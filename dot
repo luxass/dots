@@ -10,7 +10,7 @@ readonly RESET='\033[0m'
 readonly BOLD='\033[1m'
 
 readonly SCRIPT_NAME="dot"
-readonly VERSION="1.1.0"
+readonly VERSION="1.2.0"
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly DOTFILES_DIR
 readonly PACKAGES_DIR="${DOTFILES_DIR}/packages"
@@ -97,6 +97,21 @@ stow_target_rel() {
   esac
 }
 
+managed_target_for() {
+  local source="$1"
+  local rel
+  rel="$(stow_target_rel "${source#$HOME_DIR/}")"
+  printf '%s/%s\n' "$HOME" "$rel"
+}
+
+path_contains() {
+  local dir="$1"
+  case ":$PATH:" in
+    *":$dir:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 backup_path() {
   local target="$1"
   local backup_dir="$2"
@@ -115,9 +130,8 @@ backup_conflicts() {
   mkdir -p "$BACKUP_ROOT"
 
   while IFS= read -r -d '' source; do
-    local rel
-    rel="$(stow_target_rel "${source#$HOME_DIR/}")"
-    local target="$HOME/$rel"
+    local target
+    target="$(managed_target_for "$source")"
 
     if [[ -e "$target" || -L "$target" ]] && ! is_repo_path "$target" "$source"; then
       backup_path "$target" "$backup_dir"
@@ -352,6 +366,31 @@ secret_scan() {
   fi
 }
 
+check_managed_links() {
+  local verbose="${1:-false}"
+  local failed=0
+
+  while IFS= read -r -d '' source; do
+    local target
+    target="$(managed_target_for "$source")"
+
+    if is_repo_path "$target" "$source"; then
+      if [[ "$verbose" == "true" ]]; then
+        print_success "${target#$HOME/}"
+      fi
+    else
+      if [[ -e "$target" || -L "$target" ]]; then
+        print_error "Bad link: ${target#$HOME/}"
+      else
+        print_error "Missing link: ${target#$HOME/}"
+      fi
+      failed=1
+    fi
+  done < <(find "$HOME_DIR" \( -type f -o -type l \) -print0)
+
+  return "$failed"
+}
+
 ensure_gitconfig_local() {
   local force="${1:-false}"
   local file="$HOME/.gitconfig.local"
@@ -545,6 +584,37 @@ cmd_unlink() {
   _unlink_dot
 }
 
+cmd_info() {
+  print_header "Dotfiles"
+  echo "Version:            $VERSION"
+  echo "Dotfiles directory: $DOTFILES_DIR"
+  echo "Home package:       $HOME_DIR"
+  echo "Packages:           $PACKAGES_DIR"
+  echo "Backups:            $BACKUP_ROOT"
+  echo
+
+  print_header "Runtime"
+  printf "Homebrew:           "
+  command_exists brew && command -v brew || echo "missing"
+  printf "pnpm:               "
+  command_exists pnpm && command -v pnpm || echo "missing"
+  printf "Node.js:            "
+  command_exists node && node --version || echo "missing"
+  printf "npm:                "
+  command_exists npm && npm --version || echo "missing"
+  printf "Bun:                "
+  command_exists bun && bun --version || echo "missing"
+  echo
+
+  print_header "Git"
+  if git -C "$DOTFILES_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$DOTFILES_DIR" status --short --branch
+    git -C "$DOTFILES_DIR" remote -v
+  else
+    print_warning "$DOTFILES_DIR is not a git repository"
+  fi
+}
+
 cmd_doctor() {
   print_header "Running diagnostics"
 
@@ -570,6 +640,7 @@ cmd_doctor() {
 
   [[ -d "$HOME_DIR" ]] || { print_error "Missing $HOME_DIR"; failed=1; }
   [[ -f "$BASE_BUNDLE" ]] || { print_error "Missing $BASE_BUNDLE"; failed=1; }
+  [[ -x "$DOTFILES_DIR/dot" ]] || { print_error "dot is not executable"; failed=1; }
 
   if [[ -f "$HOME/.gitconfig.local" ]]; then
     print_success "Git identity config"
@@ -577,14 +648,13 @@ cmd_doctor() {
     print_warning "Missing ~/.gitconfig.local"
   fi
 
-  for rel in ".zshrc"; do
-    if is_repo_path "$HOME/$rel" "$HOME_DIR/$rel"; then
-      print_success "Linked $rel"
-    else
-      print_error "Not linked: $HOME/$rel"
-      failed=1
-    fi
-  done
+  check_managed_links false || failed=1
+
+  if path_contains "$HOME/.local/bin"; then
+    print_success "~/.local/bin is on PATH"
+  else
+    print_warning "~/.local/bin is not on PATH"
+  fi
 
   if ! brew_bundle_check "$BASE_BUNDLE"; then
     failed=1
@@ -602,6 +672,11 @@ cmd_doctor() {
   fi
 
   return "$failed"
+}
+
+cmd_links() {
+  print_header "Checking managed links"
+  check_managed_links true
 }
 
 cmd_check_packages() {
@@ -844,6 +919,8 @@ _dot() {
     'init:Initialize and install dotfiles'
     'update:Update dotfiles and packages'
     'doctor:Run diagnostics'
+    'info:Show repository and runtime info'
+    'links:Check managed symlinks'
     'package:Manage Homebrew bundle packages'
     'check-packages:Check bundle package state'
     'retry-failed:Retry failed package installs'
@@ -873,6 +950,8 @@ ${BOLD}COMMANDS:${RESET}
   init             Initialize Homebrew packages, Stow links, and dot CLI
   update           Pull repo changes, update packages, and restow
   doctor           Run diagnostics
+  info             Show repository paths, runtime tools, and git status
+  links            Check every managed home symlink
   package          Package management commands
   check-packages   Check installed package state
   retry-failed     Retry failed package installations
@@ -899,6 +978,8 @@ main() {
     init) shift; cmd_init "$@" ;;
     update) shift; cmd_update "$@" ;;
     doctor) shift; cmd_doctor "$@" ;;
+    info) shift; cmd_info "$@" ;;
+    links) shift; cmd_links "$@" ;;
     package) shift; cmd_package "$@" ;;
     check-packages) shift; cmd_check_packages "$@" ;;
     retry-failed) shift; cmd_retry_failed "$@" ;;
