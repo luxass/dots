@@ -1,0 +1,22 @@
+[include]
+	path = ~/.gitconfig.local
+[push]
+	autoSetupRemote = true
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[core]
+	editor = nvim
+	excludesfile = ~/.gitignore
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
+[commit]
+	gpgsign = true
+[pull]
+	rebase = false
+[url "git@github.com:"]
+	insteadOf = https://github.com/

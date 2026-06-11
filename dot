@@ -1,0 +1,916 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[0;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly RESET='\033[0m'
+readonly BOLD='\033[1m'
+
+readonly SCRIPT_NAME="dot"
+readonly VERSION="1.1.0"
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly DOTFILES_DIR
+readonly PACKAGES_DIR="${DOTFILES_DIR}/packages"
+readonly HOME_DIR="${DOTFILES_DIR}/home"
+readonly BASE_BUNDLE="${PACKAGES_DIR}/bundle"
+readonly WORK_BUNDLE="${PACKAGES_DIR}/bundle.work"
+readonly BACKUP_ROOT="${DOTFILES_DIR}/backups"
+readonly PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
+readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
+
+CURRENT_STEP=0
+TOTAL_STEPS=0
+
+print_header() {
+  echo -e "\n${BOLD}${BLUE}==>${RESET} ${BOLD}$1${RESET}"
+}
+
+print_success() {
+  echo -e "${GREEN}✓${RESET} $1"
+}
+
+print_error() {
+  echo -e "${RED}✗${RESET} $1" >&2
+}
+
+print_warning() {
+  echo -e "${YELLOW}⚠${RESET} $1"
+}
+
+print_info() {
+  echo -e "${CYAN}ℹ${RESET} $1"
+}
+
+print_step() {
+  ((++CURRENT_STEP))
+  echo -e "\n${BOLD}[${CURRENT_STEP}/${TOTAL_STEPS}]${RESET} $1"
+}
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+confirm() {
+  local prompt="${1:-Continue?}"
+  local default="${2:-n}"
+  local response
+
+  if [[ "$default" == "y" ]]; then
+    prompt="$prompt [Y/n]: "
+  else
+    prompt="$prompt [y/N]: "
+  fi
+
+  read -r -p "$prompt" response
+
+  case "$response" in
+    [yY][eE][sS]|[yY]) return 0 ;;
+    [nN][oO]|[nN]) return 1 ;;
+    "")
+      [[ "$default" == "y" ]]
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+timestamp() {
+  date +"%Y%m%d-%H%M%S"
+}
+
+is_repo_path() {
+  local target="$1"
+  local source="$2"
+
+  [[ -e "$target" ]] && [[ "$(realpath "$target")" == "$(realpath "$source")" ]]
+}
+
+stow_target_rel() {
+  local rel="$1"
+
+  case "$rel" in
+    dot-*) printf '.%s\n' "${rel#dot-}" ;;
+    */dot-*) printf '%s/.%s\n' "${rel%/dot-*}" "${rel##*/dot-}" ;;
+    *) printf '%s\n' "$rel" ;;
+  esac
+}
+
+backup_path() {
+  local target="$1"
+  local backup_dir="$2"
+  local rel="${target#$HOME/}"
+  local dest="$backup_dir/$rel"
+
+  mkdir -p "$(dirname "$dest")"
+  mv "$target" "$dest"
+  print_info "Backed up $target -> $dest"
+}
+
+backup_conflicts() {
+  local backup_dir="$BACKUP_ROOT/$(timestamp)"
+  local made_backup=0
+
+  mkdir -p "$BACKUP_ROOT"
+
+  while IFS= read -r -d '' source; do
+    local rel
+    rel="$(stow_target_rel "${source#$HOME_DIR/}")"
+    local target="$HOME/$rel"
+
+    if [[ -e "$target" || -L "$target" ]] && ! is_repo_path "$target" "$source"; then
+      backup_path "$target" "$backup_dir"
+      made_backup=1
+    fi
+  done < <(find "$HOME_DIR" \( -type f -o -type l \) -print0)
+
+  if [[ "$made_backup" -eq 0 ]]; then
+    rmdir "$backup_dir" 2>/dev/null || true
+  else
+    print_success "Conflicts backed up to $backup_dir"
+  fi
+}
+
+ensure_homebrew() {
+  if command_exists brew; then
+    return 0
+  fi
+
+  print_error "Homebrew is missing"
+  print_info "Install it with:"
+  echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+  return 1
+}
+
+ensure_stow() {
+  ensure_homebrew
+
+  if command_exists stow; then
+    return 0
+  fi
+
+  print_info "Installing GNU Stow..."
+  brew install stow
+}
+
+enable_pnpm_path() {
+  export PNPM_HOME
+  case ":$PATH:" in
+    *":$PNPM_HOME:"*) ;;
+    *) export PATH="$PNPM_HOME:$PATH" ;;
+  esac
+  case ":$PATH:" in
+    *":$PNPM_HOME/bin:"*) ;;
+    *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+  esac
+}
+
+ensure_pnpm() {
+  enable_pnpm_path
+
+  if command_exists pnpm; then
+    print_success "pnpm is installed"
+    return 0
+  fi
+
+  print_info "Installing pnpm standalone..."
+
+  local installer_env
+  installer_env="$(mktemp)"
+
+  if curl -fsSL https://get.pnpm.io/install.sh | ENV="$installer_env" SHELL="$(command -v zsh)" sh -; then
+    rm -f "$installer_env"
+    enable_pnpm_path
+    hash -r 2>/dev/null || true
+  else
+    rm -f "$installer_env"
+    print_error "Failed to install pnpm"
+    return 1
+  fi
+
+  if command_exists pnpm; then
+    print_success "pnpm installed"
+  else
+    print_error "pnpm install completed, but pnpm is not on PATH"
+    return 1
+  fi
+}
+
+ensure_node_runtime() {
+  ensure_pnpm
+
+  if command_exists node && [[ "$(command -v node)" == "$PNPM_HOME"* ]]; then
+    if command_exists npm; then
+      print_success "Node.js and npm are managed by pnpm"
+      return 0
+    fi
+    print_info "Node.js is managed by pnpm; npm is missing"
+  fi
+
+  print_info "Installing Node.js runtime with pnpm..."
+  pnpm runtime set node "$NODE_RUNTIME_VERSION" -g
+  enable_pnpm_path
+  hash -r 2>/dev/null || true
+
+  if ! command_exists npm; then
+    print_info "Installing npm with pnpm..."
+    pnpm add -g npm
+    hash -r 2>/dev/null || true
+  fi
+
+  if command_exists node && command_exists npm; then
+    print_success "Node.js runtime and npm installed"
+  else
+    print_error "Node.js runtime installation did not expose node/npm"
+    return 1
+  fi
+}
+
+bundle_file_for() {
+  case "${1:-base}" in
+    base) echo "$BASE_BUNDLE" ;;
+    work) echo "$WORK_BUNDLE" ;;
+    *)
+      print_error "Unknown bundle: $1"
+      return 1
+      ;;
+  esac
+}
+
+brew_bundle_check() {
+  local bundle="$1"
+
+  [[ -f "$bundle" ]] || {
+    print_warning "Bundle not found: $bundle"
+    return 0
+  }
+
+  brew bundle check --no-upgrade --file "$bundle"
+}
+
+brew_bundle_install_resilient() {
+  local bundle="$1"
+
+  [[ -f "$bundle" ]] || {
+    print_warning "Bundle not found: $bundle"
+    return 0
+  }
+
+  if HOMEBREW_BUNDLE_NO_UPGRADE=1 brew bundle --file "$bundle"; then
+    print_success "Installed packages from $(basename "$bundle")"
+    return 0
+  fi
+
+  print_warning "Bundle install failed; retrying packages individually"
+
+  local failed=()
+  local installed_count=0
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "${line// }" ]] && continue
+
+    if [[ "$line" =~ ^brew[[:space:]]+\"([^\"]+)\" ]]; then
+      local package="${BASH_REMATCH[1]}"
+      local short_package="${package##*/}"
+      if brew list --formula "$package" >/dev/null 2>&1 || brew list --formula "$short_package" >/dev/null 2>&1; then
+        print_success "Formula already installed: $package"
+        continue
+      fi
+      print_info "Installing formula: $package"
+      if brew install "$package"; then
+        ((installed_count++))
+      else
+        failed+=("brew:$package")
+      fi
+    elif [[ "$line" =~ ^cask[[:space:]]+\"([^\"]+)\" ]]; then
+      local package="${BASH_REMATCH[1]}"
+      if brew list --cask "$package" >/dev/null 2>&1; then
+        print_success "Cask already installed: $package"
+        continue
+      fi
+      print_info "Installing cask: $package"
+      if brew install --cask "$package"; then
+        ((installed_count++))
+      else
+        failed+=("cask:$package")
+      fi
+    fi
+  done < "$bundle"
+
+  print_success "Installed $installed_count packages individually"
+
+  if [[ "${#failed[@]}" -gt 0 ]]; then
+    local failed_file="${PACKAGES_DIR}/failed_packages_$(date +%Y%m%d_%H%M%S).txt"
+    printf "%s\n" "${failed[@]}" > "$failed_file"
+    print_warning "Failed packages saved to $failed_file"
+    return 1
+  fi
+}
+
+parse_bundle_packages() {
+  local bundle="$1"
+
+  [[ -f "$bundle" ]] || return 0
+
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "${line// }" ]] && continue
+
+    if [[ "$line" =~ ^brew[[:space:]]+\"([^\"]+)\" ]]; then
+      printf 'brew:%s\n' "${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^cask[[:space:]]+\"([^\"]+)\" ]]; then
+      printf 'cask:%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done < "$bundle"
+}
+
+sort_bundle() {
+  local bundle="$1"
+  local tmp
+  tmp="$(mktemp)"
+
+  {
+    grep -E '^tap "' "$bundle" 2>/dev/null | sort -u || true
+    echo ""
+    grep -E '^brew "' "$bundle" 2>/dev/null | sort -u || true
+    echo ""
+    grep -E '^cask "' "$bundle" 2>/dev/null | sort -u || true
+  } > "$tmp"
+
+  sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp" > "$bundle"
+  rm "$tmp"
+}
+
+secret_scan() {
+  local token_pattern='(_auth''Token|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=)'
+
+  if command_exists rg; then
+    rg -n --hidden --glob '!.git/**' --glob '!backups/**' --glob '!packages/failed_packages_*.txt' "$token_pattern" "$DOTFILES_DIR"
+  else
+    grep -RInE "$token_pattern" "$DOTFILES_DIR" --exclude-dir=.git --exclude-dir=backups
+  fi
+}
+
+ensure_gitconfig_local() {
+  local force="${1:-false}"
+  local file="$HOME/.gitconfig.local"
+
+  if [[ -f "$file" && "$force" != "true" ]]; then
+    print_success "Git identity config exists"
+    return 0
+  fi
+
+  if [[ ! -t 0 ]]; then
+    print_warning "Missing $file; run 'dot git-identity' to create it"
+    return 1
+  fi
+
+  local default_name default_email default_signingkey name email signingkey
+  default_name="$(git config --global --includes --get user.name 2>/dev/null || true)"
+  default_email="$(git config --global --includes --get user.email 2>/dev/null || true)"
+  default_signingkey="$(git config --global --includes --get user.signingkey 2>/dev/null || true)"
+
+  read -r -p "Git user.name${default_name:+ [$default_name]}: " name
+  name="${name:-$default_name}"
+
+  read -r -p "Git user.email${default_email:+ [$default_email]}: " email
+  email="${email:-$default_email}"
+
+  print_info "For 1Password SSH signing keys, enable the 1Password SSH agent and run: ssh-add -L"
+  read -r -p "Git user.signingkey${default_signingkey:+ [$default_signingkey]}: " signingkey
+  signingkey="${signingkey:-$default_signingkey}"
+
+  if [[ -z "$name" || -z "$email" ]]; then
+    print_warning "Git identity skipped"
+    return 1
+  fi
+
+  umask 077
+  {
+    echo "[user]"
+    printf "\tname = %s\n" "$name"
+    printf "\temail = %s\n" "$email"
+    if [[ -n "$signingkey" ]]; then
+      printf "\tsigningkey = %s\n" "$signingkey"
+    fi
+  } > "$file"
+
+  print_success "Created $file"
+}
+
+cmd_git_identity() {
+  print_header "Configuring Git identity"
+  ensure_gitconfig_local true
+}
+
+
+TOOL_REGISTRY=(
+  "Homebrew          ;; brew ;; fn:ensure_homebrew             ;; true  ;; - ;; true"
+  "Brewfile packages ;; -    ;; fn:_install_packages           ;; true  ;; - ;; false"
+  "pnpm              ;; pnpm ;; fn:ensure_pnpm                 ;; true  ;; - ;; true"
+  "Node.js runtime   ;; node ;; fn:ensure_node_runtime         ;; true  ;; - ;; true"
+  "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
+  "Git identity      ;; -    ;; fn:ensure_gitconfig_local      ;; false ;; - ;; false"
+  "dot CLI           ;; dot  ;; fn:_link_dot                   ;; true  ;; - ;; true"
+  "Git               ;; git  ;; -                              ;; true  ;; - ;; true"
+  "GNU Stow          ;; stow ;; fn:ensure_stow                 ;; true  ;; - ;; true"
+  "Starship          ;; starship ;; -                          ;; false ;; - ;; true"
+  "Zoxide            ;; zoxide ;; -                            ;; false ;; - ;; true"
+  "Bun               ;; bun  ;; -                              ;; false ;; - ;; true"
+)
+
+_parse_tool_entry() {
+  local entry="$1"
+  r_name="$(echo "$entry" | awk -F';;' '{print $1}' | xargs)"
+  r_check="$(echo "$entry" | awk -F';;' '{print $2}' | xargs)"
+  r_install="$(echo "$entry" | awk -F';;' '{print $3}' | xargs)"
+  r_required="$(echo "$entry" | awk -F';;' '{print $4}' | xargs)"
+  r_skip="$(echo "$entry" | awk -F';;' '{print $5}' | xargs)"
+  r_doctor="$(echo "$entry" | awk -F';;' '{print $6}' | xargs)"
+}
+
+run_init_steps() {
+  TOTAL_STEPS=0
+  for entry in "${TOOL_REGISTRY[@]}"; do
+    _parse_tool_entry "$entry"
+    if [[ "$r_skip" != "-" && "${!r_skip:-}" == "true" ]]; then
+      continue
+    fi
+    ((++TOTAL_STEPS))
+  done
+
+  CURRENT_STEP=0
+  for entry in "${TOOL_REGISTRY[@]}"; do
+    _parse_tool_entry "$entry"
+    if [[ "$r_skip" != "-" && "${!r_skip:-}" == "true" ]]; then
+      continue
+    fi
+
+    print_step "$r_name"
+    if [[ "$r_install" == fn:* ]]; then
+      local fn="${r_install#fn:}"
+      if "$fn"; then
+        true
+      elif [[ "$r_required" == "true" ]]; then
+        return 1
+      else
+        print_warning "$r_name failed; continuing"
+      fi
+    elif [[ "$r_check" != "-" ]] && command_exists "$r_check"; then
+      print_success "$r_name is installed"
+    elif [[ "$r_required" == "true" ]]; then
+      print_error "$r_name is missing"
+      return 1
+    else
+      print_warning "$r_name is missing"
+    fi
+  done
+}
+
+_install_packages() {
+  ensure_homebrew
+  brew_bundle_install_resilient "$BASE_BUNDLE"
+
+  if [[ -f "$WORK_BUNDLE" ]] && confirm "Install work-specific packages?" "n"; then
+    brew_bundle_install_resilient "$WORK_BUNDLE"
+  fi
+}
+
+_stow_dotfiles() {
+  ensure_stow
+  backup_conflicts
+  print_info "Stowing files from $HOME_DIR to $HOME"
+  stow --dotfiles -R -v -d "$DOTFILES_DIR" -t "$HOME" home
+  print_success "Dotfiles stowed"
+}
+
+_unstow_dotfiles() {
+  ensure_stow
+  stow --dotfiles -D -v -d "$DOTFILES_DIR" -t "$HOME" home
+  print_success "Dotfiles unstowed"
+}
+
+_link_dot() {
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$DOTFILES_DIR/dot" "$HOME/.local/bin/dot"
+  print_success "Linked dot -> $HOME/.local/bin/dot"
+}
+
+_unlink_dot() {
+  if [[ -L "$HOME/.local/bin/dot" ]]; then
+    rm "$HOME/.local/bin/dot"
+    print_success "Removed $HOME/.local/bin/dot"
+  else
+    print_info "No dot link found at $HOME/.local/bin/dot"
+  fi
+}
+
+cmd_init() {
+  print_header "Initializing dotfiles"
+  run_init_steps
+}
+
+cmd_update() {
+  print_header "Updating dotfiles"
+
+  if git -C "$DOTFILES_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    print_info "Pulling latest repo changes"
+    git -C "$DOTFILES_DIR" pull --ff-only
+  fi
+
+  print_info "Updating Homebrew"
+  brew update
+  brew_bundle_install_resilient "$BASE_BUNDLE"
+  _stow_dotfiles
+}
+
+cmd_stow() {
+  print_header "Stowing dotfiles"
+  _stow_dotfiles
+}
+
+cmd_unstow() {
+  print_header "Unstowing dotfiles"
+  _unstow_dotfiles
+}
+
+cmd_link() {
+  print_header "Linking dot CLI"
+  _link_dot
+}
+
+cmd_unlink() {
+  print_header "Unlinking dot CLI"
+  _unlink_dot
+}
+
+cmd_doctor() {
+  print_header "Running diagnostics"
+
+  local failed=0
+
+  for entry in "${TOOL_REGISTRY[@]}"; do
+    _parse_tool_entry "$entry"
+    [[ "$r_doctor" == "true" ]] || continue
+
+    if [[ "$r_check" == "-" ]]; then
+      continue
+    fi
+
+    if command_exists "$r_check"; then
+      print_success "$r_name"
+    elif [[ "$r_required" == "true" ]]; then
+      print_error "$r_name is missing"
+      failed=1
+    else
+      print_warning "$r_name is missing"
+    fi
+  done
+
+  [[ -d "$HOME_DIR" ]] || { print_error "Missing $HOME_DIR"; failed=1; }
+  [[ -f "$BASE_BUNDLE" ]] || { print_error "Missing $BASE_BUNDLE"; failed=1; }
+
+  if [[ -f "$HOME/.gitconfig.local" ]]; then
+    print_success "Git identity config"
+  else
+    print_warning "Missing ~/.gitconfig.local"
+  fi
+
+  for rel in ".zshrc"; do
+    if is_repo_path "$HOME/$rel" "$HOME_DIR/$rel"; then
+      print_success "Linked $rel"
+    else
+      print_error "Not linked: $HOME/$rel"
+      failed=1
+    fi
+  done
+
+  if ! brew_bundle_check "$BASE_BUNDLE"; then
+    failed=1
+  fi
+
+  if secret_scan; then
+    print_error "Possible secrets found"
+    failed=1
+  else
+    print_success "Secret scan passed"
+  fi
+
+  if [[ "$failed" -eq 0 ]]; then
+    print_success "dotfiles look healthy"
+  fi
+
+  return "$failed"
+}
+
+cmd_check_packages() {
+  print_header "Checking packages"
+
+  local failed=0
+  brew_bundle_check "$BASE_BUNDLE" || failed=1
+
+  if [[ -f "$WORK_BUNDLE" ]]; then
+    brew_bundle_check "$WORK_BUNDLE" || failed=1
+  fi
+
+  return "$failed"
+}
+
+cmd_retry_failed() {
+  print_header "Retrying failed package installs"
+
+  local files=("${PACKAGES_DIR}"/failed_packages_*.txt)
+  if [[ ! -e "${files[0]}" ]]; then
+    print_info "No failed package files found"
+    return 0
+  fi
+
+  local failed=()
+  for file in "${files[@]}"; do
+    print_info "Retrying packages from $(basename "$file")"
+    while IFS= read -r item; do
+      [[ -z "$item" ]] && continue
+      local type="${item%%:*}"
+      local name="${item#*:}"
+
+      if [[ "$type" == "cask" ]]; then
+        brew install --cask "$name" || failed+=("$item")
+      else
+        brew install "$name" || failed+=("$item")
+      fi
+    done < "$file"
+  done
+
+  if [[ "${#failed[@]}" -gt 0 ]]; then
+    print_warning "Still failed:"
+    printf "  - %s\n" "${failed[@]}"
+    return 1
+  fi
+
+  rm -f "${files[@]}"
+  print_success "All failed packages installed"
+}
+
+cmd_package_list() {
+  local bundle_filter="${1:-all}"
+  print_header "Listing packages"
+
+  local installed_formulas installed_casks
+  installed_formulas="$(brew list --formula 2>/dev/null || true)"
+  installed_casks="$(brew list --cask 2>/dev/null || true)"
+
+  local bundles=()
+  case "$bundle_filter" in
+    base) bundles=("$BASE_BUNDLE") ;;
+    work) bundles=("$WORK_BUNDLE") ;;
+    all) bundles=("$BASE_BUNDLE" "$WORK_BUNDLE") ;;
+    *) print_error "Unknown bundle: $bundle_filter"; return 1 ;;
+  esac
+
+  for bundle in "${bundles[@]}"; do
+    [[ -f "$bundle" ]] || continue
+    echo -e "\n${BOLD}$(basename "$bundle")${RESET}"
+
+    while IFS=: read -r type name; do
+      [[ -n "$name" ]] || continue
+      local short_name="${name##*/}"
+
+      if [[ "$type" == "cask" ]]; then
+        if grep -qx "$name" <<< "$installed_casks"; then
+          print_success "$name"
+        else
+          print_error "$name (not installed)"
+        fi
+      else
+        if grep -qx "$name" <<< "$installed_formulas" || grep -qx "$short_name" <<< "$installed_formulas"; then
+          print_success "$name"
+        else
+          print_error "$name (not installed)"
+        fi
+      fi
+    done < <(parse_bundle_packages "$bundle")
+  done
+}
+
+cmd_package_add() {
+  local name="${1:-}"
+  local type="${2:-auto}"
+  local bundle_name="${3:-base}"
+
+  [[ -n "$name" ]] || {
+    print_error "Package name required"
+    return 1
+  }
+
+  local bundle
+  bundle="$(bundle_file_for "$bundle_name")"
+  mkdir -p "$(dirname "$bundle")"
+  touch "$bundle"
+
+  if [[ "$type" == "auto" ]]; then
+    if brew info --cask "$name" >/dev/null 2>&1; then
+      type="cask"
+    else
+      type="brew"
+    fi
+  fi
+
+  case "$type" in
+    brew)
+      grep -qx "brew \"$name\"" "$bundle" 2>/dev/null || echo "brew \"$name\"" >> "$bundle"
+      brew install "$name"
+      ;;
+    cask)
+      grep -qx "cask \"$name\"" "$bundle" 2>/dev/null || echo "cask \"$name\"" >> "$bundle"
+      brew install --cask "$name"
+      ;;
+    *)
+      print_error "Type must be brew, cask, or auto"
+      return 1
+      ;;
+  esac
+
+  sort_bundle "$bundle"
+  print_success "Added $name to $(basename "$bundle")"
+}
+
+cmd_package_remove() {
+  local name="${1:-}"
+  local bundle_name="${2:-all}"
+
+  [[ -n "$name" ]] || {
+    print_error "Package name required"
+    return 1
+  }
+
+  local bundles=()
+  case "$bundle_name" in
+    base) bundles=("$BASE_BUNDLE") ;;
+    work) bundles=("$WORK_BUNDLE") ;;
+    all) bundles=("$BASE_BUNDLE" "$WORK_BUNDLE") ;;
+    *) print_error "Unknown bundle: $bundle_name"; return 1 ;;
+  esac
+
+  local found=false
+  for bundle in "${bundles[@]}"; do
+    [[ -f "$bundle" ]] || continue
+    if grep -Eq "^(brew|cask)[[:space:]]+\"$name\"" "$bundle"; then
+      local tmp
+      tmp="$(mktemp)"
+      grep -Ev "^(brew|cask)[[:space:]]+\"$name\"" "$bundle" > "$tmp"
+      mv "$tmp" "$bundle"
+      found=true
+      print_success "Removed $name from $(basename "$bundle")"
+    fi
+  done
+
+  if [[ "$found" == false ]]; then
+    print_warning "$name was not found in bundle files"
+    return 0
+  fi
+
+  if confirm "Uninstall $name from this machine?" "n"; then
+    brew uninstall "$name" || brew uninstall --cask "$name"
+  fi
+}
+
+cmd_package_update() {
+  local name="${1:-all}"
+
+  if [[ "$name" == "all" ]]; then
+    print_header "Updating Homebrew packages"
+    brew update
+    brew upgrade
+    brew upgrade --cask || true
+    if confirm "Clean up old versions?" "y"; then
+      brew cleanup
+    fi
+    return 0
+  fi
+
+  if brew list --formula | grep -qx "$name"; then
+    brew upgrade "$name"
+  elif brew list --cask | grep -qx "$name"; then
+    brew upgrade --cask "$name"
+  else
+    print_error "$name is not installed"
+    return 1
+  fi
+}
+
+cmd_package_help() {
+  cat <<EOF
+${BOLD}${SCRIPT_NAME} package${RESET}
+
+Usage:
+  ${SCRIPT_NAME} package list [base|work|all]
+  ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|work]
+  ${SCRIPT_NAME} package remove NAME [base|work|all]
+  ${SCRIPT_NAME} package update [NAME|all]
+EOF
+}
+
+cmd_package() {
+  local subcommand="${1:-list}"
+  shift || true
+
+  case "$subcommand" in
+    list) cmd_package_list "$@" ;;
+    add) cmd_package_add "$@" ;;
+    remove) cmd_package_remove "$@" ;;
+    update) cmd_package_update "$@" ;;
+    help|-h|--help) cmd_package_help ;;
+    *) print_error "Unknown package command: $subcommand"; cmd_package_help; return 1 ;;
+  esac
+}
+
+cmd_edit() {
+  if [[ -n "${EDITOR:-}" ]]; then
+    "$EDITOR" "$DOTFILES_DIR"
+  elif command_exists code; then
+    code "$DOTFILES_DIR"
+  else
+    echo "$DOTFILES_DIR"
+  fi
+}
+
+cmd_completions() {
+  cat <<'EOF'
+#compdef dot
+_dot() {
+  local -a commands
+  commands=(
+    'init:Initialize and install dotfiles'
+    'update:Update dotfiles and packages'
+    'doctor:Run diagnostics'
+    'package:Manage Homebrew bundle packages'
+    'check-packages:Check bundle package state'
+    'retry-failed:Retry failed package installs'
+    'git-identity:Create or update local Git identity'
+    'stow:Create symlinks using GNU Stow'
+    'unstow:Remove stowed symlinks'
+    'link:Install dot command globally'
+    'unlink:Remove global dot command'
+    'edit:Open dotfiles repo'
+    'help:Show help'
+  )
+  _describe 'command' commands
+}
+_dot "$@"
+EOF
+}
+
+cmd_help() {
+  cat <<EOF
+${BOLD}${SCRIPT_NAME}${RESET} - Dotfiles management tool
+Version: ${VERSION}
+
+${BOLD}USAGE:${RESET}
+  ${SCRIPT_NAME} COMMAND [ARGS]
+
+${BOLD}COMMANDS:${RESET}
+  init             Initialize Homebrew packages, Stow links, and dot CLI
+  update           Pull repo changes, update packages, and restow
+  doctor           Run diagnostics
+  package          Package management commands
+  check-packages   Check installed package state
+  retry-failed     Retry failed package installations
+  git-identity     Create or update ~/.gitconfig.local
+  stow             Create symlinks using GNU Stow
+  unstow           Remove symlinks using GNU Stow
+  link             Link dot into ~/.local/bin
+  unlink           Remove ~/.local/bin/dot
+  completions      Print zsh completions
+  edit             Open the dotfiles repo
+  help             Show this help
+
+${BOLD}CONFIGURATION:${RESET}
+  Dotfiles directory: ${DOTFILES_DIR}
+  Packages directory: ${PACKAGES_DIR}
+  Home directory:     ${HOME_DIR}
+EOF
+}
+
+main() {
+  case "${1:-help}" in
+    --version) echo "${SCRIPT_NAME} version ${VERSION}" ;;
+    -h|--help|help) cmd_help ;;
+    init) shift; cmd_init "$@" ;;
+    update) shift; cmd_update "$@" ;;
+    doctor) shift; cmd_doctor "$@" ;;
+    package) shift; cmd_package "$@" ;;
+    check-packages) shift; cmd_check_packages "$@" ;;
+    retry-failed) shift; cmd_retry_failed "$@" ;;
+    git-identity) shift; cmd_git_identity "$@" ;;
+    stow) shift; cmd_stow "$@" ;;
+    unstow) shift; cmd_unstow "$@" ;;
+    link) shift; cmd_link "$@" ;;
+    unlink) shift; cmd_unlink "$@" ;;
+    completions) shift; cmd_completions "$@" ;;
+    edit) shift; cmd_edit "$@" ;;
+    *) print_error "Unknown command: $1"; cmd_help; return 1 ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,32 @@
+.DS_Store
+*.bak
+*.backup
+*.tmp
+*.zwc
+.zcompdump*
+.zsh_history
+.node_history
+.viminfo
+node_modules/
+backups/
+Brewfile.lock.json
+packages/failed_packages_*.txt
+
+# Secrets and auth state
+**/.npmrc
+!home/.npmrc
+.gitconfig.local
+home/.gitconfig.local
+auth.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# App-generated state
+home/.config/zed/conversations/
+home/.config/zed/embeddings/
+home/.config/zed/.tmp*
+home/.config/raycast/
+home/.config/opencode/node_modules/
+home/.codex/auth.json
