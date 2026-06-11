@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo="$(git rev-parse --show-toplevel)"
+
+echo "Running dot secret-scan before push..."
+"$repo/dot" secret-scan

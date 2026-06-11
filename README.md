@@ -19,6 +19,7 @@ other configs that are not currently wanted.
 - Resilient Homebrew bundle installation with failed package retry files
 - pnpm-managed Node.js runtime and npm installation
 - Public-safe Git config with private identity in `~/.gitconfig.local`
+- Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for disabled scripts and release age checks
 - Diagnostics for required tools, package state, managed links, and secrets
 
@@ -63,6 +64,8 @@ dot update           # pull, update Homebrew, install bundle, restow
 dot doctor           # run diagnostics and secret scan
 dot info             # show repo paths, runtime tools, and git status
 dot links            # verify every managed symlink
+dot hooks            # install repository Git hooks
+dot secret-scan      # scan repository for secrets
 dot stow             # restow home/
 dot unstow           # remove stowed symlinks
 dot git-identity     # create or update ~/.gitconfig.local
@@ -110,6 +113,27 @@ ssh-add -L
 
 Paste the relevant public key when prompted for `user.signingkey`.
 
+## Git Hooks
+
+`dot init` installs repository hooks by setting:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+The tracked `pre-push` hook runs:
+
+```sh
+dot secret-scan
+```
+
+Run this manually with:
+
+```sh
+dot hooks
+dot secret-scan
+```
+
 ## JavaScript Runtime Policy
 
 The repo tracks policy-only configs:
@@ -127,6 +151,12 @@ Run diagnostics first:
 
 ```sh
 dot doctor
+```
+
+Run the publish safety scan:
+
+```sh
+dot secret-scan
 ```
 
 Check symlinks:
