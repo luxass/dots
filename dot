@@ -366,6 +366,20 @@ secret_scan() {
   fi
 }
 
+ensure_git_hooks() {
+  if ! git -C "$DOTFILES_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    print_warning "$DOTFILES_DIR is not a git repository"
+    return 1
+  fi
+
+  git -C "$DOTFILES_DIR" config core.hooksPath .githooks
+  print_success "Git hooks path set to .githooks"
+}
+
+git_hooks_enabled() {
+  [[ "$(git -C "$DOTFILES_DIR" config --get core.hooksPath 2>/dev/null || true)" == ".githooks" ]]
+}
+
 check_managed_links() {
   local verbose="${1:-false}"
   local failed=0
@@ -450,6 +464,7 @@ TOOL_REGISTRY=(
   "pnpm              ;; pnpm ;; fn:ensure_pnpm                 ;; true  ;; - ;; true"
   "Node.js runtime   ;; node ;; fn:ensure_node_runtime         ;; true  ;; - ;; true"
   "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
+  "Git hooks         ;; -    ;; fn:ensure_git_hooks            ;; false ;; - ;; false"
   "Git identity      ;; -    ;; fn:ensure_gitconfig_local      ;; false ;; - ;; false"
   "dot CLI           ;; dot  ;; fn:_link_dot                   ;; true  ;; - ;; true"
   "Git               ;; git  ;; -                              ;; true  ;; - ;; true"
@@ -584,6 +599,22 @@ cmd_unlink() {
   _unlink_dot
 }
 
+cmd_hooks() {
+  print_header "Configuring Git hooks"
+  ensure_git_hooks
+}
+
+cmd_secret_scan() {
+  print_header "Scanning for secrets"
+
+  if secret_scan; then
+    print_error "Possible secrets found"
+    return 1
+  fi
+
+  print_success "Secret scan passed"
+}
+
 cmd_info() {
   print_header "Dotfiles"
   echo "Version:            $VERSION"
@@ -641,6 +672,13 @@ cmd_doctor() {
   [[ -d "$HOME_DIR" ]] || { print_error "Missing $HOME_DIR"; failed=1; }
   [[ -f "$BASE_BUNDLE" ]] || { print_error "Missing $BASE_BUNDLE"; failed=1; }
   [[ -x "$DOTFILES_DIR/dot" ]] || { print_error "dot is not executable"; failed=1; }
+  [[ -x "$DOTFILES_DIR/.githooks/pre-push" ]] || { print_error "pre-push hook is not executable"; failed=1; }
+
+  if git_hooks_enabled; then
+    print_success "Git hooks path"
+  else
+    print_warning "Git hooks path is not .githooks; run 'dot hooks'"
+  fi
 
   if [[ -f "$HOME/.gitconfig.local" ]]; then
     print_success "Git identity config"
@@ -921,6 +959,8 @@ _dot() {
     'doctor:Run diagnostics'
     'info:Show repository and runtime info'
     'links:Check managed symlinks'
+    'hooks:Install repository Git hooks'
+    'secret-scan:Scan repository for secrets'
     'package:Manage Homebrew bundle packages'
     'check-packages:Check bundle package state'
     'retry-failed:Retry failed package installs'
@@ -952,6 +992,8 @@ ${BOLD}COMMANDS:${RESET}
   doctor           Run diagnostics
   info             Show repository paths, runtime tools, and git status
   links            Check every managed home symlink
+  hooks            Install repository Git hooks
+  secret-scan      Scan repository for secrets
   package          Package management commands
   check-packages   Check installed package state
   retry-failed     Retry failed package installations
@@ -980,6 +1022,8 @@ main() {
     doctor) shift; cmd_doctor "$@" ;;
     info) shift; cmd_info "$@" ;;
     links) shift; cmd_links "$@" ;;
+    hooks) shift; cmd_hooks "$@" ;;
+    secret-scan) shift; cmd_secret_scan "$@" ;;
     package) shift; cmd_package "$@" ;;
     check-packages) shift; cmd_check_packages "$@" ;;
     retry-failed) shift; cmd_retry_failed "$@" ;;
