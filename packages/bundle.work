@@ -1,0 +1,4 @@
+# Optional work-specific packages.
+#
+# Add entries with:
+#   dot package add NAME [brew|cask|auto] work
