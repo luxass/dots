@@ -11,7 +11,9 @@ readonly BOLD='\033[1m'
 
 readonly SCRIPT_NAME="dot"
 readonly VERSION="1.2.0"
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
+readonly SCRIPT_PATH
+DOTFILES_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 readonly DOTFILES_DIR
 readonly PACKAGES_DIR="${DOTFILES_DIR}/packages"
 readonly HOME_DIR="${DOTFILES_DIR}/home"
@@ -20,6 +22,7 @@ readonly WORK_BUNDLE="${PACKAGES_DIR}/bundle.work"
 readonly BACKUP_ROOT="${DOTFILES_DIR}/backups"
 readonly PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
+readonly PNPM_GLOBAL_PACKAGES=("sfw")
 
 CURRENT_STEP=0
 TOTAL_STEPS=0
@@ -239,6 +242,29 @@ ensure_node_runtime() {
     print_error "Node.js runtime installation did not expose node/npm"
     return 1
   fi
+}
+
+ensure_pnpm_globals() {
+  ensure_node_runtime
+
+  local package
+  for package in "${PNPM_GLOBAL_PACKAGES[@]}"; do
+    if command_exists "$package"; then
+      print_success "$package is installed"
+      continue
+    fi
+
+    print_info "Installing pnpm global: $package"
+    pnpm add -g "$package"
+    hash -r 2>/dev/null || true
+
+    if command_exists "$package"; then
+      print_success "$package installed"
+    else
+      print_error "$package install completed, but command is not on PATH"
+      return 1
+    fi
+  done
 }
 
 bundle_file_for() {
@@ -463,6 +489,7 @@ TOOL_REGISTRY=(
   "Brewfile packages ;; -    ;; fn:_install_packages           ;; true  ;; - ;; false"
   "pnpm              ;; pnpm ;; fn:ensure_pnpm                 ;; true  ;; - ;; true"
   "Node.js runtime   ;; node ;; fn:ensure_node_runtime         ;; true  ;; - ;; true"
+  "pnpm globals      ;; -    ;; fn:ensure_pnpm_globals         ;; true  ;; - ;; false"
   "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
   "Git hooks         ;; -    ;; fn:ensure_git_hooks            ;; false ;; - ;; false"
   "Git identity      ;; -    ;; fn:ensure_gitconfig_local      ;; false ;; - ;; false"
@@ -472,6 +499,7 @@ TOOL_REGISTRY=(
   "Starship          ;; starship ;; -                          ;; false ;; - ;; true"
   "Zoxide            ;; zoxide ;; -                            ;; false ;; - ;; true"
   "Bun               ;; bun  ;; -                              ;; false ;; - ;; true"
+  "Socket Firewall   ;; sfw  ;; -                              ;; false ;; - ;; true"
 )
 
 _parse_tool_entry() {

@@ -18,6 +18,7 @@ other configs that are not currently wanted.
 - GNU Stow symlink management from `home/` to `$HOME`
 - Resilient Homebrew bundle installation with failed package retry files
 - pnpm-managed Node.js runtime and npm installation
+- Managed pnpm global tools, including Socket Firewall (`sfw`)
 - Public-safe Git config with private identity in `~/.gitconfig.local`
 - Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for disabled scripts and release age checks
@@ -144,6 +145,19 @@ The repo tracks policy-only configs:
 
 These disable dependency lifecycle scripts and require packages to be at least
 five days old before installation. Auth tokens must stay out of the repo.
+
+`dot init` also installs managed pnpm globals:
+
+```text
+sfw
+```
+
+Socket Firewall can be used by prefixing supported package-manager commands:
+
+```sh
+sfw pnpm install
+sfw npm install
+```
 
 ## Troubleshooting
 
