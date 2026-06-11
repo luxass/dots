@@ -1,0 +1,4 @@
+ignoreScripts: true
+minimumReleaseAge: 7200
+minimumReleaseAgeStrict: true
+dangerouslyAllowAllBuilds: false
