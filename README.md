@@ -52,6 +52,7 @@ command is not available immediately.
 │   └── dot-gitignore   # Stowed as ~/.gitignore via --dotfiles
 ├── packages/
 │   ├── bundle          # Base Brewfile
+│   ├── bundle.fonts    # Optional font casks
 │   └── bundle.work     # Optional work-only Brewfile
 ├── AGENTS.md           # Notes for AI/code agents
 └── README.md
@@ -76,13 +77,16 @@ dot edit             # open the repo in $EDITOR
 
 ## Package Management
 
-The base package list is `packages/bundle`. Optional work-only packages can be
-kept in `packages/bundle.work`.
+The base package list is `packages/bundle`. Fonts live in
+`packages/bundle.fonts`, and optional work-only packages can be kept in
+`packages/bundle.work`. `dot init` asks before installing fonts and work
+packages; fonts default to yes, work defaults to no.
 
 ```sh
-dot package list [base|work|all]
-dot package add NAME [brew|cask|auto] [base|work]
-dot package remove NAME [base|work|all]
+dot package list [base|fonts|work|all]
+dot package unmanaged
+dot package add NAME [brew|cask|auto] [base|fonts|work]
+dot package remove NAME [base|fonts|work|all]
 dot package update [NAME|all]
 dot check-packages
 dot retry-failed

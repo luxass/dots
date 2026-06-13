@@ -2,3 +2,8 @@
 #
 # Add entries with:
 #   dot package add NAME [brew|cask|auto] work
+
+brew "awscli"
+brew "helm"
+brew "k9s"
+brew "kind"

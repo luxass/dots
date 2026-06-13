@@ -1,0 +1,7 @@
+# Font packages.
+
+cask "font-jetbrains-mono-nerd-font"
+cask "font-meslo-lg-nerd-font"
+cask "font-monaspace"
+cask "font-monocraft"
+cask "font-monocraft-nerd-font"
