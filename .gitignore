@@ -34,7 +34,6 @@ home/.config/opencode/node_modules/
 # Pi runtime, generated state, and secrets
 home/.pi/node_modules/
 home/.pi/package-lock.json
-home/.pi/pnpm-lock.yaml
 home/.pi/agent/auth.json
 home/.pi/agent/trust.json
 home/.pi/agent/bin/
