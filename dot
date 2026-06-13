@@ -29,10 +29,10 @@ source "${DOTFILES_DIR}/lib/git.sh"
 TOOL_REGISTRY=(
   "Homebrew          ;; brew ;; fn:ensure_homebrew             ;; true  ;; - ;; true"
   "Brewfile packages ;; -    ;; fn:_install_packages           ;; true  ;; - ;; false"
+  "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
   "pnpm              ;; pnpm ;; fn:ensure_pnpm                 ;; true  ;; - ;; true"
   "Node.js runtime   ;; node ;; fn:ensure_node_runtime         ;; true  ;; - ;; true"
   "pnpm globals      ;; -    ;; fn:ensure_pnpm_globals         ;; true  ;; - ;; false"
-  "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
   "Git hooks         ;; -    ;; fn:ensure_git_hooks            ;; false ;; - ;; false"
   "Git identity      ;; -    ;; fn:ensure_gitconfig_local      ;; false ;; - ;; false"
   "dot CLI           ;; dot  ;; fn:_link_dot                   ;; true  ;; - ;; true"
@@ -189,6 +189,9 @@ cmd_doctor() {
   else
     print_warning "~/.local/bin is not on PATH"
   fi
+
+  check_runtime_origins || failed=1
+  check_pnpm_policy || failed=1
 
   if ! brew_bundle_check "$BASE_BUNDLE"; then
     failed=1
