@@ -156,6 +156,13 @@ The repo tracks policy-only configs:
 These disable dependency lifecycle scripts and require packages to be at least
 five days old before installation. Auth tokens must stay out of the repo.
 
+`dot init` stows these configs before installing the pnpm-managed Node.js
+runtime or pnpm global tools, so the package-manager policy is active during
+setup.
+
+`dot doctor` verifies that `pnpm`, `node`, and `npm` resolve from `PNPM_HOME`
+and checks the tracked pnpm security policy values.
+
 `dot init` also installs managed pnpm globals:
 
 ```text

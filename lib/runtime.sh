@@ -93,3 +93,64 @@ ensure_pnpm_globals() {
     fi
   done
 }
+
+command_path_in_pnpm_home() {
+  local command_name="$1"
+  local command_path
+
+  command_path="$(command -v "$command_name" 2>/dev/null || true)"
+  [[ -n "$command_path" && "$command_path" == "$PNPM_HOME"/* ]]
+}
+
+check_runtime_origins() {
+  local failed=0
+  local command_name command_path
+
+  for command_name in pnpm node npm; do
+    command_path="$(command -v "$command_name" 2>/dev/null || true)"
+
+    if [[ -z "$command_path" ]]; then
+      print_error "$command_name is missing"
+      failed=1
+    elif command_path_in_pnpm_home "$command_name"; then
+      print_success "$command_name resolves from PNPM_HOME"
+    else
+      print_error "$command_name is not managed by pnpm: $command_path"
+      failed=1
+    fi
+  done
+
+  return "$failed"
+}
+
+check_pnpm_config_value() {
+  local key="$1"
+  local expected="$2"
+  local actual
+
+  actual="$(pnpm config get "$key" 2>/dev/null || true)"
+
+  if [[ "$actual" == "$expected" ]]; then
+    print_success "pnpm $key=$expected"
+    return 0
+  fi
+
+  print_error "pnpm $key is ${actual:-unset}; expected $expected"
+  return 1
+}
+
+check_pnpm_policy() {
+  if ! command_exists pnpm; then
+    print_error "pnpm policy cannot be checked because pnpm is missing"
+    return 1
+  fi
+
+  local failed=0
+
+  check_pnpm_config_value "ignore-scripts" "true" || failed=1
+  check_pnpm_config_value "minimumReleaseAge" "7200" || failed=1
+  check_pnpm_config_value "minimumReleaseAgeStrict" "true" || failed=1
+  check_pnpm_config_value "dangerouslyAllowAllBuilds" "false" || failed=1
+
+  return "$failed"
+}
