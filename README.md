@@ -39,7 +39,13 @@ command is not available immediately.
 
 ```text
 ~/dots/
-├── dot                 # Main management CLI
+├── dot                 # Main management CLI entrypoint
+├── lib/
+│   ├── brew.sh         # Homebrew bundle and package commands
+│   ├── core.sh         # Shared output, prompts, and generic helpers
+│   ├── git.sh          # Git hooks, identity, and secret scanning
+│   ├── runtime.sh      # pnpm, Node.js, and global runtime tools
+│   └── stow.sh         # GNU Stow links, backups, and dot CLI linking
 ├── home/               # Files stowed into $HOME
 │   ├── .config/
 │   │   ├── ghostty/
