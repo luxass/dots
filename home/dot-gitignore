@@ -13,4 +13,3 @@
 **/.pi/agent/packages/**
 **/.pi/agent/node_modules/**
 **/.pi/agent/package-lock.json
-**/.pi/agent/pnpm-lock.yaml
