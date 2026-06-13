@@ -18,6 +18,7 @@ readonly DOTFILES_DIR
 readonly PACKAGES_DIR="${DOTFILES_DIR}/packages"
 readonly HOME_DIR="${DOTFILES_DIR}/home"
 readonly BASE_BUNDLE="${PACKAGES_DIR}/bundle"
+readonly FONTS_BUNDLE="${PACKAGES_DIR}/bundle.fonts"
 readonly WORK_BUNDLE="${PACKAGES_DIR}/bundle.work"
 readonly BACKUP_ROOT="${DOTFILES_DIR}/backups"
 readonly PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
@@ -270,6 +271,7 @@ ensure_pnpm_globals() {
 bundle_file_for() {
   case "${1:-base}" in
     base) echo "$BASE_BUNDLE" ;;
+    fonts) echo "$FONTS_BUNDLE" ;;
     work) echo "$WORK_BUNDLE" ;;
     *)
       print_error "Unknown bundle: $1"
@@ -363,6 +365,42 @@ parse_bundle_packages() {
       printf 'cask:%s\n' "${BASH_REMATCH[1]}"
     fi
   done < "$bundle"
+}
+
+all_bundle_files() {
+  printf '%s\n' "$BASE_BUNDLE"
+  printf '%s\n' "$FONTS_BUNDLE"
+  printf '%s\n' "$WORK_BUNDLE"
+}
+
+tracked_brews() {
+  local bundle
+  while IFS= read -r bundle; do
+    [[ -f "$bundle" ]] || continue
+
+    while IFS=: read -r type name; do
+      [[ "$type" == "brew" && -n "$name" ]] || continue
+      printf '%s\n' "$name"
+      printf '%s\n' "${name##*/}"
+
+      case "$name" in
+        nvim) printf 'neovim\n' ;;
+        neovim) printf 'nvim\n' ;;
+      esac
+    done < <(parse_bundle_packages "$bundle")
+  done < <(all_bundle_files)
+}
+
+tracked_casks() {
+  local bundle
+  while IFS= read -r bundle; do
+    [[ -f "$bundle" ]] || continue
+
+    while IFS=: read -r type name; do
+      [[ "$type" == "cask" && -n "$name" ]] || continue
+      printf '%s\n' "$name"
+    done < <(parse_bundle_packages "$bundle")
+  done < <(all_bundle_files)
 }
 
 sort_bundle() {
@@ -553,6 +591,10 @@ run_init_steps() {
 _install_packages() {
   ensure_homebrew
   brew_bundle_install_resilient "$BASE_BUNDLE"
+
+  if [[ -f "$FONTS_BUNDLE" ]] && confirm "Install font packages?" "y"; then
+    brew_bundle_install_resilient "$FONTS_BUNDLE"
+  fi
 
   if [[ -f "$WORK_BUNDLE" ]] && confirm "Install work-specific packages?" "n"; then
     brew_bundle_install_resilient "$WORK_BUNDLE"
@@ -751,6 +793,10 @@ cmd_check_packages() {
   local failed=0
   brew_bundle_check "$BASE_BUNDLE" || failed=1
 
+  if [[ -f "$FONTS_BUNDLE" ]]; then
+    brew_bundle_check "$FONTS_BUNDLE" || failed=1
+  fi
+
   if [[ -f "$WORK_BUNDLE" ]]; then
     brew_bundle_check "$WORK_BUNDLE" || failed=1
   fi
@@ -804,8 +850,9 @@ cmd_package_list() {
   local bundles=()
   case "$bundle_filter" in
     base) bundles=("$BASE_BUNDLE") ;;
+    fonts) bundles=("$FONTS_BUNDLE") ;;
     work) bundles=("$WORK_BUNDLE") ;;
-    all) bundles=("$BASE_BUNDLE" "$WORK_BUNDLE") ;;
+    all) bundles=("$BASE_BUNDLE" "$FONTS_BUNDLE" "$WORK_BUNDLE") ;;
     *) print_error "Unknown bundle: $bundle_filter"; return 1 ;;
   esac
 
@@ -832,6 +879,32 @@ cmd_package_list() {
       fi
     done < <(parse_bundle_packages "$bundle")
   done
+}
+
+cmd_package_unmanaged() {
+  print_header "Unmanaged Homebrew packages"
+
+  local unmanaged_brews unmanaged_casks
+  unmanaged_brews="$(comm -23 \
+    <(brew leaves 2>/dev/null | sed 's#^.*/##' | sort -u) \
+    <(tracked_brews | sort -u))"
+  unmanaged_casks="$(comm -23 \
+    <(brew list --cask 2>/dev/null | sort -u) \
+    <(tracked_casks | sort -u))"
+
+  echo -e "\n${BOLD}Formulae${RESET}"
+  if [[ -n "$unmanaged_brews" ]]; then
+    printf '%s\n' "$unmanaged_brews"
+  else
+    print_success "No unmanaged top-level formulae"
+  fi
+
+  echo -e "\n${BOLD}Casks${RESET}"
+  if [[ -n "$unmanaged_casks" ]]; then
+    printf '%s\n' "$unmanaged_casks"
+  else
+    print_success "No unmanaged casks"
+  fi
 }
 
 cmd_package_add() {
@@ -888,8 +961,9 @@ cmd_package_remove() {
   local bundles=()
   case "$bundle_name" in
     base) bundles=("$BASE_BUNDLE") ;;
+    fonts) bundles=("$FONTS_BUNDLE") ;;
     work) bundles=("$WORK_BUNDLE") ;;
-    all) bundles=("$BASE_BUNDLE" "$WORK_BUNDLE") ;;
+    all) bundles=("$BASE_BUNDLE" "$FONTS_BUNDLE" "$WORK_BUNDLE") ;;
     *) print_error "Unknown bundle: $bundle_name"; return 1 ;;
   esac
 
@@ -945,9 +1019,10 @@ cmd_package_help() {
 ${BOLD}${SCRIPT_NAME} package${RESET}
 
 Usage:
-  ${SCRIPT_NAME} package list [base|work|all]
-  ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|work]
-  ${SCRIPT_NAME} package remove NAME [base|work|all]
+  ${SCRIPT_NAME} package list [base|fonts|work|all]
+  ${SCRIPT_NAME} package unmanaged
+  ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|fonts|work]
+  ${SCRIPT_NAME} package remove NAME [base|fonts|work|all]
   ${SCRIPT_NAME} package update [NAME|all]
 EOF
 }
@@ -958,6 +1033,7 @@ cmd_package() {
 
   case "$subcommand" in
     list) cmd_package_list "$@" ;;
+    unmanaged) cmd_package_unmanaged "$@" ;;
     add) cmd_package_add "$@" ;;
     remove) cmd_package_remove "$@" ;;
     update) cmd_package_update "$@" ;;
