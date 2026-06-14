@@ -21,4 +21,7 @@ export MANPAGER="less -X";
 # Pi writes changelog/update state into settings during version checks.
 export PI_SKIP_VERSION_CHECK="1";
 
+# Plannotator sharing is opt-in for Pi sessions.
+export PLANNOTATOR_SHARE="disabled";
+
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
