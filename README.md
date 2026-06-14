@@ -218,6 +218,26 @@ extension.
 The shell environment sets `PI_SKIP_VERSION_CHECK=1` so Pi does not write update
 or changelog state into the tracked settings file during startup.
 
+Manage Pi and pinned Pi extensions through `dot pi`:
+
+```sh
+dot pi status
+dot pi update 0.79.3
+dot pi extension install plannotator 0.20.2
+```
+
+`dot pi update VERSION` updates the tracked Pi package pins in
+`home/.pi/package.json`, refreshes the lockfile, runs `pi update`, verifies
+`pi --version`, runs the optional manual skills sync workflow when installed,
+and finishes with `dot doctor`. Pi's own updater supplies its pnpm safety flags
+for self-updates, including disabled lifecycle scripts and a release-age
+override for fresh Pi releases.
+
+`dot pi extension install plannotator VERSION` installs the pinned Plannotator
+Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This
+explicit pinned install disables npm lifecycle scripts and overrides npm's
+release-age gate for that command only.
+
 Do not commit Pi auth, trust decisions, sessions, package installs, logs, or
 caches. Those paths are ignored by the global gitignore.
 

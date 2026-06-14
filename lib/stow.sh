@@ -31,6 +31,7 @@ find_managed_sources() {
       -path "$HOME_DIR/.pi/agent/cache" -o \
       -path "$HOME_DIR/.pi/agent/logs" -o \
       -path "$HOME_DIR/.pi/agent/node_modules" -o \
+      -path "$HOME_DIR/.pi/agent/npm" -o \
       -path "$HOME_DIR/.pi/agent/packages" -o \
       -path "$HOME_DIR/.pi/agent/sessions" -o \
       -path "$HOME_DIR/.pi/agent/mcp-oauth" -o \

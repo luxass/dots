@@ -10,6 +10,8 @@ This is a personal macOS dotfiles repository.
 - Run `dot doctor` after behavior changes.
 - Use GNU Stow semantics. Files under `home/` map to `$HOME`; `dot-*` names map
   to hidden files through `stow --dotfiles`.
-- Do not reintroduce removed configs such as Neovim, tmux, skhd, lazygit, k9s,
+- Neovim is an actively used tool and may stay installed/tracked, but do not
+  reintroduce Neovim config unless explicitly requested.
+- Do not reintroduce removed configs or tools such as tmux, skhd, lazygit,
   wezterm, or custom alias/function files unless explicitly requested.
 - Keep personal Git identity in `~/.gitconfig.local`, not in tracked files.
