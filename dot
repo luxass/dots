@@ -15,7 +15,7 @@ readonly WORK_BUNDLE="${PACKAGES_DIR}/bundle.work"
 readonly BACKUP_ROOT="${DOTFILES_DIR}/backups"
 readonly PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
-readonly PNPM_GLOBAL_PACKAGES=("sfw")
+readonly PNPM_GLOBAL_PACKAGES=("sfw" "@earendil-works/pi-coding-agent:pi")
 
 CURRENT_STEP=0
 TOTAL_STEPS=0
@@ -42,6 +42,7 @@ TOOL_REGISTRY=(
   "Zoxide            ;; zoxide ;; -                            ;; false ;; - ;; true"
   "Bun               ;; bun  ;; -                              ;; false ;; - ;; true"
   "Socket Firewall   ;; sfw  ;; -                              ;; false ;; - ;; true"
+  "Pi                ;; pi   ;; -                              ;; false ;; - ;; true"
 )
 
 _parse_tool_entry() {

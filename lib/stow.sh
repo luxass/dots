@@ -22,6 +22,31 @@ managed_target_for() {
   printf '%s/%s\n' "$HOME" "$rel"
 }
 
+find_managed_sources() {
+  find "$HOME_DIR" \
+    \( \
+      -path "$HOME_DIR/.config/opencode/node_modules" -o \
+      -path "$HOME_DIR/.pi/node_modules" -o \
+      -path "$HOME_DIR/.pi/agent/bin" -o \
+      -path "$HOME_DIR/.pi/agent/cache" -o \
+      -path "$HOME_DIR/.pi/agent/logs" -o \
+      -path "$HOME_DIR/.pi/agent/node_modules" -o \
+      -path "$HOME_DIR/.pi/agent/packages" -o \
+      -path "$HOME_DIR/.pi/agent/sessions" -o \
+      -path "$HOME_DIR/.pi/agent/mcp-oauth" -o \
+      -path "$HOME_DIR/.pi/agent/extensions/*/node_modules" -o \
+      -path "$HOME_DIR/.pi/todos" \
+    \) -prune -o \
+    \( -type f -o -type l \) \
+    ! -name auth.json \
+    ! -name trust.json \
+    ! -name package-lock.json \
+    ! -name mcp-cache.json \
+    ! -name mcp-npx-cache.json \
+    ! -name mcp-auth.json \
+    -print0
+}
+
 backup_path() {
   local target="$1"
   local backup_dir="$2"
@@ -47,7 +72,7 @@ backup_conflicts() {
       backup_path "$target" "$backup_dir"
       made_backup=1
     fi
-  done < <(find "$HOME_DIR" \( -type f -o -type l \) -print0)
+  done < <(find_managed_sources)
 
   if [[ "$made_backup" -eq 0 ]]; then
     rmdir "$backup_dir" 2>/dev/null || true
@@ -87,7 +112,7 @@ check_managed_links() {
       fi
       failed=1
     fi
-  done < <(find "$HOME_DIR" \( -type f -o -type l \) -print0)
+  done < <(find_managed_sources)
 
   return "$failed"
 }

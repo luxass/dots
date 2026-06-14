@@ -8,6 +8,7 @@
 .node_history
 .viminfo
 node_modules/
+.pnpm-store/
 backups/
 Brewfile.lock.json
 packages/failed_packages_*.txt
@@ -28,5 +29,28 @@ home/.config/zed/conversations/
 home/.config/zed/embeddings/
 home/.config/zed/.tmp*
 home/.config/raycast/
+
 home/.config/opencode/node_modules/
+
+# Pi runtime, generated state, and secrets
+home/.pi/node_modules/
+home/.pi/package-lock.json
+home/.pi/agent/auth.json
+home/.pi/agent/trust.json
+home/.pi/agent/bin/
+home/.pi/agent/cache/
+home/.pi/agent/logs/
+home/.pi/agent/node_modules/
+home/.pi/agent/packages/
+home/.pi/agent/sessions/
+home/.pi/agent/mcp-oauth/
+home/.pi/agent/mcp-cache.json
+home/.pi/agent/mcp-npx-cache.json
+home/.pi/agent/mcp-auth.json
+home/.pi/todos/
+home/.local/share/pi/mcp-auth.json
+
+# Pi extension dependencies
+home/.pi/agent/extensions/**/node_modules/
+
 home/.codex/auth.json

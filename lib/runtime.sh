@@ -74,10 +74,16 @@ ensure_node_runtime() {
 ensure_pnpm_globals() {
   ensure_node_runtime
 
-  local package
-  for package in "${PNPM_GLOBAL_PACKAGES[@]}"; do
-    if command_exists "$package"; then
-      print_success "$package is installed"
+  local entry package command_name
+  for entry in "${PNPM_GLOBAL_PACKAGES[@]}"; do
+    package="${entry%%:*}"
+    command_name="${entry#*:}"
+    if [[ "$command_name" == "$entry" ]]; then
+      command_name="$package"
+    fi
+
+    if command_exists "$command_name"; then
+      print_success "$command_name is installed"
       continue
     fi
 
@@ -85,10 +91,10 @@ ensure_pnpm_globals() {
     pnpm add -g "$package"
     hash -r 2>/dev/null || true
 
-    if command_exists "$package"; then
-      print_success "$package installed"
+    if command_exists "$command_name"; then
+      print_success "$command_name installed"
     else
-      print_error "$package install completed, but command is not on PATH"
+      print_error "$package install completed, but $command_name is not on PATH"
       return 1
     fi
   done
