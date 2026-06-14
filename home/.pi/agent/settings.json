@@ -1,6 +1,6 @@
 {
-  "theme": "dark",
-  "quietStartup": true,
+  "theme": "graphite-grove",
+  "quietStartup": false,
   "defaultProjectTrust": "ask",
   "enableInstallTelemetry": false,
   "enableAnalytics": false,
