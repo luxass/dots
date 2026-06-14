@@ -1,3 +1,12 @@
+/**
+ * Trusted GitHub repository extension.
+ *
+ * Automatically grants Pi project trust for git checkouts whose `origin`
+ * remotes all point to GitHub repositories owned by trusted organizations or
+ * users. Everything else remains undecided so Pi still asks before loading
+ * project-local resources.
+ */
+
 import type { ExtensionAPI, ProjectTrustEventResult } from "@earendil-works/pi-coding-agent";
 
 const TRUSTED_GITHUB_OWNERS = new Set(["kvalitetsit", "luxass"]);

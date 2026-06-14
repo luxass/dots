@@ -1,3 +1,16 @@
+/**
+ * Git command interceptor.
+ *
+ * Applies two small guards to agent-driven git commands:
+ *
+ * 1. Editor hang prevention: set GIT_EDITOR and GIT_SEQUENCE_EDITOR to `true`,
+ *    and GIT_MERGE_AUTOEDIT to `no`, so git does not open an interactive editor
+ *    that would hang the shell tool.
+ *
+ * 2. Hook bypass prevention: block `--no-verify` so the agent cannot skip
+ *    repository hooks. Hook failures should be fixed or escalated to the user.
+ */
+
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 

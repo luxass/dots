@@ -1,3 +1,10 @@
+/**
+ * Working-message extension.
+ *
+ * Replaces Pi's turn-in-progress text with a random short status line at the
+ * start of a turn, then resets it when the turn ends.
+ */
+
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const messages = [

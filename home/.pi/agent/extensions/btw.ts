@@ -1,3 +1,12 @@
+/**
+ * BTW side-chat extension.
+ *
+ * Adds `/btw` as a side-channel conversation inside Pi. It opens a compact TUI
+ * overlay, seeds the side session with the main conversation context, preserves
+ * the side thread in session entries, and can inject a summary back into the
+ * main conversation when the overlay is closed.
+ */
+
 import {
 	buildSessionContext,
 	createAgentSession,
