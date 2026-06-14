@@ -66,6 +66,9 @@ command is not available immediately.
 
 ## Commands
 
+Global `-v` / `--verbose` prints progress and decision-point diagnostics, for
+example `dot --verbose doctor`.
+
 ```sh
 dot init             # install packages, stow files, create local identity, link dot
 dot update           # pull, update Homebrew, install bundle, restow
