@@ -18,4 +18,7 @@ export NODE_REPL_MODE="sloppy";
 
 export MANPAGER="less -X";
 
+# Pi writes changelog/update state into settings during version checks.
+export PI_SKIP_VERSION_CHECK="1";
+
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"

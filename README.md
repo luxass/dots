@@ -18,7 +18,7 @@ other configs that are not currently wanted.
 - GNU Stow symlink management from `home/` to `$HOME`
 - Resilient Homebrew bundle installation with failed package retry files
 - pnpm-managed Node.js runtime and npm installation
-- Managed pnpm global tools, including Socket Firewall (`sfw`)
+- Managed pnpm global tools, including Socket Firewall (`sfw`) and Pi (`pi`)
 - Public-safe Git config with private identity in `~/.gitconfig.local`
 - Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for disabled scripts and release age checks
@@ -167,6 +167,7 @@ and checks the tracked pnpm security policy values.
 
 ```text
 sfw
+pi
 ```
 
 Socket Firewall can be used by prefixing supported package-manager commands:
@@ -175,6 +176,47 @@ Socket Firewall can be used by prefixing supported package-manager commands:
 sfw pnpm install
 sfw npm install
 ```
+
+## Pi Coding Agent
+
+Pi is installed by default as a pnpm global package:
+
+```sh
+pnpm add -g @earendil-works/pi-coding-agent
+```
+
+The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
+
+- `settings.json` keeps project trust on `ask`, disables Pi telemetry/analytics,
+  and enables compaction/retry defaults.
+- `AGENTS.md` contains global safety notes for Pi sessions.
+- `extensions/safety-guard.ts` blocks writes outside the current project,
+  blocks protected credential/config paths, blocks catastrophic shell commands,
+  and asks before high-risk shell commands when a TUI is available.
+- `extensions/trust-github-repos.ts` automatically trusts GitHub checkouts
+  owned by `owner` or `luxass`.
+- `extensions/notify.ts` sends a Ghostty-compatible desktop notification when
+  Pi finishes a turn and waits for input.
+- `extensions/review.ts` adds `/review` and `/end-review` workflows for code
+  review sessions over PRs, branches, commits, folders, or local changes.
+- `extensions/package-manager-interceptor.ts` prepends package-manager shims to
+  Pi's bash `PATH`, blocks install-policy bypass flags, and routes install-like
+  `pnpm`/`npm`/`yarn`/`bun` commands and runner aliases through Socket Firewall
+  when available.
+- `skills/commit/` teaches Pi to make focused Conventional Commits with useful
+  commit bodies.
+- `skills/github/` teaches Pi to use the `gh` CLI for PRs, checks, workflow
+  runs, issues, and GitHub API queries.
+
+This is a host-side guard, not a sandbox. For untrusted repositories or
+unattended work, run Pi in an isolated environment instead of relying only on the
+extension.
+
+The shell environment sets `PI_SKIP_VERSION_CHECK=1` so Pi does not write update
+or changelog state into the tracked settings file during startup.
+
+Do not commit Pi auth, trust decisions, sessions, package installs, logs, or
+caches. Those paths are ignored by the global gitignore.
 
 ## Troubleshooting
 
