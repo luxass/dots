@@ -112,6 +112,12 @@ cmd_update() {
   brew update
   brew_bundle_install_resilient "$BASE_BUNDLE"
   _stow_dotfiles
+
+  if confirm "Update Pi and managed Pi extensions/skills?" "n"; then
+    cmd_pi_update
+  else
+    print_info "Skipping Pi update"
+  fi
 }
 
 cmd_info() {

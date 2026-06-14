@@ -95,7 +95,7 @@ dots/
 
 ```sh
 dot init             # Install packages, stow files, create local identity, link dot
-dot update           # Pull repo changes, update packages, and restow
+dot update           # Pull repo changes, update packages, restow, optionally update Pi
 dot doctor           # Run diagnostics and secret scan
 dot info             # Show repo paths, runtime tools, and git status
 dot links            # Verify managed home symlinks
@@ -109,6 +109,7 @@ dot retry-failed     # Retry failed package installations
 dot package list     # List managed packages
 dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
+dot pi update        # Update Pi to latest, update packages/extensions, sync skills
 dot completions      # Print zsh completions
 ```
 

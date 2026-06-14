@@ -30,6 +30,10 @@ pi_package_version() {
   ' "$PI_PACKAGE_JSON" "$package_name"
 }
 
+latest_pi_version() {
+  pnpm view @earendil-works/pi-coding-agent version 2>/dev/null
+}
+
 set_pi_package_version() {
   local version="$1"
 
@@ -153,16 +157,20 @@ cmd_pi_status() {
 cmd_pi_update() {
   local version="${1:-}"
 
-  if [[ -z "$version" ]]; then
-    print_error "Usage: dot pi update VERSION"
-    return 1
-  fi
-
   require_pi_tooling || return 1
 
   if [[ ! -f "$PI_PACKAGE_JSON" ]]; then
     print_error "Missing $PI_PACKAGE_JSON"
     return 1
+  fi
+
+  if [[ -z "$version" ]]; then
+    print_info "Checking latest Pi version"
+    version="$(latest_pi_version)"
+    if [[ -z "$version" ]]; then
+      print_error "Could not determine latest Pi version"
+      return 1
+    fi
   fi
 
   print_header "Updating Pi to $version"
@@ -251,12 +259,12 @@ ${BOLD}${SCRIPT_NAME} pi${RESET}
 
 ${BOLD}USAGE:${RESET}
   ${SCRIPT_NAME} pi status
-  ${SCRIPT_NAME} pi update VERSION
+  ${SCRIPT_NAME} pi update [VERSION]
   ${SCRIPT_NAME} pi extension install plannotator VERSION
 
 ${BOLD}COMMANDS:${RESET}
   status                         Show installed, latest, and pinned Pi state
-  update VERSION                 Update tracked Pi pins, run 'pi update', verify version, and run doctor
+  update [VERSION]               Update tracked Pi pins, run 'pi update', verify version, sync skills, and run doctor
   extension install NAME VERSION Install a managed pinned Pi extension
 EOF
 }
