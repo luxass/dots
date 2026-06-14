@@ -2,6 +2,8 @@
 export XDG_CACHE_HOME="$HOME/.cache";
 export XDG_CONFIG_HOME="$HOME/.config";
 export XDG_DATA_HOME="$HOME/.local/share";
+export XDG_STATE_HOME="$HOME/.local/state";
+export HISTFILE="$XDG_STATE_HOME/zsh/history";
 export EDITOR="nvim";
 
 # node env variables
@@ -20,5 +22,8 @@ export MANPAGER="less -X";
 
 # Pi writes changelog/update state into settings during version checks.
 export PI_SKIP_VERSION_CHECK="1";
+
+# Plannotator sharing is opt-in for Pi sessions.
+export PLANNOTATOR_SHARE="disabled";
 
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"

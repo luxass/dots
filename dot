@@ -26,6 +26,7 @@ source "${DOTFILES_DIR}/lib/brew.sh"
 source "${DOTFILES_DIR}/lib/runtime.sh"
 source "${DOTFILES_DIR}/lib/stow.sh"
 source "${DOTFILES_DIR}/lib/git.sh"
+source "${DOTFILES_DIR}/lib/pi.sh"
 
 TOOL_REGISTRY=(
   "Homebrew          ;; brew ;; fn:ensure_homebrew             ;; true  ;; - ;; true"
@@ -111,6 +112,12 @@ cmd_update() {
   brew update
   brew_bundle_install_resilient "$BASE_BUNDLE"
   _stow_dotfiles
+
+  if confirm "Update Pi and managed Pi extensions/skills?" "n"; then
+    cmd_pi_update
+  else
+    print_info "Skipping Pi update"
+  fi
 }
 
 cmd_info() {
@@ -251,6 +258,7 @@ _dot() {
     'hooks:Install repository Git hooks'
     'secret-scan:Scan repository for secrets'
     'package:Manage Homebrew bundle packages'
+    'pi:Manage Pi and Pi extensions'
     'check-packages:Check bundle package state'
     'retry-failed:Retry failed package installs'
     'git-identity:Create or update local Git identity'
@@ -289,6 +297,7 @@ ${BOLD}COMMANDS:${RESET}
   hooks            Install repository Git hooks
   secret-scan      Scan repository for secrets
   package          Package management commands
+  pi               Manage Pi and Pi extensions
   check-packages   Check installed package state
   retry-failed     Retry failed package installations
   git-identity     Create or update ~/.gitconfig.local
@@ -338,6 +347,7 @@ main() {
     hooks) cmd_hooks "$@" ;;
     secret-scan) cmd_secret_scan "$@" ;;
     package) cmd_package "$@" ;;
+    pi) cmd_pi "$@" ;;
     check-packages) cmd_check_packages "$@" ;;
     retry-failed) cmd_retry_failed "$@" ;;
     git-identity) cmd_git_identity "$@" ;;

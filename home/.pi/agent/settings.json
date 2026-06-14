@@ -1,6 +1,6 @@
 {
-  "theme": "dark",
-  "quietStartup": true,
+  "theme": "graphite-grove",
+  "quietStartup": false,
   "defaultProjectTrust": "ask",
   "enableInstallTelemetry": false,
   "enableAnalytics": false,
@@ -25,7 +25,11 @@
   "images": {
     "autoResize": true
   },
-  "lastChangelogVersion": "0.78.1",
+  "collapseChangelog": true,
+  "lastChangelogVersion": "0.79.3",
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5"
+  "defaultModel": "gpt-5.5",
+  "packages": [
+    "npm:@plannotator/pi-extension@0.20.2"
+  ]
 }

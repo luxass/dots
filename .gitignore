@@ -44,6 +44,7 @@ home/.pi/agent/node_modules/
 home/.pi/agent/packages/
 home/.pi/agent/sessions/
 home/.pi/agent/mcp-oauth/
+home/.pi/agent/npm/
 home/.pi/agent/mcp-cache.json
 home/.pi/agent/mcp-npx-cache.json
 home/.pi/agent/mcp-auth.json
