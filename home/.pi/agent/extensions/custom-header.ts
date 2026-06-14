@@ -1,68 +1,161 @@
-/**
- * Custom Header Extension
- *
- * Demonstrates ctx.ui.setHeader() for replacing the built-in header
- * (logo + keybinding hints) with a custom component showing the pi mascot.
- */
+import type { ExtensionAPI, SessionInfo, Theme } from "@earendil-works/pi-coding-agent";
+import { SessionManager, VERSION } from "@earendil-works/pi-coding-agent";
 
-import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
-import { VERSION } from "@earendil-works/pi-coding-agent";
+const ANSI_PATTERN = /\u001B\[[0-?]*[ -/]*[@-~]/g;
 
-// --- PI MASCOT ---
-// Based on pi_mascot.ts - the pi agent character
-function getPiMascot(theme: Theme): string[] {
-	// --- COLORS ---
-	// 3b1b Blue: R=80, G=180, B=230
-	const piBlue = (text: string) => theme.fg("accent", text);
-	const white = (text: string) => text; // Use plain white (or theme.fg("text", text))
-	const black = (text: string) => theme.fg("dim", text); // Use dim for contrast
+function visibleLength(value: string): number {
+	return value.replace(ANSI_PATTERN, "").length;
+}
 
-	// --- GLYPHS ---
-	const BLOCK = "█";
-	const PUPIL = "▌"; // Vertical half-block for the pupil
+function padRight(value: string, width: number): string {
+	return value + " ".repeat(Math.max(0, width - visibleLength(value)));
+}
 
-	// --- CONSTRUCTION ---
+function truncate(value: string, width: number): string {
+	const clean = value.replace(/\s+/g, " ").trim();
+	if (clean.length <= width) return clean;
+	return `${clean.slice(0, Math.max(0, width - 1))}…`;
+}
 
-	// 1. The Eye Unit: [White Full Block][Black Vertical Sliver]
-	// This creates the "looking sideways" effect
-	const eye = `${white(BLOCK)}${black(PUPIL)}`;
+function timeAgo(date: Date): string {
+	const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+	if (seconds < 60) return "just now";
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return `${minutes}m ago`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours}h ago`;
+	const days = Math.floor(hours / 24);
+	return `${days}d ago`;
+}
 
-	// 2. Line 1: The Eyes
-	// 5 spaces indent aligns them with the start of the legs
-	const lineEyes = `     ${eye}  ${eye}`;
+function sessionLabel(session: SessionInfo): string {
+	const label = session.name || session.firstMessage || session.id.slice(0, 8);
+	return label.replace(/\s+/g, " ").trim();
+}
 
-	// 3. Line 2: The Wide Top Bar (The "Overhang")
-	// 14 blocks wide for that serif-style roof
-	const lineBar = `  ${piBlue(BLOCK.repeat(14))}`;
+function getPiLogo(theme: Theme): string[] {
+	const left = (text: string) => theme.fg("customMessageLabel", text);
+	const mid = (text: string) => theme.fg("accent", text);
+	const right = (text: string) => theme.fg("userMessageText", text);
 
-	// 4. Lines 3-6: The Legs
-	// Indented 5 spaces relative to the very left edge
-	// Leg width: 2 blocks | Gap: 4 blocks
-	const lineLeg = `     ${piBlue(BLOCK.repeat(2))}    ${piBlue(BLOCK.repeat(2))}`;
+	return [
+		` ${left("██")} ${mid("████")} ${right("██")}`,
+		`    ${mid("██")}   ${right("██")}`,
+		`    ${mid("██")}   ${right("██")}`,
+		`    ${mid("██")}   ${right("██")}`,
+		` ${left("██")} ${mid("████")} ${right("██")}`,
+	];
+}
 
-	// --- ASSEMBLY ---
-	return ["", lineEyes, lineBar, lineLeg, lineLeg, lineLeg, lineLeg, ""];
+function countExtensionSources(pi: ExtensionAPI): number {
+	const sources = new Set<string>();
+
+	for (const command of pi.getCommands()) {
+		if (command.source === "extension" && command.sourceInfo?.path) {
+			sources.add(command.sourceInfo.path);
+		}
+	}
+
+	for (const tool of pi.getAllTools()) {
+		const sourceInfo = tool.sourceInfo;
+		if (sourceInfo?.path?.includes("/extensions/")) {
+			sources.add(sourceInfo.path);
+		}
+	}
+
+	return sources.size;
 }
 
 export default function (pi: ExtensionAPI) {
-	// Set custom header immediately on load (if UI is available)
 	pi.on("session_start", async (_event, ctx) => {
-		if (ctx.mode === "tui") {
-			ctx.ui.setHeader((_tui, theme) => {
-				return {
-					render(_width: number): string[] {
-						const mascotLines = getPiMascot(theme);
-						// Add a subtitle with hint
-						const subtitle = `${theme.fg("muted", "   shitty coding agent")}${theme.fg("dim", ` v${VERSION}`)}`;
-						return [...mascotLines, subtitle];
-					},
-					invalidate() {},
-				};
-			});
-		}
+		if (ctx.mode !== "tui") return;
+
+		const commands = pi.getCommands();
+		const extensionCount = countExtensionSources(pi);
+		const skillCount = commands.filter((command) => command.source === "skill").length;
+		const promptCount = commands.filter((command) => command.source === "prompt").length;
+		const recentSessions = await SessionManager.list(ctx.cwd).catch(() => [] as SessionInfo[]);
+		const modelName = ctx.model?.id ?? "no model";
+		const providerName = ctx.model?.provider ?? "provider unknown";
+
+		ctx.ui.setHeader((_tui, theme) => {
+			const border = (text: string) => theme.fg("borderMuted", text);
+			const title = (text: string) => theme.fg("customMessageLabel", text);
+			const heading = (text: string) => theme.fg("warning", text);
+			const ok = (text: string) => theme.fg("success", text);
+			const dim = (text: string) => theme.fg("dim", text);
+			const muted = (text: string) => theme.fg("muted", text);
+			const accent = (text: string) => theme.fg("accent", text);
+
+			return {
+				render(width: number): string[] {
+					const boxWidth = Math.max(58, Math.min(86, width - 2));
+					const leftWidth = 21;
+					const rightWidth = boxWidth - leftWidth - 3;
+					const label = " pi agent ";
+					const topFill = Math.max(0, boxWidth - 4 - label.length);
+					const rule = border("─".repeat(rightWidth));
+
+					const model = truncate(modelName, leftWidth - 4);
+					const provider = truncate(providerName, leftWidth - 6);
+					const sessions = recentSessions
+						.slice()
+						.sort((a, b) => b.modified.getTime() - a.modified.getTime())
+						.slice(0, 3);
+
+					const leftLines = [
+						"",
+						`   ${theme.bold("Welcome back!")}`,
+						"",
+						...getPiLogo(theme).map((line) => `  ${line}`),
+						"",
+						` ${title(model)}`,
+						`   ${muted(provider)}`,
+					];
+
+					const rightLines = [
+						heading("Tips"),
+						`${accent("/")} ${dim("for commands")}`,
+						`${accent("!")} ${dim("to run bash")}`,
+						`${dim("Shift+Tab")} cycle thinking`,
+						rule,
+						heading("Loaded"),
+						`${ok("✓")} ${extensionCount} extensions`,
+						`${ok("✓")} ${skillCount} skills`,
+						`${ok("✓")} ${promptCount} prompt templates`,
+						rule,
+						heading("Recent sessions"),
+						...(sessions.length > 0
+							? sessions.map((session) => {
+									const ago = `(${timeAgo(session.modified)})`;
+									const labelWidth = Math.max(8, rightWidth - visibleLength(`•  ${ago}`) - 1);
+									const label = truncate(sessionLabel(session), labelWidth);
+									return `${accent("•")} ${label} ${dim(ago)}`;
+								})
+							: [dim("No recent sessions")]),
+						"",
+						`${dim("pi")} ${dim(`v${VERSION}`)}`,
+					];
+
+					const rowCount = Math.max(leftLines.length, rightLines.length);
+					const rows = [
+						`${border("╭──")}${title(label)}${border(`${"─".repeat(topFill)}╮`)}`,
+					];
+
+					for (let index = 0; index < rowCount; index++) {
+						rows.push(
+							`${border("│")}${padRight(leftLines[index] ?? "", leftWidth)}${border("│")}${padRight(rightLines[index] ?? "", rightWidth)}${border("│")}`,
+						);
+					}
+
+					rows.push(`${border("╰")}${border("─".repeat(boxWidth - 2))}${border("╯")}`);
+					return rows;
+				},
+				invalidate() {},
+			};
+		});
 	});
 
-	// Command to restore built-in header
 	pi.registerCommand("builtin-header", {
 		description: "Restore built-in header with keybinding hints",
 		handler: async (_args, ctx) => {
