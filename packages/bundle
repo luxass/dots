@@ -1,4 +1,6 @@
+tap "anomalyco/tap"
 tap "luxass/tap"
+tap "oven-sh/bun"
 
 brew "anomalyco/tap/opencode"
 brew "bat"
