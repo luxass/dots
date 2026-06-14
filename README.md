@@ -201,7 +201,8 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   review sessions over PRs, branches, commits, folders, or local changes.
 - `extensions/package-manager-interceptor.ts` prepends package-manager shims to
   Pi's bash `PATH`, blocks install-policy bypass flags, and routes install-like
-  `pnpm`/`npm`/`yarn`/`bun` commands through Socket Firewall when available.
+  `pnpm`/`npm`/`yarn`/`bun` commands and runner aliases through Socket Firewall
+  when available.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
 unattended work, run Pi in an isolated environment instead of relying only on the

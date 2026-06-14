@@ -2,8 +2,9 @@
  * Package-manager command interceptor.
  *
  * Registers a wrapped bash tool that prepends `intercepted-commands/` to PATH.
- * The shim scripts for `pnpm`, `npm`, `yarn`, and `bun` route install-like
- * commands through Socket Firewall (`sfw`) and leave read-only commands alone.
+ * The shim scripts for `pnpm`, `npm`, `yarn`, `bun`, and their runner aliases
+ * route install-like commands through Socket Firewall (`sfw`) and leave
+ * read-only commands alone.
  *
  * A spawn hook still blocks explicit install-policy bypass flags, including
  * attempts that call package managers by absolute path and bypass the shims.
@@ -25,7 +26,7 @@ const BLOCKED_FLAGS = [
 ];
 
 const PACKAGE_MANAGER_SEGMENT_RE =
-	/(?:^|\n|[;|&]{1,2})\s*(?:\S+\/)?(?:pnpm|npm|yarn|bun)\b[^\n;|&]*/m;
+	/(?:^|\n|[;|&]{1,2})\s*(?:\S+\/)?(?:pnpm|pnpx|npm|npx|yarn|yarnpkg|bun|bunx)\b[^\n;|&]*/m;
 
 function getBlockedCommandMessage(command: string): string | null {
 	const segment = command.match(PACKAGE_MANAGER_SEGMENT_RE)?.[0] ?? "";
