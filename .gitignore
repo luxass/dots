@@ -8,6 +8,7 @@
 .node_history
 .viminfo
 node_modules/
+.pnpm-store/
 backups/
 Brewfile.lock.json
 packages/failed_packages_*.txt
