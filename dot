@@ -19,6 +19,7 @@ readonly PNPM_GLOBAL_PACKAGES=("sfw" "@earendil-works/pi-coding-agent:pi")
 
 CURRENT_STEP=0
 TOTAL_STEPS=0
+DOT_VERBOSE="${DOT_VERBOSE:-false}"
 
 source "${DOTFILES_DIR}/lib/core.sh"
 source "${DOTFILES_DIR}/lib/brew.sh"
@@ -144,10 +145,12 @@ cmd_info() {
 }
 
 cmd_doctor() {
+  parse_verbose_args "$@" || return 1
   print_header "Running diagnostics"
 
   local failed=0
 
+  print_verbose "Checking registered tool dependencies"
   for entry in "${TOOL_REGISTRY[@]}"; do
     _parse_tool_entry "$entry"
     [[ "$r_doctor" == "true" ]] || continue
@@ -166,38 +169,48 @@ cmd_doctor() {
     fi
   done
 
+  print_verbose "Checking repository layout and executable bits"
   [[ -d "$HOME_DIR" ]] || { print_error "Missing $HOME_DIR"; failed=1; }
   [[ -f "$BASE_BUNDLE" ]] || { print_error "Missing $BASE_BUNDLE"; failed=1; }
   [[ -x "$DOTFILES_DIR/dot" ]] || { print_error "dot is not executable"; failed=1; }
   [[ -x "$DOTFILES_DIR/.githooks/pre-push" ]] || { print_error "pre-push hook is not executable"; failed=1; }
 
+  print_verbose "Checking Git hook configuration"
   if git_hooks_enabled; then
     print_success "Git hooks path"
   else
     print_warning "Git hooks path is not .githooks; run 'dot hooks'"
   fi
 
+  print_verbose "Checking local Git identity configuration"
   if [[ -f "$HOME/.gitconfig.local" ]]; then
     print_success "Git identity config"
   else
     print_warning "Missing ~/.gitconfig.local"
   fi
 
-  check_managed_links false || failed=1
+  print_verbose "Checking managed home symlinks"
+  check_managed_links || failed=1
 
+  print_verbose "Checking shell PATH entries"
   if path_contains "$HOME/.local/bin"; then
     print_success "~/.local/bin is on PATH"
   else
     print_warning "~/.local/bin is not on PATH"
   fi
 
+  print_verbose "Checking pnpm-managed runtime origins"
   check_runtime_origins || failed=1
+
+  print_verbose "Checking pnpm security policy"
   check_pnpm_policy || failed=1
 
+  print_verbose "Checking Homebrew bundle state"
   if ! brew_bundle_check "$BASE_BUNDLE"; then
     failed=1
   fi
 
+  print_verbose "Running repository secret scan"
   if secret_scan; then
     print_error "Possible secrets found"
     failed=1
@@ -228,6 +241,8 @@ cmd_completions() {
 _dot() {
   local -a commands
   commands=(
+    '-v:Print verbose progress diagnostics'
+    '--verbose:Print verbose progress diagnostics'
     'init:Initialize and install dotfiles'
     'update:Update dotfiles and packages'
     'doctor:Run diagnostics'
@@ -258,7 +273,12 @@ ${BOLD}${SCRIPT_NAME}${RESET} - Dotfiles management tool
 Version: ${VERSION}
 
 ${BOLD}USAGE:${RESET}
-  ${SCRIPT_NAME} COMMAND [ARGS]
+  ${SCRIPT_NAME} [GLOBAL OPTIONS] COMMAND [ARGS]
+
+${BOLD}GLOBAL OPTIONS:${RESET}
+  -v, --verbose    Print progress and decision-point diagnostics
+  -h, --help       Show this help
+  --version        Show version
 
 ${BOLD}COMMANDS:${RESET}
   init             Initialize Homebrew packages, Stow links, and dot CLI
@@ -288,27 +308,46 @@ EOF
 }
 
 main() {
-  case "${1:-help}" in
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      -v|--verbose)
+        DOT_VERBOSE=true
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *) break ;;
+    esac
+  done
+
+  local command="${1:-help}"
+  if [[ "$#" -gt 0 ]]; then
+    shift
+  fi
+
+  case "$command" in
     --version) echo "${SCRIPT_NAME} version ${VERSION}" ;;
     -h|--help|help) cmd_help ;;
-    init) shift; cmd_init "$@" ;;
-    update) shift; cmd_update "$@" ;;
-    doctor) shift; cmd_doctor "$@" ;;
-    info) shift; cmd_info "$@" ;;
-    links) shift; cmd_links "$@" ;;
-    hooks) shift; cmd_hooks "$@" ;;
-    secret-scan) shift; cmd_secret_scan "$@" ;;
-    package) shift; cmd_package "$@" ;;
-    check-packages) shift; cmd_check_packages "$@" ;;
-    retry-failed) shift; cmd_retry_failed "$@" ;;
-    git-identity) shift; cmd_git_identity "$@" ;;
-    stow) shift; cmd_stow "$@" ;;
-    unstow) shift; cmd_unstow "$@" ;;
-    link) shift; cmd_link "$@" ;;
-    unlink) shift; cmd_unlink "$@" ;;
-    completions) shift; cmd_completions "$@" ;;
-    edit) shift; cmd_edit "$@" ;;
-    *) print_error "Unknown command: $1"; cmd_help; return 1 ;;
+    init) cmd_init "$@" ;;
+    update) cmd_update "$@" ;;
+    doctor) cmd_doctor "$@" ;;
+    info) cmd_info "$@" ;;
+    links) cmd_links "$@" ;;
+    hooks) cmd_hooks "$@" ;;
+    secret-scan) cmd_secret_scan "$@" ;;
+    package) cmd_package "$@" ;;
+    check-packages) cmd_check_packages "$@" ;;
+    retry-failed) cmd_retry_failed "$@" ;;
+    git-identity) cmd_git_identity "$@" ;;
+    stow) cmd_stow "$@" ;;
+    unstow) cmd_unstow "$@" ;;
+    link) cmd_link "$@" ;;
+    unlink) cmd_unlink "$@" ;;
+    completions) cmd_completions "$@" ;;
+    edit) cmd_edit "$@" ;;
+    *) print_error "Unknown command: $command"; cmd_help; return 1 ;;
   esac
 }
 

@@ -62,6 +62,7 @@ backup_conflicts() {
   local backup_dir="$BACKUP_ROOT/$(timestamp)"
   local made_backup=0
 
+  print_verbose "Checking for files that would conflict with managed links"
   mkdir -p "$BACKUP_ROOT"
 
   while IFS= read -r -d '' source; do
@@ -76,15 +77,18 @@ backup_conflicts() {
 
   if [[ "$made_backup" -eq 0 ]]; then
     rmdir "$backup_dir" 2>/dev/null || true
+    print_verbose "No link conflicts found"
   else
     print_success "Conflicts backed up to $backup_dir"
   fi
 }
 
 ensure_stow() {
+  print_verbose "Checking GNU Stow availability"
   ensure_homebrew
 
   if command_exists stow; then
+    print_verbose "GNU Stow is available"
     return 0
   fi
 
@@ -93,41 +97,56 @@ ensure_stow() {
 }
 
 check_managed_links() {
-  local verbose="${1:-false}"
+  local verbose="${1:-${DOT_VERBOSE:-false}}"
   local failed=0
+  local total=0
+  local failed_count=0
+
+  if [[ "$verbose" == "true" ]]; then
+    print_info "Scanning managed sources in $HOME_DIR"
+    print_info "Pruning generated runtime directories from the managed-link scan"
+  fi
 
   while IFS= read -r -d '' source; do
     local target
+    ((++total))
     target="$(managed_target_for "$source")"
 
-    if is_repo_path "$target" "$source"; then
-      if [[ "$verbose" == "true" ]]; then
-        print_success "${target#$HOME/}"
-      fi
-    else
+    if ! is_repo_path "$target" "$source"; then
       if [[ -e "$target" || -L "$target" ]]; then
         print_error "Bad link: ${target#$HOME/}"
       else
         print_error "Missing link: ${target#$HOME/}"
       fi
       failed=1
+      ((++failed_count))
     fi
   done < <(find_managed_sources)
+
+  if [[ "$failed" -eq 0 ]]; then
+    print_success "Managed links are healthy ($total checked)"
+  else
+    print_error "Managed links failed ($failed_count of $total checked)"
+  fi
 
   return "$failed"
 }
 
 _stow_dotfiles() {
   ensure_stow
+  print_verbose "Preparing to stow files from $HOME_DIR to $HOME"
   backup_conflicts
   print_info "Stowing files from $HOME_DIR to $HOME"
-  stow --dotfiles -R -v -d "$DOTFILES_DIR" -t "$HOME" home
+  print_verbose "Running GNU Stow in restow mode for package: home"
+  stow --dotfiles -R -d "$DOTFILES_DIR" -t "$HOME" home
   print_success "Dotfiles stowed"
 }
 
 _unstow_dotfiles() {
   ensure_stow
-  stow --dotfiles -D -v -d "$DOTFILES_DIR" -t "$HOME" home
+  print_verbose "Preparing to unstow files from $HOME_DIR"
+  print_verbose "Running GNU Stow in delete mode for package: home"
+  stow --dotfiles -D -d "$DOTFILES_DIR" -t "$HOME" home
   print_success "Dotfiles unstowed"
 }
 
@@ -147,11 +166,13 @@ _unlink_dot() {
 }
 
 cmd_stow() {
+  parse_verbose_args "$@" || return 1
   print_header "Stowing dotfiles"
   _stow_dotfiles
 }
 
 cmd_unstow() {
+  parse_verbose_args "$@" || return 1
   print_header "Unstowing dotfiles"
   _unstow_dotfiles
 }
@@ -167,6 +188,7 @@ cmd_unlink() {
 }
 
 cmd_links() {
+  parse_verbose_args "$@" || return 1
   print_header "Checking managed links"
-  check_managed_links true
+  check_managed_links
 }
