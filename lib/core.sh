@@ -26,6 +26,27 @@ print_info() {
   echo -e "${CYAN}ℹ${RESET} $1"
 }
 
+is_verbose() {
+  [[ "${DOT_VERBOSE:-false}" == "true" ]]
+}
+
+print_verbose() {
+  if is_verbose; then
+    print_info "$1"
+  fi
+}
+
+parse_verbose_args() {
+  local arg
+
+  for arg in "$@"; do
+    case "$arg" in
+      -v|--verbose) DOT_VERBOSE=true ;;
+      *) print_error "Unknown option: $arg"; return 1 ;;
+    esac
+  done
+}
+
 print_step() {
   ((++CURRENT_STEP))
   echo -e "\n${BOLD}[${CURRENT_STEP}/${TOTAL_STEPS}]${RESET} $1"
