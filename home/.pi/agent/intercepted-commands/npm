@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+manager="$(basename "$0")"
+intercept_dir="$(cd "$(dirname "$0")" && pwd)"
+
+clean_path() {
+  local old_ifs="$IFS"
+  local path_part
+  local result=""
+  IFS=:
+  for path_part in $PATH; do
+    [[ "$path_part" == "$intercept_dir" ]] && continue
+    if [[ -z "$result" ]]; then
+      result="$path_part"
+    else
+      result="$result:$path_part"
+    fi
+  done
+  IFS="$old_ifs"
+  printf '%s\n' "$result"
+}
+
+real_path="$(clean_path)"
+real_manager="$(PATH="$real_path" command -v "$manager" || true)"
+
+if [[ -z "$real_manager" ]]; then
+  printf 'Error: could not find real %s outside %s\n' "$manager" "$intercept_dir" >&2
+  exit 127
+fi
+
+if [[ "${PI_PM_INTERCEPT_BYPASS:-}" == "1" ]]; then
+  exec env PATH="$real_path" "$real_manager" "$@"
+fi
+
+for arg in "$@"; do
+  case "$arg" in
+    --ignore-scripts=false|--enable-pre-post-scripts|--dangerously-allow-all-builds|--allow-scripts)
+      printf 'Error: package-manager safety bypass flag is disabled: %s\n' "$arg" >&2
+      exit 2
+      ;;
+  esac
+done
+
+subcommand=""
+for arg in "$@"; do
+  [[ "$arg" == -* ]] && continue
+  subcommand="$arg"
+  break
+done
+
+case "$subcommand" in
+  add|install|i|update|upgrade)
+    if PATH="$real_path" command -v sfw >/dev/null 2>&1; then
+      exec env PI_PM_INTERCEPT_BYPASS=1 PATH="$real_path" sfw "$manager" "$@"
+    fi
+
+    cat >&2 <<EOF
+Error: direct $manager $subcommand is disabled for agent-driven commands.
+
+Socket Firewall (sfw) was not found on PATH. Install or expose sfw, then run:
+
+  sfw $manager $*
+EOF
+    exit 2
+    ;;
+esac
+
+exec env PATH="$real_path" "$real_manager" "$@"

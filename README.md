@@ -195,6 +195,13 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   and asks before high-risk shell commands when a TUI is available.
 - `extensions/trust-github-repos.ts` automatically trusts GitHub checkouts
   owned by `KvalitetsIT` or `luxass`.
+- `extensions/notify.ts` sends a Ghostty-compatible desktop notification when
+  Pi finishes a turn and waits for input.
+- `extensions/review.ts` adds `/review` and `/end-review` workflows for code
+  review sessions over PRs, branches, commits, folders, or local changes.
+- `extensions/package-manager-interceptor.ts` prepends package-manager shims to
+  Pi's bash `PATH`, blocks install-policy bypass flags, and routes install-like
+  `pnpm`/`npm`/`yarn`/`bun` commands through Socket Firewall when available.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
 unattended work, run Pi in an isolated environment instead of relying only on the
