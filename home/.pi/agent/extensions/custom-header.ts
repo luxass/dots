@@ -1,7 +1,21 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import type { ExtensionAPI, SessionInfo, Theme } from "@earendil-works/pi-coding-agent";
 import { SessionManager, VERSION } from "@earendil-works/pi-coding-agent";
 
 const ANSI_PATTERN = /\u001B\[[0-?]*[ -/]*[@-~]/g;
+const HEADER_STATE_PATH = join(process.env.HOME || homedir(), ".pi", "agent", "cache", "custom-header.json");
+
+type ProjectTrustAwareContext = {
+	isProjectTrusted?: () => boolean;
+};
+
+type ProjectTrustStatus = "trusted" | "not trusted" | "unknown";
+type HeaderIcon = "generic" | "work";
+type HeaderState = {
+	icon?: HeaderIcon;
+};
 
 function visibleLength(value: string): number {
 	return value.replace(ANSI_PATTERN, "").length;
@@ -33,18 +47,70 @@ function sessionLabel(session: SessionInfo): string {
 	return label.replace(/\s+/g, " ").trim();
 }
 
-function getPiLogo(theme: Theme): string[] {
-	const left = (text: string) => theme.fg("customMessageLabel", text);
-	const mid = (text: string) => theme.fg("accent", text);
-	const right = (text: string) => theme.fg("userMessageText", text);
+function isHeaderIcon(value: unknown): value is HeaderIcon {
+	return value === "generic" || value === "work";
+}
+
+function readHeaderState(): HeaderState {
+	if (!existsSync(HEADER_STATE_PATH)) {
+		return {};
+	}
+
+	try {
+		const parsed = JSON.parse(readFileSync(HEADER_STATE_PATH, "utf8")) as HeaderState;
+		return isHeaderIcon(parsed.icon) ? { icon: parsed.icon } : {};
+	} catch {
+		return {};
+	}
+}
+
+function writeHeaderState(state: HeaderState): void {
+	mkdirSync(dirname(HEADER_STATE_PATH), { recursive: true });
+	writeFileSync(HEADER_STATE_PATH, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+}
+
+function getHeaderIcon(): HeaderIcon {
+	if (isHeaderIcon(process.env.PI_HEADER_ICON)) {
+		return process.env.PI_HEADER_ICON;
+	}
+
+	return readHeaderState().icon ?? "generic";
+}
+
+function setHeaderIcon(icon: HeaderIcon): void {
+	writeHeaderState({ icon });
+}
+
+function getGenericIcon(theme: Theme): string[] {
+	const primary = (text: string) => theme.fg("customMessageLabel", text);
+	const accent = (text: string) => theme.fg("accent", text);
+	const muted = (text: string) => theme.fg("userMessageText", text);
 
 	return [
-		` ${left("██")} ${mid("████")} ${right("██")}`,
-		`    ${mid("██")}   ${right("██")}`,
-		`    ${mid("██")}   ${right("██")}`,
-		`    ${mid("██")}   ${right("██")}`,
-		` ${left("██")} ${mid("████")} ${right("██")}`,
+		` ${primary("▄██▄")}  ${muted("▄██")}`,
+		`${primary("██")} ${accent("◆")} ${muted("██")}`,
+		` ${primary("▀██")} ${accent("██")} `,
+		`${muted("██")} ${accent("◆")} ${primary("██")}`,
+		` ${muted("▀██▀")} ${accent("▀")}`,
 	];
+}
+
+function getWorkIcon(theme: Theme): string[] {
+	const k = (text: string) => theme.fg("mdLink", text);
+	const i = (text: string) => theme.fg("mdLinkUrl", text);
+	const t = (text: string) => theme.fg("mdCode", text);
+
+	return [
+		`${k("██  ██")} ${i("███")} ${t("█████")}`,
+		`${k("██ ██ ")} ${i(" █ ")} ${t("  █  ")}`,
+		`${k("████  ")} ${i(" █ ")} ${t("  █  ")}`,
+		`${k("██ ██ ")} ${i(" █ ")} ${t("  █  ")}`,
+		`${k("██  ██")} ${i("███")} ${t("  █  ")}`,
+	];
+}
+
+function getLogo(theme: Theme, icon: HeaderIcon): string[] {
+	return icon === "work" ? getWorkIcon(theme) : getGenericIcon(theme);
 }
 
 function countExtensionSources(pi: ExtensionAPI): number {
@@ -66,6 +132,14 @@ function countExtensionSources(pi: ExtensionAPI): number {
 	return sources.size;
 }
 
+function getProjectTrustStatus(ctx: ProjectTrustAwareContext): ProjectTrustStatus {
+	if (typeof ctx.isProjectTrusted !== "function") {
+		return "unknown";
+	}
+
+	return ctx.isProjectTrusted() ? "trusted" : "not trusted";
+}
+
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		if (ctx.mode !== "tui") return;
@@ -77,12 +151,15 @@ export default function (pi: ExtensionAPI) {
 		const recentSessions = await SessionManager.list(ctx.cwd).catch(() => [] as SessionInfo[]);
 		const modelName = ctx.model?.id ?? "no model";
 		const providerName = ctx.model?.provider ?? "provider unknown";
+		const projectTrustStatus = getProjectTrustStatus(ctx);
+		const headerIcon = getHeaderIcon();
 
 		ctx.ui.setHeader((_tui, theme) => {
 			const border = (text: string) => theme.fg("borderMuted", text);
 			const title = (text: string) => theme.fg("customMessageLabel", text);
 			const heading = (text: string) => theme.fg("warning", text);
 			const ok = (text: string) => theme.fg("success", text);
+			const warn = (text: string) => theme.fg("warning", text);
 			const dim = (text: string) => theme.fg("dim", text);
 			const muted = (text: string) => theme.fg("muted", text);
 			const accent = (text: string) => theme.fg("accent", text);
@@ -107,7 +184,7 @@ export default function (pi: ExtensionAPI) {
 						"",
 						`   ${theme.bold("Welcome back!")}`,
 						"",
-						...getPiLogo(theme).map((line) => `  ${line}`),
+						...getLogo(theme, headerIcon).map((line) => `  ${line}`),
 						"",
 						` ${title(model)}`,
 						`   ${muted(provider)}`,
@@ -118,6 +195,13 @@ export default function (pi: ExtensionAPI) {
 						`${accent("/")} ${dim("for commands")}`,
 						`${accent("!")} ${dim("to run bash")}`,
 						`${dim("Shift+Tab")} cycle thinking`,
+						rule,
+						heading("Workspace"),
+						projectTrustStatus === "trusted"
+							? `${ok("✓")} trusted`
+							: projectTrustStatus === "not trusted"
+								? `${warn("!")} not trusted`
+								: `${dim("?")} trust unavailable`,
 						rule,
 						heading("Loaded"),
 						`${ok("✓")} ${extensionCount} extensions`,
@@ -161,6 +245,20 @@ export default function (pi: ExtensionAPI) {
 		handler: async (_args, ctx) => {
 			ctx.ui.setHeader(undefined);
 			ctx.ui.notify("Built-in header restored", "info");
+		},
+	});
+
+	pi.registerCommand("header-icon", {
+		description: "Switch custom header icon: generic or work",
+		handler: async (args, ctx) => {
+			const icon = args.trim();
+			if (icon !== "generic" && icon !== "work") {
+				ctx.ui.notify("Usage: /header-icon generic|work", "warning");
+				return;
+			}
+
+			setHeaderIcon(icon);
+			ctx.ui.notify(`Header icon set to ${icon}. Restart pi to see it in the startup header.`, "info");
 		},
 	});
 }
