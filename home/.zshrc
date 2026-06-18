@@ -16,6 +16,9 @@ fi
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOPATH/bin:$HOME/.local/bin
 
+# agent-repos completions
+[[ -f "$HOME/.config/agent-repos/completions/_agent-repos.zsh" ]] && source "$HOME/.config/agent-repos/completions/_agent-repos.zsh"
+
 if [[ -d /opt/homebrew/opt/fzf ]]; then
   source /opt/homebrew/opt/fzf/shell/completion.zsh
   source /opt/homebrew/opt/fzf/shell/key-bindings.zsh

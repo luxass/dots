@@ -22,6 +22,7 @@ other configs that are not currently wanted.
 - Public-safe Git config with private identity in `~/.gitconfig.local`
 - Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for disabled scripts and release age checks
+- `agent-repos` helper for local agent reference repos, with explicit clone/subtree modes
 - Diagnostics for required tools, package state, managed links, and secrets
 
 ## Quick Start
@@ -83,6 +84,30 @@ dot git-identity     # create or update ~/.gitconfig.local
 dot completions      # print zsh completions
 dot edit             # open the repo in $EDITOR
 ```
+
+## Agent Reference Repositories
+
+`agent-repos` manages external repositories under `repos/` so coding agents can inspect real source, tests, docs, and examples before guessing APIs or patterns.
+
+It has two explicit modes:
+
+- `clone` mode uses plain local clones. `agent-repos init --mode clone` adds `.agent-repos` and `repos/` to the target project's `.gitignore`, so the references stay local-only and do not affect the parent repository history.
+- `subtree` mode uses `git subtree add/pull`. This intentionally imports files into the parent Git tree and can create commits or merge commits. Use it only when you want a tracked, reproducible vendor snapshot.
+
+Common commands:
+
+```sh
+agent-repos init --mode clone --instructions
+agent-repos add https://github.com/owner/repo --mode clone
+agent-repos update --all
+agent-repos list
+
+# Explicit history-changing workflow:
+agent-repos init --mode subtree
+agent-repos add https://github.com/owner/repo --mode subtree --branch main --yes
+```
+
+The manifest is stored in `.agent-repos` with rows shaped as `mode`, `name`, `path`, `url`, and `branch`.
 
 ## Package Management
 

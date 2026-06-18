@@ -1,0 +1,684 @@
+#!/usr/bin/env bash
+# agent-repos - manage reference repositories for coding agents.
+# Clone mode is local-only. Subtree mode intentionally imports files into parent Git history.
+
+set -euo pipefail
+
+MANIFEST_NAME=".agent-repos"
+DEFAULT_REPOS_DIR="repos"
+START_MARKER="<!-- agent-repos:start -->"
+END_MARKER="<!-- agent-repos:end -->"
+
+usage() {
+  cat <<'EOF'
+Usage: agent-repos <command> [options]
+
+Commands:
+  init [--mode clone|subtree] [--instructions] [--file FILE]
+      Prepare the current Git repository for agent reference repos.
+
+  add <url> [--mode clone|subtree] [--name NAME] [--path PATH] [--branch BRANCH] [--yes]
+      Add a reference repository. Clone mode is local-only; subtree mode is tracked.
+
+  update <name|path> [--yes]
+  update --all [--yes]
+      Update one reference repo or every manifest entry.
+
+  list
+      List reference repositories from .agent-repos.
+
+  remove <name|path> [--delete] [--yes]
+      Remove a manifest entry. Clone directories are deleted only with --delete.
+
+  instructions [--file FILE]
+      Add or refresh an AGENTS.md instructions block.
+
+  completions zsh
+      Print zsh completions.
+
+Modes:
+  clone    Plain git clone under repos/<name>. .agent-repos and repos/ are ignored.
+  subtree  git subtree add/pull under repos/<name>. Files are tracked in parent history.
+
+Examples:
+  agent-repos init --mode clone --instructions
+  agent-repos add https://github.com/owner/repo --mode clone
+  agent-repos add https://github.com/owner/repo --mode subtree --branch main --yes
+  agent-repos update --all
+  agent-repos remove repo --delete
+EOF
+}
+
+log() {
+  printf 'agent-repos: %s\n' "$*" >&2
+}
+
+die() {
+  log "$*"
+  exit 1
+}
+
+git_root() {
+  git rev-parse --show-toplevel 2>/dev/null || die "not inside a Git repository"
+}
+
+manifest_path() {
+  printf '%s/%s\n' "$1" "$MANIFEST_NAME"
+}
+
+validate_mode() {
+  case "${1:-}" in
+    clone|subtree) ;;
+    *) die "mode must be 'clone' or 'subtree'" ;;
+  esac
+}
+
+validate_field() {
+  local label="$1"
+  local value="$2"
+  [[ -n "$value" ]] || die "$label must not be empty"
+  [[ "$value" != *$'\t'* ]] || die "$label must not contain tab characters"
+  [[ "$value" != *$'\n'* ]] || die "$label must not contain newlines"
+}
+
+validate_rel_path() {
+  local path="$1"
+  validate_field "path" "$path"
+  [[ "$path" != /* ]] || die "path must be relative: $path"
+  [[ "$path" != "." ]] || die "path must not be '.'"
+  [[ "$path" != ".." && "$path" != ../* && "$path" != */../* && "$path" != */.. ]] || die "path must not contain '..': $path"
+}
+
+ensure_manifest() {
+  local root="$1"
+  local file
+  file="$(manifest_path "$root")"
+  if [[ ! -f "$file" ]]; then
+    cat >"$file" <<'EOF'
+# agent-repos manifest
+# mode	name	path	url	branch
+EOF
+  fi
+}
+
+manifest_rows() {
+  local root="$1"
+  local file
+  file="$(manifest_path "$root")"
+  [[ -f "$file" ]] || return 0
+  awk -F '\t' 'NF >= 5 && $1 !~ /^#/ && $1 != "" { print }' "$file"
+}
+
+manifest_find() {
+  local root="$1"
+  local key="$2"
+  local file
+  file="$(manifest_path "$root")"
+  [[ -f "$file" ]] || return 1
+  awk -F '\t' -v key="$key" '
+    NF >= 5 && $1 !~ /^#/ && ($2 == key || $3 == key) { print; found = 1; exit }
+    END { exit found ? 0 : 1 }
+  ' "$file"
+}
+
+manifest_upsert() {
+  local root="$1"
+  local mode="$2"
+  local name="$3"
+  local path="$4"
+  local url="$5"
+  local branch="$6"
+  local file tmp
+
+  validate_mode "$mode"
+  validate_field "name" "$name"
+  validate_rel_path "$path"
+  validate_field "url" "$url"
+  validate_field "branch" "$branch"
+  ensure_manifest "$root"
+  file="$(manifest_path "$root")"
+  tmp="$(mktemp)"
+
+  awk -F '\t' \
+    -v OFS='\t' \
+    -v mode="$mode" \
+    -v name="$name" \
+    -v path="$path" \
+    -v url="$url" \
+    -v branch="$branch" '
+      $1 !~ /^#/ && ($2 == name || $3 == path) {
+        if (!done) {
+          print mode, name, path, url, branch
+          done = 1
+        }
+        next
+      }
+      { print }
+      END {
+        if (!done) print mode, name, path, url, branch
+      }
+    ' "$file" >"$tmp"
+  mv "$tmp" "$file"
+}
+
+manifest_remove() {
+  local root="$1"
+  local key="$2"
+  local file tmp
+  file="$(manifest_path "$root")"
+  [[ -f "$file" ]] || die "manifest does not exist; run 'agent-repos init' first"
+  tmp="$(mktemp)"
+  awk -F '\t' -v key="$key" '
+    NF >= 5 && $1 !~ /^#/ && ($2 == key || $3 == key) { removed = 1; next }
+    { print }
+    END { exit removed ? 0 : 2 }
+  ' "$file" >"$tmp" || {
+    local status=$?
+    rm -f "$tmp"
+    [[ "$status" -eq 2 ]] && die "no manifest entry matches '$key'"
+    exit "$status"
+  }
+  mv "$tmp" "$file"
+}
+
+ensure_gitignore_entry() {
+  local file="$1"
+  local entry="$2"
+  touch "$file"
+  if ! grep -Fxq "$entry" "$file"; then
+    if [[ -s "$file" ]]; then
+      printf '\n' >>"$file"
+    fi
+    printf '%s\n' "$entry" >>"$file"
+  fi
+}
+
+update_gitignore_for_mode() {
+  local root="$1"
+  local mode="$2"
+  local file="$root/.gitignore"
+  validate_mode "$mode"
+  ensure_gitignore_entry "$file" "$MANIFEST_NAME"
+  if [[ "$mode" == "clone" ]]; then
+    ensure_gitignore_entry "$file" "$DEFAULT_REPOS_DIR/"
+  fi
+}
+
+is_clean_worktree() {
+  local root="$1"
+  [[ -z "$(git -C "$root" status --porcelain)" ]]
+}
+
+require_clean_worktree() {
+  local root="$1"
+  is_clean_worktree "$root" || die "subtree mode requires a clean parent worktree; commit or stash changes first"
+}
+
+require_subtree_metadata_ready() {
+  local root="$1"
+  if ! git -C "$root" check-ignore -q "$MANIFEST_NAME"; then
+    die "subtree mode needs '$MANIFEST_NAME' to be ignored; run 'agent-repos init --mode subtree', commit .gitignore, and retry"
+  fi
+}
+
+confirm_or_yes() {
+  local yes="$1"
+  local prompt="$2"
+  if [[ "$yes" == "true" ]]; then
+    return 0
+  fi
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    die "$prompt Pass --yes to confirm in non-interactive mode."
+  fi
+  local answer
+  printf '%s [y/N] ' "$prompt" > /dev/tty
+  IFS= read -r answer < /dev/tty
+  case "$answer" in
+    y|Y|yes|YES) ;;
+    *) die "cancelled" ;;
+  esac
+}
+
+strip_url_suffix() {
+  local value="$1"
+  value="${value%/}"
+  value="${value%.git}"
+  printf '%s\n' "$value"
+}
+
+name_from_url() {
+  local url="$1"
+  local clean base
+  clean="$(strip_url_suffix "$url")"
+  base="${clean##*/}"
+  [[ -n "$base" ]] || die "could not infer repo name from URL: $url"
+  printf '%s\n' "$base"
+}
+
+default_branch_for_url() {
+  local url="$1"
+  local branch
+  branch="$(git ls-remote --symref "$url" HEAD 2>/dev/null | awk '/^ref:/ { sub("refs/heads/", "", $2); print $2; exit }')"
+  printf '%s\n' "${branch:-main}"
+}
+
+agent_file_default() {
+  local root="$1"
+  if [[ -f "$root/AGENTS.md" ]]; then
+    printf 'AGENTS.md\n'
+  elif [[ -f "$root/AGENT.md" ]]; then
+    printf 'AGENT.md\n'
+  else
+    printf 'AGENTS.md\n'
+  fi
+}
+
+instructions_block() {
+  cat <<'EOF'
+<!-- agent-repos:start -->
+## Agent reference repositories
+
+This project may use `agent-repos` to place external repositories under `repos/` for coding-agent reference.
+
+- Treat `repos/` as reference material unless the user explicitly asks you to edit it.
+- In clone mode, `repos/` is local-only and ignored by Git.
+- In subtree mode, entries under `repos/` are tracked vendor snapshots and changes affect this repository's history.
+- Before guessing an API, pattern, test style, or integration detail for a related dependency, inspect the relevant repository under `repos/` when it exists.
+- If a reference repo contains its own AGENTS.md, AGENT.md, README, or docs, read those files before relying on implementation details.
+<!-- agent-repos:end -->
+EOF
+}
+
+write_instructions() {
+  local root="$1"
+  local rel_file="$2"
+  validate_rel_path "$rel_file"
+  local file tmp block
+  file="$root/$rel_file"
+  tmp="$(mktemp)"
+  block="$(mktemp)"
+  mkdir -p "$(dirname "$file")"
+  instructions_block >"$block"
+
+  if [[ -f "$file" ]] && grep -Fxq "$START_MARKER" "$file" && grep -Fxq "$END_MARKER" "$file"; then
+    awk -v start="$START_MARKER" -v end="$END_MARKER" '
+      $0 == start { skipping = 1; next }
+      $0 == end { skipping = 0; next }
+      !skipping { print }
+    ' "$file" >"$tmp"
+    if [[ -s "$tmp" ]]; then
+      cat "$tmp" >"$file"
+      tail -c 1 "$file" | grep -q '^$' 2>/dev/null || printf '\n' >>"$file"
+      printf '\n' >>"$file"
+      cat "$block" >>"$file"
+    else
+      cat "$block" >"$file"
+    fi
+  else
+    if [[ -f "$file" && -s "$file" ]]; then
+      cat "$file" >"$tmp"
+      tail -c 1 "$tmp" | grep -q '^$' 2>/dev/null || printf '\n' >>"$tmp"
+      printf '\n' >>"$tmp"
+      cat "$block" >>"$tmp"
+      mv "$tmp" "$file"
+      rm -f "$block"
+      return
+    fi
+    cat "$block" >"$file"
+  fi
+
+  rm -f "$tmp" "$block"
+}
+
+cmd_init() {
+  local root mode instructions rel_file
+  root="$(git_root)"
+  mode="clone"
+  instructions="false"
+  rel_file=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --mode) mode="${2:-}"; shift 2 ;;
+      --mode=*) mode="${1#*=}"; shift ;;
+      --instructions) instructions="true"; shift ;;
+      --file) rel_file="${2:-}"; shift 2 ;;
+      --file=*) rel_file="${1#*=}"; shift ;;
+      -h|--help) usage; return 0 ;;
+      *) die "unknown init option: $1" ;;
+    esac
+  done
+
+  validate_mode "$mode"
+  ensure_manifest "$root"
+  mkdir -p "$root/$DEFAULT_REPOS_DIR"
+  update_gitignore_for_mode "$root" "$mode"
+  if [[ "$instructions" == "true" ]]; then
+    [[ -n "$rel_file" ]] || rel_file="$(agent_file_default "$root")"
+    write_instructions "$root" "$rel_file"
+    log "updated $rel_file"
+  fi
+  log "initialized $root for $mode mode"
+}
+
+clone_add() {
+  local root="$1" name="$2" path="$3" url="$4" branch="$5"
+  [[ ! -e "$root/$path" ]] || die "path already exists: $path"
+  mkdir -p "$(dirname "$root/$path")"
+  git clone --depth=1 --branch "$branch" "$url" "$root/$path"
+  manifest_upsert "$root" clone "$name" "$path" "$url" "$branch"
+  log "added clone $name at $path"
+}
+
+subtree_add() {
+  local root="$1" name="$2" path="$3" url="$4" branch="$5" yes="$6"
+  [[ ! -e "$root/$path" ]] || die "path already exists: $path"
+  require_clean_worktree "$root"
+  confirm_or_yes "$yes" "Subtree mode will import '$url' into '$path' and change parent Git history. Continue?"
+  mkdir -p "$(dirname "$root/$path")"
+  git -C "$root" subtree add --prefix="$path" "$url" "$branch" --squash
+  manifest_upsert "$root" subtree "$name" "$path" "$url" "$branch"
+  log "added subtree $name at $path"
+}
+
+cmd_add() {
+  local root mode name path branch url yes
+  root="$(git_root)"
+  mode="clone"
+  name=""
+  path=""
+  branch=""
+  url=""
+  yes="false"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --mode) mode="${2:-}"; shift 2 ;;
+      --mode=*) mode="${1#*=}"; shift ;;
+      --name|-n) name="${2:-}"; shift 2 ;;
+      --name=*) name="${1#*=}"; shift ;;
+      --path|-p) path="${2:-}"; shift 2 ;;
+      --path=*) path="${1#*=}"; shift ;;
+      --branch|-b) branch="${2:-}"; shift 2 ;;
+      --branch=*) branch="${1#*=}"; shift ;;
+      --yes|-y) yes="true"; shift ;;
+      -h|--help) usage; return 0 ;;
+      --*) die "unknown add option: $1" ;;
+      *)
+        [[ -z "$url" ]] || die "only one URL may be provided"
+        url="$1"
+        shift
+        ;;
+    esac
+  done
+
+  [[ -n "$url" ]] || die "usage: agent-repos add <url> [options]"
+  validate_mode "$mode"
+  [[ -n "$name" ]] || name="$(name_from_url "$url")"
+  [[ -n "$path" ]] || path="$DEFAULT_REPOS_DIR/$name"
+  [[ -n "$branch" ]] || branch="$(default_branch_for_url "$url")"
+  validate_field "name" "$name"
+  validate_rel_path "$path"
+  validate_field "branch" "$branch"
+
+  case "$mode" in
+    clone)
+      ensure_manifest "$root"
+      update_gitignore_for_mode "$root" "$mode"
+      clone_add "$root" "$name" "$path" "$url" "$branch"
+      ;;
+    subtree)
+      require_subtree_metadata_ready "$root"
+      ensure_manifest "$root"
+      subtree_add "$root" "$name" "$path" "$url" "$branch" "$yes"
+      ;;
+  esac
+}
+
+update_clone() {
+  local root="$1" name="$2" path="$3" branch="$4"
+  [[ -d "$root/$path/.git" ]] || die "clone path is missing or is not a Git repo for $name: $path"
+  git -C "$root/$path" fetch --prune origin
+  if [[ -n "$branch" ]]; then
+    if git -C "$root/$path" show-ref --verify --quiet "refs/heads/$branch"; then
+      git -C "$root/$path" checkout "$branch"
+    else
+      git -C "$root/$path" checkout -B "$branch" "origin/$branch"
+    fi
+    git -C "$root/$path" pull --ff-only origin "$branch"
+  else
+    git -C "$root/$path" pull --ff-only
+  fi
+  log "updated clone $name"
+}
+
+update_subtree() {
+  local root="$1" name="$2" path="$3" url="$4" branch="$5" yes="$6"
+  require_clean_worktree "$root"
+  confirm_or_yes "$yes" "Subtree update for '$name' may create a parent Git merge commit. Continue?"
+  git -C "$root" subtree pull --prefix="$path" "$url" "$branch" --squash
+  log "updated subtree $name"
+}
+
+cmd_update() {
+  local root all key yes
+  root="$(git_root)"
+  all="false"
+  key=""
+  yes="false"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --all|-a) all="true"; shift ;;
+      --yes|-y) yes="true"; shift ;;
+      -h|--help) usage; return 0 ;;
+      --*) die "unknown update option: $1" ;;
+      *)
+        [[ -z "$key" ]] || die "only one update target may be provided"
+        key="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [[ "$all" != "true" && -z "$key" ]]; then
+    die "usage: agent-repos update <name|path> [--yes] or agent-repos update --all [--yes]"
+  fi
+  if [[ "$all" == "true" && -n "$key" ]]; then
+    die "use either --all or a single target, not both"
+  fi
+
+  local rows
+  if [[ "$all" == "true" ]]; then
+    rows="$(manifest_rows "$root")"
+    [[ -n "$rows" ]] || die "no manifest entries found"
+  else
+    rows="$(manifest_find "$root" "$key")" || die "no manifest entry matches '$key'"
+  fi
+
+  while IFS=$'\t' read -r mode name path url branch; do
+    [[ -n "${mode:-}" ]] || continue
+    case "$mode" in
+      clone) update_clone "$root" "$name" "$path" "$branch" ;;
+      subtree) update_subtree "$root" "$name" "$path" "$url" "$branch" "$yes" ;;
+      *) die "unknown mode in manifest for $name: $mode" ;;
+    esac
+  done <<<"$rows"
+}
+
+cmd_list() {
+  local root rows
+  root="$(git_root)"
+  rows="$(manifest_rows "$root")"
+  if [[ -z "$rows" ]]; then
+    printf 'No agent reference repos found.\n'
+    return 0
+  fi
+  printf '%-8s %-22s %-28s %-12s %s\n' MODE NAME PATH BRANCH STATUS
+  while IFS=$'\t' read -r mode name path url branch; do
+    [[ -n "${mode:-}" ]] || continue
+    local status="missing"
+    [[ -e "$root/$path" ]] && status="present"
+    printf '%-8s %-22s %-28s %-12s %s\n' "$mode" "$name" "$path" "$branch" "$status"
+    printf '  %s\n' "$url"
+  done <<<"$rows"
+}
+
+safe_remove_clone_dir() {
+  local root="$1" path="$2"
+  validate_rel_path "$path"
+  [[ "$path" == "$DEFAULT_REPOS_DIR/"* ]] || die "refusing to delete path outside $DEFAULT_REPOS_DIR/: $path"
+  [[ -e "$root/$path" ]] || return 0
+  rm -rf "$root/$path"
+}
+
+cmd_remove() {
+  local root key delete yes row mode name path url branch
+  root="$(git_root)"
+  key=""
+  delete="false"
+  yes="false"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --delete) delete="true"; shift ;;
+      --yes|-y) yes="true"; shift ;;
+      -h|--help) usage; return 0 ;;
+      --*) die "unknown remove option: $1" ;;
+      *)
+        [[ -z "$key" ]] || die "only one remove target may be provided"
+        key="$1"
+        shift
+        ;;
+    esac
+  done
+
+  [[ -n "$key" ]] || die "usage: agent-repos remove <name|path> [--delete] [--yes]"
+  row="$(manifest_find "$root" "$key")" || die "no manifest entry matches '$key'"
+  IFS=$'\t' read -r mode name path url branch <<<"$row"
+  manifest_remove "$root" "$key"
+  log "removed manifest entry for $name"
+
+  if [[ "$mode" == "clone" && "$delete" == "true" ]]; then
+    confirm_or_yes "$yes" "Delete local clone directory '$path'?"
+    safe_remove_clone_dir "$root" "$path"
+    log "deleted $path"
+  elif [[ "$mode" == "subtree" ]]; then
+    log "subtree files are tracked; to remove them, run: git rm -r '$path' && git commit"
+  fi
+}
+
+cmd_instructions() {
+  local root rel_file
+  root="$(git_root)"
+  rel_file="$(agent_file_default "$root")"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --file) rel_file="${2:-}"; shift 2 ;;
+      --file=*) rel_file="${1#*=}"; shift ;;
+      -h|--help) usage; return 0 ;;
+      *) die "unknown instructions option: $1" ;;
+    esac
+  done
+  write_instructions "$root" "$rel_file"
+  log "updated $rel_file"
+}
+
+generate_zsh_completions() {
+  cat <<'EOF'
+#compdef agent-repos
+
+_agent_repos() {
+  local -a commands modes
+  commands=(
+    'init:prepare repository metadata and ignores'
+    'add:add a clone or subtree reference repository'
+    'update:update one or all reference repositories'
+    'list:list reference repositories'
+    'remove:remove a manifest entry'
+    'instructions:add or refresh AGENTS.md guidance'
+    'completions:print shell completions'
+    'help:show help'
+  )
+  modes=('clone:local ignored clone' 'subtree:tracked git subtree')
+
+  _arguments -C \
+    '1:command:->command' \
+    '*::arg:->args'
+
+  case $state in
+    command)
+      _describe 'command' commands
+      ;;
+    args)
+      case $words[2] in
+        init)
+          _arguments \
+            '--mode[select reference mode]:mode:((clone\:local\ ignored\ clone subtree\:tracked\ git\ subtree))' \
+            '--instructions[write AGENTS.md instructions]' \
+            '--file[agent instructions file]:file:_files'
+          ;;
+        add)
+          _arguments \
+            '--mode[select reference mode]:mode:((clone\:local\ ignored\ clone subtree\:tracked\ git\ subtree))' \
+            '(-n --name)'{-n,--name}'[logical repo name]:name:' \
+            '(-p --path)'{-p,--path}'[target path]:path:_files -/' \
+            '(-b --branch)'{-b,--branch}'[branch or ref]:branch:' \
+            '(-y --yes)'{-y,--yes}'[confirm subtree operation]' \
+            '1:url:'
+          ;;
+        update)
+          _arguments \
+            '(-a --all)'{-a,--all}'[update all entries]' \
+            '(-y --yes)'{-y,--yes}'[confirm subtree operation]' \
+            '1:name or path:'
+          ;;
+        remove)
+          _arguments \
+            '--delete[delete clone directory too]' \
+            '(-y --yes)'{-y,--yes}'[confirm deletion]' \
+            '1:name or path:'
+          ;;
+        instructions)
+          _arguments '--file[agent instructions file]:file:_files'
+          ;;
+        completions)
+          _arguments '1:shell:(zsh)'
+          ;;
+      esac
+      ;;
+  esac
+}
+
+compdef _agent_repos agent-repos
+EOF
+}
+
+cmd_completions() {
+  local shell="${1:-}"
+  case "$shell" in
+    zsh) generate_zsh_completions ;;
+    ""|-h|--help) printf 'Usage: agent-repos completions zsh\n' ;;
+    *) die "unsupported shell for completions: $shell" ;;
+  esac
+}
+
+main() {
+  local command="${1:-help}"
+  if [[ $# -gt 0 ]]; then
+    shift
+  fi
+  case "$command" in
+    init) cmd_init "$@" ;;
+    add) cmd_add "$@" ;;
+    update|pull) cmd_update "$@" ;;
+    list|ls) cmd_list "$@" ;;
+    remove|rm) cmd_remove "$@" ;;
+    instructions) cmd_instructions "$@" ;;
+    completions|completion) cmd_completions "$@" ;;
+    help|-h|--help) usage ;;
+    *) die "unknown command: $command" ;;
+  esac
+}
+
+main "$@"
