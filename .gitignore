@@ -32,6 +32,13 @@ home/.config/raycast/
 
 home/.config/opencode/node_modules/
 
+# Herdr runtime/state
+home/.config/herdr/*.log
+home/.config/herdr/*.sock
+home/.config/herdr/session.json
+home/.config/herdr/session-history.json
+home/.config/herdr/release-notes.json
+
 # Pi runtime, generated state, and secrets
 home/.pi/node_modules/
 home/.pi/package-lock.json
