@@ -40,6 +40,7 @@ home/.pi/agent/trust.json
 home/.pi/agent/bin/
 home/.pi/agent/cache/
 home/.pi/agent/logs/
+home/.pi/agent/*.log
 home/.pi/agent/node_modules/
 home/.pi/agent/packages/
 home/.pi/agent/sessions/
