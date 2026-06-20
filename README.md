@@ -291,6 +291,8 @@ Manage Pi and pinned Pi extensions through `dot pi`:
 dot pi status
 dot pi update
 dot pi update 0.79.8
+dot pi skills add <url>
+dot pi skills list
 dot pi extension install plannotator 0.20.2
 ```
 
@@ -305,11 +307,19 @@ external skills. When `VERSION` is omitted, it resolves the latest
 pnpm safety flags for self-updates, including disabled lifecycle scripts and a
 release-age override for fresh Pi releases.
 
-External skills are installed manually through the open `skills` CLI. Do not
-install the CLI globally unless you explicitly want that; use `pnpm dlx`. Run
-`dot stow` first so `~/.pi/agent/skills` points at this repo and installed skill
-files stay visible to Git under `home/.pi/agent/skills`. After installing or
-removing skills, update `home/.pi/skills-lock.json` in the same change.
+External skills are managed through `dot pi skills`, which wraps the open
+`skills` CLI with `pnpm dlx` so the CLI does not need to be installed globally.
+Run `dot stow` first so `~/.pi/agent/skills` points at this repo and installed
+skill files stay visible to Git under `home/.pi/agent/skills`.
+
+```sh
+dot pi skills add <url>
+dot pi skills add <url> --skill <name>
+dot pi skills list
+```
+
+`dot pi skills add` always installs to global Pi skills with `--global --agent pi
+--copy`. The skills CLI updates its lock/inventory as part of installation.
 
 `dot pi extension install plannotator VERSION` installs the pinned Plannotator
 Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This
