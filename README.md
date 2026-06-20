@@ -276,8 +276,8 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   commit bodies.
 - `skills/github/` teaches Pi to use the `gh` CLI for PRs, checks, workflow
   runs, issues, and GitHub API queries.
-- `../skills-lock.json` records the checked-in local skills inventory and hashes
-  for read-only drift checks.
+- `../skills-lock.json` records the checked-in skill inventory and hashes for
+  drift checks.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
 unattended work, run Pi in an isolated environment instead of relying only on the
@@ -294,6 +294,8 @@ dot pi update
 dot pi update 0.79.8
 dot pi skills list
 dot pi skills check
+dot pi skills refresh
+dot pi skills add owner/repo --skill skill-name
 dot pi extension install plannotator 0.20.2
 ```
 
@@ -302,16 +304,30 @@ the Homebrew and Stow steps.
 
 `dot pi update [VERSION]` updates the tracked Pi package pins in
 `home/.pi/package.json`, refreshes the lockfile, runs `pi update`, verifies
-`pi --version`, and finishes with `dot doctor`. It does not run the manual skills
-sync workflow; invoke `sync-pocock-skills` directly when you want to sync skills.
-When `VERSION` is omitted, it resolves the latest
+`pi --version`, and finishes with `dot doctor`. It does not install or sync
+external skills. When `VERSION` is omitted, it resolves the latest
 `@earendil-works/pi-coding-agent` version from npm. Pi's own updater supplies its
 pnpm safety flags for self-updates, including disabled lifecycle scripts and a
 release-age override for fresh Pi releases.
 
-`dot pi skills list` and `dot pi skills check` inspect the checked-in local skill
-inventory in `home/.pi/skills-lock.json`. They are read-only and do not install,
-remove, or sync skills.
+`dot pi skills list` and `dot pi skills check` inspect the checked-in skill
+inventory in `home/.pi/skills-lock.json`. `dot pi skills refresh` rebuilds that
+lock from the files under `home/.pi/agent/skills`.
+
+External skills are installed manually through the open `skills` CLI without
+installing that CLI globally. `dot pi skills add SOURCE [skills options...]`
+runs `pnpm dlx skills add SOURCE --global --agent pi --copy ...`, verifies that
+`~/.pi/agent/skills` points at this repo, and refreshes the tracked lock. The
+installed skill files stay visible to Git under `home/.pi/agent/skills`.
+
+Examples:
+
+```sh
+dot stow
+dot pi skills add ogulcancelik/herdr --skill herdr
+dot pi skills check
+git add home/.pi/agent/skills home/.pi/skills-lock.json
+```
 
 `dot pi extension install plannotator VERSION` installs the pinned Plannotator
 Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This

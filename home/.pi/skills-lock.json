@@ -1,27 +1,6 @@
 {
   "version": 1,
   "skills": {
-    "ask-matt": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/ask-matt",
-      "localPath": "home/.pi/agent/skills/ask-matt",
-      "computedHash": "9f2a6f2b76c02a1be69ad71f7bf085247c636c29e05cb3964b6bcc5a3254e101"
-    },
-    "bro": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/bro",
-      "localPath": "home/.pi/agent/skills/bro",
-      "computedHash": "da76cb8963e62a4340bfb3ec0187836f33f040a68317e2d26fa504ccad8d7412"
-    },
-    "codebase-design": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/codebase-design",
-      "localPath": "home/.pi/agent/skills/codebase-design",
-      "computedHash": "8db39f56a468be8d731ff9aa6b3f9cceb161e40b2e4932027edb1a82a188131c"
-    },
     "commit": {
       "source": "dots",
       "sourceType": "local",
@@ -29,166 +8,12 @@
       "localPath": "home/.pi/agent/skills/commit",
       "computedHash": "bab79c859de96ee0babac4a1b7c1cae4e37f8b38fe15210b4a05b6c1d11732b6"
     },
-    "diagnose": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/diagnose",
-      "localPath": "home/.pi/agent/skills/diagnose",
-      "computedHash": "500dccc3cc265fbf52363da4e8db98a218ef53dca3225f767e18aaf681627132"
-    },
-    "diagnosing-bugs": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/diagnosing-bugs",
-      "localPath": "home/.pi/agent/skills/diagnosing-bugs",
-      "computedHash": "7219a899edf38e9ec752c56d66c247ac13847a7628a62cb87ee0000326703f91"
-    },
-    "domain-modeling": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/domain-modeling",
-      "localPath": "home/.pi/agent/skills/domain-modeling",
-      "computedHash": "9c70797062c1017367293905782a5a3a6b8f3ea85148abc172996a8de3f60071"
-    },
     "github": {
       "source": "dots",
       "sourceType": "local",
       "sourcePath": "home/.pi/agent/skills/github",
       "localPath": "home/.pi/agent/skills/github",
       "computedHash": "cf0168f1b4c142b3eda25e6f81cb8b438d305f03640c7538cebc5c912bfe41e2"
-    },
-    "grill-with-docs": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/grill-with-docs",
-      "localPath": "home/.pi/agent/skills/grill-with-docs",
-      "computedHash": "8683d99a2d347d358662c4d4744affd38212913b85a69158118b1f6735e5da7e"
-    },
-    "grilling": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/grilling",
-      "localPath": "home/.pi/agent/skills/grilling",
-      "computedHash": "5c720ab336c06e775e950b271a09cd1f79fe7210c947ce9ea7013ed9cf9c11c7"
-    },
-    "handoff": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/handoff",
-      "localPath": "home/.pi/agent/skills/handoff",
-      "computedHash": "9d467ac388762c34b7fbb1683ba54af1f8918c28e1a1a98bc0f1ca840f94a9cf"
-    },
-    "implement": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/implement",
-      "localPath": "home/.pi/agent/skills/implement",
-      "computedHash": "8d0c377f3e3f395daabb56da201d2235f953446ea58e8a713a62e35c516944fb"
-    },
-    "improve-codebase-architecture": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/improve-codebase-architecture",
-      "localPath": "home/.pi/agent/skills/improve-codebase-architecture",
-      "computedHash": "402192ea060510487062a9b495dfdfcde6228d040355f1c9e673b394d6b1eb18"
-    },
-    "init-deep": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/init-deep",
-      "localPath": "home/.pi/agent/skills/init-deep",
-      "computedHash": "182ec14a52644dc99052b7019ac9bf589d886f74a1a24901ed40cb55abbf1656"
-    },
-    "no-jargon-bro": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/no-jargon-bro",
-      "localPath": "home/.pi/agent/skills/no-jargon-bro",
-      "computedHash": "db4a11aaa0739891ea8072425bcf88794f9701058f09f6a956146855e7bbe90a"
-    },
-    "prototype": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/prototype",
-      "localPath": "home/.pi/agent/skills/prototype",
-      "computedHash": "ba8b437ef2c355f5321cde0b21011190a6e21f7554fc4139d0df3f61fae6e5cb"
-    },
-    "resolving-merge-conflicts": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/resolving-merge-conflicts",
-      "localPath": "home/.pi/agent/skills/resolving-merge-conflicts",
-      "computedHash": "0569ceadd02418da6a74ce0b8d549803e46838823f9585f8b169a6cf9da66ffc"
-    },
-    "setup-matt-pocock-skills": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/setup-matt-pocock-skills",
-      "localPath": "home/.pi/agent/skills/setup-matt-pocock-skills",
-      "computedHash": "d1ed87db43b22aace681ad07a63fa2fe9bb593afbb91f3a5c80e2c0ad12b2b16"
-    },
-    "sync-pocock-skills": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/sync-pocock-skills",
-      "localPath": "home/.pi/agent/skills/sync-pocock-skills",
-      "computedHash": "dfbe18545714b8987da5504ad0d67bb622b12a94b7000d4096ce0d52cc564f84"
-    },
-    "tdd": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/tdd",
-      "localPath": "home/.pi/agent/skills/tdd",
-      "computedHash": "20c73dd83caf7c5fb38e56a9a12558dc0e4791282369027c74aeb43d12df7ecf"
-    },
-    "teach": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/teach",
-      "localPath": "home/.pi/agent/skills/teach",
-      "computedHash": "63feafa166e24e8b85376accae0af357beb1874c61776acc32c1d39a6fce9bc4"
-    },
-    "to-issues": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/to-issues",
-      "localPath": "home/.pi/agent/skills/to-issues",
-      "computedHash": "6140d82b09999229e8ac00f537caee00e6e74bff7b2d717d34a483f2554d0917"
-    },
-    "to-prd": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/to-prd",
-      "localPath": "home/.pi/agent/skills/to-prd",
-      "computedHash": "3bcff1d61bd7999b66f118909822a8e6a0e3f6d583c1f00c2ec0a4a2a49d1b88"
-    },
-    "triage": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/triage",
-      "localPath": "home/.pi/agent/skills/triage",
-      "computedHash": "ac70de32fe89f8f08941e0baa3659954cb38d2a0de41a4050ded1456b81f5699"
-    },
-    "write-a-skill": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/write-a-skill",
-      "localPath": "home/.pi/agent/skills/write-a-skill",
-      "computedHash": "fa5ea1a594593c636c558814a81f56d087c512c81f54ee1ce1415efe42c35f94"
-    },
-    "writing-great-skills": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/writing-great-skills",
-      "localPath": "home/.pi/agent/skills/writing-great-skills",
-      "computedHash": "5d1cdd3f72091e970ac5c9130172ac08b2cc433c303c503137da693c0330d3b1"
-    },
-    "zoom-out": {
-      "source": "dots",
-      "sourceType": "local",
-      "sourcePath": "home/.pi/agent/skills/zoom-out",
-      "localPath": "home/.pi/agent/skills/zoom-out",
-      "computedHash": "34f4bab271b9b9bbad01e08413d5a096ec84d1ee983d747de9219f77afc5e897"
     }
   }
 }

@@ -110,6 +110,7 @@ dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
 dot pi update        # Update Pi to latest and update packages/extensions
 dot pi skills check  # Verify checked-in Pi skills match the local skills lock
+dot pi skills add X  # Install external Pi skills via pnpm dlx skills into tracked files
 dot completions      # Print Fish completions
 ```
 
@@ -128,7 +129,7 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
-| Pi | `home/.pi/package.json`, `home/.pi/pnpm-lock.yaml`, `home/.pi/skills-lock.json`, `home/.pi/agent/settings.json` | Managed by `dot pi` |
+| Pi | `home/.pi/package.json`, `home/.pi/pnpm-lock.yaml`, `home/.pi/skills-lock.json`, `home/.pi/agent/settings.json`, `home/.pi/agent/skills/` | Managed by `dot pi` |
 
 ## NOTES
 
@@ -139,3 +140,6 @@ detail.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.
+- Only custom/local Pi skills should be edited directly. Install external Pi
+  skills with `dot pi skills add ...` so files remain under `home/.pi/agent/skills/`
+  and refresh `home/.pi/skills-lock.json`.
