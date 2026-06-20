@@ -1,6 +1,6 @@
-tap "anomalyco/tap"
-tap "luxass/tap"
-tap "oven-sh/bun"
+tap "anomalyco/tap", trusted: { formula: "opencode" }
+tap "luxass/tap", trusted: { formula: "actioneer" }
+tap "oven-sh/bun", trusted: { formula: "bun" }
 
 brew "anomalyco/tap/opencode"
 brew "bat"
@@ -32,7 +32,7 @@ cask "claude-code@latest"
 cask "codex"
 cask "codex-app"
 cask "discord"
-cask "ghostty@tip"
+cask "ghostty"
 cask "google-chrome"
 cask "orbstack"
 cask "raycast"
@@ -40,3 +40,4 @@ cask "slack"
 cask "spotify"
 cask "visual-studio-code"
 cask "nordvpn"
+cask "yaak@beta"
