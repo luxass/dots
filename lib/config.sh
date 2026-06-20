@@ -89,7 +89,21 @@ config_is_set() {
   config_get "$key" >/dev/null
 }
 
-config_set() {
+config_with_lock() (
+  local dir lock
+  dir="$(dot_config_dir)"
+  mkdir -p "$dir" || return 1
+  lock="$dir/.preferences.lock"
+
+  while ! mkdir "$lock" 2>/dev/null; do
+    sleep 0.05
+  done
+
+  trap 'rmdir "$lock"' EXIT
+  "$@"
+)
+
+_config_set_unlocked() {
   local key="$1"
   local raw_value="$2"
   config_require_key "$key" || return 1
@@ -130,17 +144,20 @@ config_set() {
   mv "$tmp" "$file"
 }
 
-config_unset() {
+config_set() {
+  config_with_lock _config_set_unlocked "$@"
+}
+
+_config_unset_unlocked() {
   local key="$1"
   config_require_key "$key" || return 1
 
-  local file dir tmp line current_key removed
+  local file dir tmp line current_key
   file="$(dot_config_file)"
   [[ -f "$file" ]] || return 0
 
   dir="$(dot_config_dir)"
   tmp="$(mktemp "$dir/.preferences.tmp.XXXXXX")"
-  removed=false
 
   while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ -z "$line" || "$line" == \#* || "$line" != *=* ]]; then
@@ -149,10 +166,7 @@ config_unset() {
     fi
 
     current_key="${line%%=*}"
-    if [[ "$current_key" == "$key" ]]; then
-      removed=true
-      continue
-    fi
+    [[ "$current_key" == "$key" ]] && continue
 
     printf '%s\n' "$line" >> "$tmp"
   done < "$file"
@@ -160,10 +174,18 @@ config_unset() {
   mv "$tmp" "$file"
 }
 
-config_reset() {
+config_unset() {
+  config_with_lock _config_unset_unlocked "$@"
+}
+
+_config_reset_unlocked() {
   local file
   file="$(dot_config_file)"
   rm -f "$file"
+}
+
+config_reset() {
+  config_with_lock _config_reset_unlocked "$@"
 }
 
 cmd_config_help() {

@@ -179,8 +179,8 @@ _install_packages() {
   ensure_homebrew
   brew_bundle_install_resilient "$BASE_BUNDLE"
 
-  install_optional_bundle "$FONTS_BUNDLE" "font packages" "y" "packages.brew.fonts.enabled"
-  install_optional_bundle "$WORK_BUNDLE" "work-specific packages" "n" "packages.brew.work.enabled"
+  install_optional_bundle "$FONTS_BUNDLE" "font packages" "y" "packages.brew.fonts.enabled" || return 1
+  install_optional_bundle "$WORK_BUNDLE" "work-specific packages" "n" "packages.brew.work.enabled" || return 1
 }
 
 install_optional_bundle() {
@@ -199,10 +199,16 @@ install_optional_bundle() {
     fi
   else
     if confirm "Install $label?" "$default"; then
-      config_set "$config_key" "true"
+      config_set "$config_key" "true" || {
+        print_error "Failed to persist local preference: $config_key"
+        return 1
+      }
       enabled="true"
     else
-      config_set "$config_key" "false"
+      config_set "$config_key" "false" || {
+        print_error "Failed to persist local preference: $config_key"
+        return 1
+      }
       print_info "Skipping $label ($config_key=false)"
       return 0
     fi
