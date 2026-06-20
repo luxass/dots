@@ -102,9 +102,10 @@ dot secret-scan      # Scan repository for secrets
 dot stow             # Create symlinks using GNU Stow
 dot unstow           # Remove symlinks using GNU Stow
 dot git-identity     # Create or update ~/.gitconfig.local
-dot check-packages   # Check installed Homebrew package state
+dot config           # Manage local-only preferences
 dot retry-failed     # Retry failed package installations
 dot package list     # List managed packages
+dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
 dot pi update        # Update Pi to latest, update packages/extensions, sync skills
@@ -134,5 +135,6 @@ detail.
 - `dot init` stows package-manager policy before installing pnpm-managed
   runtime tools, so install policy is active during setup.
 - Managed pnpm globals currently include Socket Firewall (`sfw`) and Pi (`pi`).
-- Optional package groups are prompted during `dot init`: fonts default to yes,
-  work packages default to no.
+- Optional package groups are controlled by local-only preferences under
+  `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
+  when first prompted, work packages default to no.

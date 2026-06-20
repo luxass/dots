@@ -22,6 +22,7 @@ TOTAL_STEPS=0
 DOT_VERBOSE="${DOT_VERBOSE:-false}"
 
 source "${DOTFILES_DIR}/lib/core.sh"
+source "${DOTFILES_DIR}/lib/config.sh"
 source "${DOTFILES_DIR}/lib/brew.sh"
 source "${DOTFILES_DIR}/lib/runtime.sh"
 source "${DOTFILES_DIR}/lib/stow.sh"
@@ -289,7 +290,7 @@ complete -c dot -n '__fish_use_subcommand' -a hooks -d 'Install repository Git h
 complete -c dot -n '__fish_use_subcommand' -a secret-scan -d 'Scan repository for secrets'
 complete -c dot -n '__fish_use_subcommand' -a package -d 'Manage Homebrew bundle packages'
 complete -c dot -n '__fish_use_subcommand' -a pi -d 'Manage Pi and Pi extensions'
-complete -c dot -n '__fish_use_subcommand' -a check-packages -d 'Check bundle package state'
+complete -c dot -n '__fish_use_subcommand' -a config -d 'Manage local-only preferences'
 complete -c dot -n '__fish_use_subcommand' -a retry-failed -d 'Retry failed package installs'
 complete -c dot -n '__fish_use_subcommand' -a git-identity -d 'Create or update local Git identity'
 complete -c dot -n '__fish_use_subcommand' -a stow -d 'Create symlinks using GNU Stow'
@@ -300,8 +301,9 @@ complete -c dot -n '__fish_use_subcommand' -a completions -d 'Print shell comple
 complete -c dot -n '__fish_use_subcommand' -a edit -d 'Open dotfiles repo'
 complete -c dot -n '__fish_use_subcommand' -a help -d 'Show help'
 
-complete -c dot -n '__fish_seen_subcommand_from package' -a 'list unmanaged add remove update help' -d 'Package command'
+complete -c dot -n '__fish_seen_subcommand_from package' -a 'list check unmanaged add remove update help' -d 'Package command'
 complete -c dot -n '__fish_seen_subcommand_from pi' -a 'status update extension help' -d 'Pi command'
+complete -c dot -n '__fish_seen_subcommand_from config' -a 'list get set unset reset help' -d 'Config command'
 EOF
 }
 
@@ -332,7 +334,7 @@ ${BOLD}COMMANDS:${RESET}
   secret-scan      Scan repository for secrets
   package          Package management commands
   pi               Manage Pi and Pi extensions
-  check-packages   Check installed package state
+  config           Manage local-only preferences
   retry-failed     Retry failed package installations
   git-identity     Create or update ~/.gitconfig.local
   stow             Create symlinks using GNU Stow
@@ -382,7 +384,7 @@ main() {
     secret-scan) cmd_secret_scan "$@" ;;
     package) cmd_package "$@" ;;
     pi) cmd_pi "$@" ;;
-    check-packages) cmd_check_packages "$@" ;;
+    config) cmd_config "$@" ;;
     retry-failed) cmd_retry_failed "$@" ;;
     git-identity) cmd_git_identity "$@" ;;
     stow) cmd_stow "$@" ;;

@@ -79,6 +79,7 @@ dot secret-scan      # scan repository for secrets
 dot stow             # restow home/
 dot unstow           # remove stowed symlinks
 dot git-identity     # create or update ~/.gitconfig.local
+dot config           # list or edit local-only preferences
 dot completions      # print Fish completions
 dot edit             # open the repo in $EDITOR
 ```
@@ -111,23 +112,51 @@ The manifest is stored in `.agent-repos` with rows shaped as `mode`, `name`, `pa
 
 The base package list is `packages/bundle`. Fonts live in
 `packages/bundle.fonts`, and optional work-only packages can be kept in
-`packages/bundle.work`. `dot init` asks before installing missing fonts and
-work packages; fonts default to yes, work defaults to no.
+`packages/bundle.work`. `dot init` prompts for optional groups only when their
+local preference is unset. Answers are saved under XDG state so future runs know
+whether fonts or work packages are enabled or intentionally skipped.
 
 ```sh
 dot package list [base|fonts|work|all]
+dot package check
 dot package unmanaged
 dot package add NAME [brew|cask|auto] [base|fonts|work]
 dot package remove NAME [base|fonts|work|all]
 dot package update [NAME|all]
-dot check-packages
 dot retry-failed
 ```
+
+Use `dot package check` for base/fonts/work bundle status. Use
+`dot package unmanaged` separately to review installed Homebrew items that are
+not tracked by these bundles.
 
 Failed package installs are written to `packages/failed_packages_<timestamp>.txt`
 and ignored by Git.
 
 ## Local-Only Configuration
+
+Machine-local dot preferences are stored outside the repo at:
+
+```text
+${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences
+```
+
+Keys use lowercase/digit segments separated by dots. Manage them with:
+
+```sh
+dot config list
+dot config get packages.brew.fonts.enabled
+dot config set packages.brew.fonts.enabled true
+dot config unset packages.brew.fonts.enabled
+dot config reset
+```
+
+Current optional package preferences:
+
+```text
+packages.brew.fonts.enabled
+packages.brew.work.enabled
+```
 
 Tracked Git config intentionally excludes name, email, and signing key:
 
@@ -307,7 +336,8 @@ dot stow
 Check package drift:
 
 ```sh
-dot check-packages
+dot package check
+dot package unmanaged
 dot retry-failed
 ```
 

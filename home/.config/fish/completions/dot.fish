@@ -12,7 +12,7 @@ complete -c dot -n '__fish_use_subcommand' -a hooks -d 'Install repository Git h
 complete -c dot -n '__fish_use_subcommand' -a secret-scan -d 'Scan repository for secrets'
 complete -c dot -n '__fish_use_subcommand' -a package -d 'Manage Homebrew bundle packages'
 complete -c dot -n '__fish_use_subcommand' -a pi -d 'Manage Pi and Pi extensions'
-complete -c dot -n '__fish_use_subcommand' -a check-packages -d 'Check bundle package state'
+complete -c dot -n '__fish_use_subcommand' -a config -d 'Manage local-only preferences'
 complete -c dot -n '__fish_use_subcommand' -a retry-failed -d 'Retry failed package installs'
 complete -c dot -n '__fish_use_subcommand' -a git-identity -d 'Create or update local Git identity'
 complete -c dot -n '__fish_use_subcommand' -a stow -d 'Create symlinks using GNU Stow'
@@ -23,5 +23,6 @@ complete -c dot -n '__fish_use_subcommand' -a completions -d 'Print shell comple
 complete -c dot -n '__fish_use_subcommand' -a edit -d 'Open dotfiles repo'
 complete -c dot -n '__fish_use_subcommand' -a help -d 'Show help'
 
-complete -c dot -n '__fish_seen_subcommand_from package' -a 'list unmanaged add remove update help' -d 'Package command'
+complete -c dot -n '__fish_seen_subcommand_from package' -a 'list check unmanaged add remove update help' -d 'Package command'
 complete -c dot -n '__fish_seen_subcommand_from pi' -a 'status update extension help' -d 'Pi command'
+complete -c dot -n '__fish_seen_subcommand_from config' -a 'list get set unset reset help' -d 'Config command'

@@ -179,37 +179,68 @@ _install_packages() {
   ensure_homebrew
   brew_bundle_install_resilient "$BASE_BUNDLE"
 
-  install_optional_bundle "$FONTS_BUNDLE" "font packages" "y"
-  install_optional_bundle "$WORK_BUNDLE" "work-specific packages" "n"
+  install_optional_bundle "$FONTS_BUNDLE" "font packages" "y" "packages.brew.fonts.enabled" || return 1
+  install_optional_bundle "$WORK_BUNDLE" "work-specific packages" "n" "packages.brew.work.enabled" || return 1
 }
 
 install_optional_bundle() {
   local bundle="$1"
   local label="$2"
   local default="$3"
+  local config_key="$4"
 
   [[ -f "$bundle" ]] || return 0
+
+  local enabled
+  if enabled="$(config_get "$config_key")"; then
+    if [[ "$enabled" == "false" ]]; then
+      print_info "Skipping $label ($config_key=false)"
+      return 0
+    fi
+  else
+    if confirm "Install $label?" "$default"; then
+      config_set "$config_key" "true" || {
+        print_error "Failed to persist local preference: $config_key"
+        return 1
+      }
+      enabled="true"
+    else
+      config_set "$config_key" "false" || {
+        print_error "Failed to persist local preference: $config_key"
+        return 1
+      }
+      print_info "Skipping $label ($config_key=false)"
+      return 0
+    fi
+  fi
 
   if brew_bundle_satisfied "$bundle"; then
     print_success "Already installed: $label"
     return 0
   fi
 
-  if confirm "Install $label?" "$default"; then
-    brew_bundle_install_resilient "$bundle"
-  fi
+  brew_bundle_install_resilient "$bundle"
 }
 
 check_bundle_group() {
   local bundle="$1"
   local label="$2"
   local required="$3"
+  local config_key="${4:-}"
 
   echo -e "\n${BOLD}$label${RESET}"
 
   if [[ ! -f "$bundle" ]]; then
     print_warning "Bundle not found: $bundle"
     return 0
+  fi
+
+  if [[ "$required" != "true" && -n "$config_key" ]]; then
+    local enabled
+    if enabled="$(config_get "$config_key")" && [[ "$enabled" == "false" ]]; then
+      print_info "Skipped by local preference ($config_key=false)"
+      return 0
+    fi
   fi
 
   if brew_bundle_satisfied "$bundle"; then
@@ -223,21 +254,21 @@ check_bundle_group() {
     return 1
   fi
 
-  print_warning "Optional packages are not fully installed"
+  print_warning "Optional packages are missing"
+  if [[ -n "$config_key" ]]; then
+    print_info "Set $config_key=false to intentionally skip this group"
+  fi
   brew_bundle_check_verbose "$bundle" || true
   return 0
 }
 
-cmd_check_packages() {
+cmd_package_check() {
   print_header "Checking packages"
 
   local failed=0
-  check_bundle_group "$BASE_BUNDLE" "Base packages" "true" || failed=1
-
-  check_bundle_group "$FONTS_BUNDLE" "Font packages (optional)" "false"
-  check_bundle_group "$WORK_BUNDLE" "Work packages (optional)" "false"
-
-  cmd_package_unmanaged
+  check_bundle_group "$BASE_BUNDLE" "Base packages (required)" "true" || failed=1
+  check_bundle_group "$FONTS_BUNDLE" "Font packages (optional)" "false" "packages.brew.fonts.enabled"
+  check_bundle_group "$WORK_BUNDLE" "Work packages (optional)" "false" "packages.brew.work.enabled"
 
   return "$failed"
 }
@@ -477,6 +508,7 @@ ${BOLD}${SCRIPT_NAME} package${RESET}
 
 Usage:
   ${SCRIPT_NAME} package list [base|fonts|work|all]
+  ${SCRIPT_NAME} package check
   ${SCRIPT_NAME} package unmanaged
   ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|fonts|work]
   ${SCRIPT_NAME} package remove NAME [base|fonts|work|all]
@@ -490,6 +522,7 @@ cmd_package() {
 
   case "$subcommand" in
     list) cmd_package_list "$@" ;;
+    check) cmd_package_check "$@" ;;
     unmanaged) cmd_package_unmanaged "$@" ;;
     add) cmd_package_add "$@" ;;
     remove) cmd_package_remove "$@" ;;
