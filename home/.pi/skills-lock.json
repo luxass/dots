@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "bro": {
+      "source": "dillon-dotfiles",
+      "sourceType": "local",
+      "sourcePath": "home/.pi/agent/skills/bro",
+      "localPath": "home/.pi/agent/skills/bro"
+    },
     "commit": {
       "source": "dots",
       "sourceType": "local",
