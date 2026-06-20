@@ -152,17 +152,39 @@ _unstow_dotfiles() {
 }
 
 _link_dot() {
-  mkdir -p "$HOME/.local/bin"
-  ln -sfn "$DOTFILES_DIR/dot" "$HOME/.local/bin/dot"
-  print_success "Linked dot -> $HOME/.local/bin/dot"
+  local target_dir="/usr/local/bin"
+  local link_path="$target_dir/dot"
+
+  if [[ ! -w "$target_dir" ]]; then
+    print_info "Need sudo access to create symlink in $target_dir"
+    target_dir="$HOME/.local/bin"
+    link_path="$target_dir/dot"
+    mkdir -p "$target_dir"
+    print_info "Using $target_dir instead"
+  fi
+
+  if [[ -L "$link_path" ]]; then
+    rm "$link_path"
+  fi
+
+  ln -s "$DOTFILES_DIR/dot" "$link_path"
+  print_success "Linked dot -> $link_path"
 }
 
 _unlink_dot() {
-  if [[ -L "$HOME/.local/bin/dot" ]]; then
-    rm "$HOME/.local/bin/dot"
-    print_success "Removed $HOME/.local/bin/dot"
-  else
-    print_info "No dot link found at $HOME/.local/bin/dot"
+  local removed=false
+  local link_path
+
+  for link_path in "/usr/local/bin/dot" "$HOME/.local/bin/dot"; do
+    if [[ -L "$link_path" ]]; then
+      rm "$link_path"
+      print_success "Removed $link_path"
+      removed=true
+    fi
+  done
+
+  if [[ "$removed" != "true" ]]; then
+    print_info "No dot link found"
   fi
 }
 
