@@ -1,7 +1,8 @@
 readonly PI_PACKAGE_JSON="${HOME_DIR}/.pi/package.json"
 readonly PI_SETTINGS_JSON="${HOME_DIR}/.pi/agent/settings.json"
+readonly PI_SKILLS_DIR="${HOME_DIR}/.pi/agent/skills"
+readonly PI_SKILLS_LOCK="${HOME_DIR}/.pi/skills-lock.json"
 readonly PLANNOTATOR_PACKAGE="@plannotator/pi-extension"
-readonly POCOCK_SYNC_SKILL="${HOME_DIR}/.pi/agent/skills/sync-pocock-skills/SKILL.md"
 
 require_pi_tooling() {
   local failed=0
@@ -104,21 +105,6 @@ print_pi_settings_packages() {
   ' "$PI_SETTINGS_JSON"
 }
 
-run_pocock_skills_sync() {
-  if [[ ! -f "$POCOCK_SYNC_SKILL" ]]; then
-    print_warning "sync-pocock-skills is not installed; skipping skills sync"
-    return 0
-  fi
-
-  print_info "Running headless Pi skills sync..."
-  if (cd "$DOTFILES_DIR" && pi -p --no-skills --skill "$POCOCK_SYNC_SKILL" "/skill:sync-pocock-skills"); then
-    print_success "Matt Pocock skills sync complete"
-  else
-    print_error "Matt Pocock skills sync failed"
-    return 1
-  fi
-}
-
 cmd_pi_status() {
   print_header "Pi status"
 
@@ -197,7 +183,6 @@ cmd_pi_update() {
   fi
   print_success "Pi version verified: $installed_version"
 
-  run_pocock_skills_sync
   cmd_doctor
 }
 
@@ -255,6 +240,134 @@ cmd_pi_extension() {
   esac
 }
 
+cmd_pi_skills_list() {
+  node - "$PI_SKILLS_LOCK" <<'NODE'
+const fs = require("fs");
+const lockPath = process.argv[2];
+
+if (!fs.existsSync(lockPath)) {
+  console.log(`Missing skills lock: ${lockPath}`);
+  process.exit(1);
+}
+
+const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+const rows = Object.entries(lock.skills ?? {}).sort(([a], [b]) => a.localeCompare(b));
+
+console.log(`Skills lock: ${lockPath}`);
+console.log(`Skills: ${rows.length}`);
+for (const [name, skill] of rows) {
+  const hash = String(skill.computedHash ?? "").slice(0, 12);
+  console.log(`${name}\t${skill.source ?? "unknown"}\t${skill.localPath ?? ""}\t${hash}`);
+}
+NODE
+}
+
+cmd_pi_skills_check() {
+  node - "$DOTFILES_DIR" "$PI_SKILLS_DIR" "$PI_SKILLS_LOCK" <<'NODE'
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+
+const root = process.argv[2];
+const skillsDir = process.argv[3];
+const lockPath = process.argv[4];
+let failed = false;
+
+function hashSkill(dir) {
+  const hash = crypto.createHash("sha256");
+  const files = [];
+
+  function walk(current) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile()) files.push(full);
+    }
+  }
+
+  walk(dir);
+  for (const file of files) {
+    const rel = path.relative(dir, file).split(path.sep).join("/");
+    hash.update(rel);
+    hash.update("\0");
+    hash.update(fs.readFileSync(file));
+    hash.update("\0");
+  }
+  return hash.digest("hex");
+}
+
+if (!fs.existsSync(lockPath)) {
+  console.error(`Missing skills lock: ${lockPath}`);
+  process.exit(1);
+}
+
+const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+const skills = lock.skills ?? {};
+const lockedNames = new Set(Object.keys(skills));
+
+for (const [name, skill] of Object.entries(skills).sort(([a], [b]) => a.localeCompare(b))) {
+  const localPath = skill.localPath ?? `home/.pi/agent/skills/${name}`;
+  const dir = path.join(root, localPath);
+  if (!fs.existsSync(path.join(dir, "SKILL.md"))) {
+    console.error(`missing: ${name} (${localPath})`);
+    failed = true;
+    continue;
+  }
+
+  const actual = hashSkill(dir);
+  if (actual !== skill.computedHash) {
+    console.error(`changed: ${name}`);
+    console.error(`  expected ${skill.computedHash}`);
+    console.error(`  actual   ${actual}`);
+    failed = true;
+  } else {
+    console.log(`ok: ${name}`);
+  }
+}
+
+if (fs.existsSync(skillsDir)) {
+  for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!entry.isDirectory()) continue;
+    if (!fs.existsSync(path.join(skillsDir, entry.name, "SKILL.md"))) continue;
+    if (!lockedNames.has(entry.name)) {
+      console.error(`untracked: ${entry.name}`);
+      failed = true;
+    }
+  }
+}
+
+process.exit(failed ? 1 : 0);
+NODE
+}
+
+cmd_pi_skills_help() {
+  cat <<EOF
+${BOLD}${SCRIPT_NAME} pi skills${RESET}
+
+${BOLD}USAGE:${RESET}
+  ${SCRIPT_NAME} pi skills list
+  ${SCRIPT_NAME} pi skills check
+
+${BOLD}COMMANDS:${RESET}
+  list   List tracked skills from the local skills lock
+  check  Verify checked-in skill files match the local skills lock
+EOF
+}
+
+cmd_pi_skills() {
+  local subcommand="${1:-list}"
+  if [[ "$#" -gt 0 ]]; then
+    shift
+  fi
+
+  case "$subcommand" in
+    list) cmd_pi_skills_list "$@" ;;
+    check) cmd_pi_skills_check "$@" ;;
+    help|-h|--help) cmd_pi_skills_help ;;
+    *) print_error "Unknown pi skills command: $subcommand"; cmd_pi_skills_help; return 1 ;;
+  esac
+}
+
 cmd_pi_help() {
   cat <<EOF
 ${BOLD}${SCRIPT_NAME} pi${RESET}
@@ -262,11 +375,14 @@ ${BOLD}${SCRIPT_NAME} pi${RESET}
 ${BOLD}USAGE:${RESET}
   ${SCRIPT_NAME} pi status
   ${SCRIPT_NAME} pi update [VERSION]
+  ${SCRIPT_NAME} pi skills list
+  ${SCRIPT_NAME} pi skills check
   ${SCRIPT_NAME} pi extension install plannotator VERSION
 
 ${BOLD}COMMANDS:${RESET}
   status                         Show installed, latest, and pinned Pi state
-  update [VERSION]               Update tracked Pi pins, run 'pi update', verify version, sync skills, and run doctor
+  update [VERSION]               Update tracked Pi pins, run 'pi update', verify version, and run doctor
+  skills                         Inspect the checked-in Pi skills inventory
   extension install NAME VERSION Install a managed pinned Pi extension
 EOF
 }
@@ -280,6 +396,7 @@ cmd_pi() {
   case "$subcommand" in
     status) cmd_pi_status "$@" ;;
     update) cmd_pi_update "$@" ;;
+    skills) cmd_pi_skills "$@" ;;
     extension) cmd_pi_extension "$@" ;;
     help|-h|--help) cmd_pi_help ;;
     *) print_error "Unknown pi command: $subcommand"; cmd_pi_help; return 1 ;;

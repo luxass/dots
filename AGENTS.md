@@ -108,7 +108,8 @@ dot package list     # List managed packages
 dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
-dot pi update        # Update Pi to latest, update packages/extensions, sync skills
+dot pi update        # Update Pi to latest and update packages/extensions
+dot pi skills check  # Verify checked-in Pi skills match the local skills lock
 dot completions      # Print Fish completions
 ```
 
@@ -127,7 +128,7 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
-| Pi | `home/.pi/package.json`, `home/.pi/agent/settings.json` | Managed by `dot pi` |
+| Pi | `home/.pi/package.json`, `home/.pi/pnpm-lock.yaml`, `home/.pi/skills-lock.json`, `home/.pi/agent/settings.json` | Managed by `dot pi` |
 
 ## NOTES
 

@@ -276,6 +276,8 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   commit bodies.
 - `skills/github/` teaches Pi to use the `gh` CLI for PRs, checks, workflow
   runs, issues, and GitHub API queries.
+- `../skills-lock.json` records the checked-in local skills inventory and hashes
+  for read-only drift checks.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
 unattended work, run Pi in an isolated environment instead of relying only on the
@@ -289,20 +291,27 @@ Manage Pi and pinned Pi extensions through `dot pi`:
 ```sh
 dot pi status
 dot pi update
-dot pi update 0.79.3
+dot pi update 0.79.8
+dot pi skills list
+dot pi skills check
 dot pi extension install plannotator 0.20.2
 ```
 
-`dot update` asks whether to update Pi and managed Pi extensions/skills after
+`dot update` asks whether to update Pi and managed Pi packages/extensions after
 the Homebrew and Stow steps.
 
 `dot pi update [VERSION]` updates the tracked Pi package pins in
 `home/.pi/package.json`, refreshes the lockfile, runs `pi update`, verifies
-`pi --version`, runs the optional manual skills sync workflow when installed,
-and finishes with `dot doctor`. When `VERSION` is omitted, it resolves the
-latest `@earendil-works/pi-coding-agent` version from npm. Pi's own updater
-supplies its pnpm safety flags for self-updates, including disabled lifecycle
-scripts and a release-age override for fresh Pi releases.
+`pi --version`, and finishes with `dot doctor`. It does not run the manual skills
+sync workflow; invoke `sync-pocock-skills` directly when you want to sync skills.
+When `VERSION` is omitted, it resolves the latest
+`@earendil-works/pi-coding-agent` version from npm. Pi's own updater supplies its
+pnpm safety flags for self-updates, including disabled lifecycle scripts and a
+release-age override for fresh Pi releases.
+
+`dot pi skills list` and `dot pi skills check` inspect the checked-in local skill
+inventory in `home/.pi/skills-lock.json`. They are read-only and do not install,
+remove, or sync skills.
 
 `dot pi extension install plannotator VERSION` installs the pinned Plannotator
 Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This
