@@ -32,6 +32,12 @@ brew_bundle_check() {
   brew bundle check --no-upgrade --file "$bundle"
 }
 
+brew_bundle_check_verbose() {
+  local bundle="$1"
+
+  brew bundle check --verbose --no-upgrade --file "$bundle"
+}
+
 brew_bundle_satisfied() {
   local bundle="$1"
 
@@ -194,19 +200,44 @@ install_optional_bundle() {
   fi
 }
 
+check_bundle_group() {
+  local bundle="$1"
+  local label="$2"
+  local required="$3"
+
+  echo -e "\n${BOLD}$label${RESET}"
+
+  if [[ ! -f "$bundle" ]]; then
+    print_warning "Bundle not found: $bundle"
+    return 0
+  fi
+
+  if brew_bundle_satisfied "$bundle"; then
+    print_success "Satisfied"
+    return 0
+  fi
+
+  if [[ "$required" == "true" ]]; then
+    print_error "Missing required packages"
+    brew_bundle_check_verbose "$bundle" || true
+    return 1
+  fi
+
+  print_warning "Optional packages are not fully installed"
+  brew_bundle_check_verbose "$bundle" || true
+  return 0
+}
+
 cmd_check_packages() {
   print_header "Checking packages"
 
   local failed=0
-  brew_bundle_check "$BASE_BUNDLE" || failed=1
+  check_bundle_group "$BASE_BUNDLE" "Base packages" "true" || failed=1
 
-  if [[ -f "$FONTS_BUNDLE" ]]; then
-    brew_bundle_check "$FONTS_BUNDLE" || failed=1
-  fi
+  check_bundle_group "$FONTS_BUNDLE" "Font packages (optional)" "false"
+  check_bundle_group "$WORK_BUNDLE" "Work packages (optional)" "false"
 
-  if [[ -f "$WORK_BUNDLE" ]]; then
-    brew_bundle_check "$WORK_BUNDLE" || failed=1
-  fi
+  cmd_package_unmanaged
 
   return "$failed"
 }
@@ -299,18 +330,37 @@ cmd_package_unmanaged() {
     <(brew list --cask 2>/dev/null | sort -u) \
     <(tracked_casks | sort -u))"
 
-  echo -e "\n${BOLD}Formulae${RESET}"
+  local formula_count cask_count
+  formula_count="$(awk 'NF { count++ } END { print count + 0 }' <<< "$unmanaged_brews")"
+  cask_count="$(awk 'NF { count++ } END { print count + 0 }' <<< "$unmanaged_casks")"
+
+  echo
+  echo "These are installed Homebrew items that are not listed in:"
+  printf '  %s\n' "packages/bundle" "packages/bundle.fonts" "packages/bundle.work"
+
+  echo -e "\n${BOLD}Formulae (${formula_count})${RESET}"
   if [[ -n "$unmanaged_brews" ]]; then
-    printf '%s\n' "$unmanaged_brews"
+    sed 's/^/  /' <<< "$unmanaged_brews"
   else
-    print_success "No unmanaged top-level formulae"
+    print_success "None"
   fi
 
-  echo -e "\n${BOLD}Casks${RESET}"
+  echo -e "\n${BOLD}Casks (${cask_count})${RESET}"
   if [[ -n "$unmanaged_casks" ]]; then
-    printf '%s\n' "$unmanaged_casks"
+    sed 's/^/  /' <<< "$unmanaged_casks"
   else
-    print_success "No unmanaged casks"
+    print_success "None"
+  fi
+
+  if (( formula_count > 0 || cask_count > 0 )); then
+    echo
+    echo "To manage one:"
+    echo "  dot package add NAME brew base"
+    echo "  dot package add NAME cask base"
+    echo
+    echo "To remove one:"
+    echo "  brew uninstall NAME"
+    echo "  brew uninstall --cask NAME"
   fi
 }
 
