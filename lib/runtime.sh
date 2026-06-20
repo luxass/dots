@@ -23,10 +23,7 @@ ensure_pnpm() {
   local installer_env
   installer_env="$(mktemp)"
 
-  local install_shell
-  install_shell="$(command -v fish 2>/dev/null || echo /bin/sh)"
-
-  if curl -fsSL https://get.pnpm.io/install.sh | ENV="$installer_env" SHELL="$install_shell" sh -; then
+  if curl -fsSL https://get.pnpm.io/install.sh | ENV="$installer_env" SHELL="/bin/sh" sh -; then
     rm -f "$installer_env"
     enable_pnpm_path
     hash -r 2>/dev/null || true
