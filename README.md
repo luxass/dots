@@ -8,7 +8,7 @@ This repository contains a reproducible macOS development setup. Files under
 `home/` mirror `$HOME`, packages live in `packages/`, and `dot` handles setup,
 maintenance, package checks, symlinks, and local-only identity configuration.
 
-The repo is intentionally small: zsh, Git, Ghostty, Homebrew packages, and
+The repo is intentionally small: Fish, Git, Ghostty, Homebrew packages, and
 JavaScript runtime policy. It does not try to manage Linux, Neovim, tmux, or
 other configs that are not currently wanted.
 
@@ -49,13 +49,11 @@ command is not available immediately.
 │   └── stow.sh         # GNU Stow links, backups, and dot CLI linking
 ├── home/               # Files stowed into $HOME
 │   ├── .config/
+│   │   ├── fish/
 │   │   ├── ghostty/
 │   │   └── pnpm/
 │   ├── .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 │   ├── .npmrc          # Public npm policy only; no auth
-│   ├── .zprofile
-│   ├── .zshenv
-│   ├── .zshrc
 │   └── dot-gitignore   # Stowed as ~/.gitignore via --dotfiles
 ├── packages/
 │   ├── bundle          # Base Brewfile
@@ -81,7 +79,7 @@ dot secret-scan      # scan repository for secrets
 dot stow             # restow home/
 dot unstow           # remove stowed symlinks
 dot git-identity     # create or update ~/.gitconfig.local
-dot completions      # print zsh completions
+dot completions      # print Fish completions
 dot edit             # open the repo in $EDITOR
 ```
 
@@ -151,6 +149,20 @@ ssh-add -L
 ```
 
 Paste the relevant public key when prompted for `user.signingkey`.
+
+## Shell
+
+Fish is the primary interactive shell. The tracked Fish config keeps a small
+`config.fish` plus modular `conf.d/*.fish` style:
+
+- `home/.config/fish/config.fish` stays small.
+- `home/.config/fish/conf.d/*.fish` contains environment, paths, Homebrew,
+  Starship, Zoxide, Direnv, Bun, and OrbStack setup.
+- `home/.config/fish/completions/` contains Fish completions.
+
+`dot init` installs Fish through Homebrew, adds it to `/etc/shells` when needed,
+and sets it as the login shell with `chsh`. Restart the terminal after the
+change.
 
 ## Git Hooks
 

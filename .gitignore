@@ -25,6 +25,7 @@ auth.json
 *.pfx
 
 # App-generated state
+home/.config/fish/fish_variables
 home/.config/zed/conversations/
 home/.config/zed/embeddings/
 home/.config/zed/.tmp*

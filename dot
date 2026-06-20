@@ -32,6 +32,7 @@ TOOL_REGISTRY=(
   "Homebrew          ;; brew ;; fn:ensure_homebrew             ;; true  ;; - ;; true"
   "Brewfile packages ;; -    ;; fn:_install_packages           ;; true  ;; - ;; false"
   "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
+  "Fish shell        ;; fish ;; fn:_setup_fish_shell           ;; false ;; - ;; true"
   "pnpm              ;; pnpm ;; fn:ensure_pnpm                 ;; true  ;; - ;; true"
   "Node.js runtime   ;; node ;; fn:ensure_node_runtime         ;; true  ;; - ;; true"
   "pnpm globals      ;; -    ;; fn:ensure_pnpm_globals         ;; true  ;; - ;; false"
@@ -95,6 +96,34 @@ run_init_steps() {
   done
 }
 
+_setup_fish_shell() {
+  if ! command_exists fish; then
+    print_warning "Fish is not installed"
+    return 1
+  fi
+
+  local fish_path
+  fish_path="$(command -v fish)"
+
+  if ! grep -qx "$fish_path" /etc/shells; then
+    print_info "Adding Fish to /etc/shells"
+    echo "$fish_path" | sudo tee -a /etc/shells >/dev/null
+  fi
+
+  if [[ "${SHELL:-}" != "$fish_path" ]]; then
+    print_info "Setting Fish as the default shell"
+    chsh -s "$fish_path"
+    print_success "Default shell set to Fish; restart the terminal to use it"
+  else
+    print_success "Fish is already the default shell"
+  fi
+
+  if command_exists fisher; then
+    print_info "Installing Fish plugins"
+    fish -c "fisher install jhillyerd/plugin-git"
+  fi
+}
+
 cmd_init() {
   print_header "Initializing dotfiles"
   run_init_steps
@@ -140,6 +169,8 @@ cmd_info() {
   command_exists npm && npm --version || echo "missing"
   printf "Bun:                "
   command_exists bun && bun --version || echo "missing"
+  printf "Fish:               "
+  command_exists fish && fish --version || echo "missing"
   echo
 
   print_header "Git"
@@ -242,37 +273,40 @@ cmd_edit() {
   fi
 }
 
-cmd_completions() {
+cmd_completions_fish() {
   cat <<'EOF'
-#compdef dot
-_dot() {
-  local -a commands
-  commands=(
-    '-v:Print verbose progress diagnostics'
-    '--verbose:Print verbose progress diagnostics'
-    'init:Initialize and install dotfiles'
-    'update:Update dotfiles and packages'
-    'doctor:Run diagnostics'
-    'info:Show repository and runtime info'
-    'links:Check managed symlinks'
-    'hooks:Install repository Git hooks'
-    'secret-scan:Scan repository for secrets'
-    'package:Manage Homebrew bundle packages'
-    'pi:Manage Pi and Pi extensions'
-    'check-packages:Check bundle package state'
-    'retry-failed:Retry failed package installs'
-    'git-identity:Create or update local Git identity'
-    'stow:Create symlinks using GNU Stow'
-    'unstow:Remove stowed symlinks'
-    'link:Install dot command globally'
-    'unlink:Remove global dot command'
-    'edit:Open dotfiles repo'
-    'help:Show help'
-  )
-  _describe 'command' commands
-}
-_dot "$@"
+complete -c dot -f
+complete -c dot -s v -l verbose -d 'Print verbose progress diagnostics'
+complete -c dot -s h -l help -d 'Show help'
+complete -c dot -l version -d 'Show version'
+
+complete -c dot -n '__fish_use_subcommand' -a init -d 'Initialize and install dotfiles'
+complete -c dot -n '__fish_use_subcommand' -a update -d 'Update dotfiles and packages'
+complete -c dot -n '__fish_use_subcommand' -a doctor -d 'Run diagnostics'
+complete -c dot -n '__fish_use_subcommand' -a info -d 'Show repository and runtime info'
+complete -c dot -n '__fish_use_subcommand' -a links -d 'Check managed symlinks'
+complete -c dot -n '__fish_use_subcommand' -a hooks -d 'Install repository Git hooks'
+complete -c dot -n '__fish_use_subcommand' -a secret-scan -d 'Scan repository for secrets'
+complete -c dot -n '__fish_use_subcommand' -a package -d 'Manage Homebrew bundle packages'
+complete -c dot -n '__fish_use_subcommand' -a pi -d 'Manage Pi and Pi extensions'
+complete -c dot -n '__fish_use_subcommand' -a check-packages -d 'Check bundle package state'
+complete -c dot -n '__fish_use_subcommand' -a retry-failed -d 'Retry failed package installs'
+complete -c dot -n '__fish_use_subcommand' -a git-identity -d 'Create or update local Git identity'
+complete -c dot -n '__fish_use_subcommand' -a stow -d 'Create symlinks using GNU Stow'
+complete -c dot -n '__fish_use_subcommand' -a unstow -d 'Remove stowed symlinks'
+complete -c dot -n '__fish_use_subcommand' -a link -d 'Install dot command globally'
+complete -c dot -n '__fish_use_subcommand' -a unlink -d 'Remove global dot command'
+complete -c dot -n '__fish_use_subcommand' -a completions -d 'Print shell completions'
+complete -c dot -n '__fish_use_subcommand' -a edit -d 'Open dotfiles repo'
+complete -c dot -n '__fish_use_subcommand' -a help -d 'Show help'
+
+complete -c dot -n '__fish_seen_subcommand_from package' -a 'list unmanaged add remove update help' -d 'Package command'
+complete -c dot -n '__fish_seen_subcommand_from pi' -a 'status update extension help' -d 'Pi command'
 EOF
+}
+
+cmd_completions() {
+  cmd_completions_fish
 }
 
 cmd_help() {
@@ -305,7 +339,7 @@ ${BOLD}COMMANDS:${RESET}
   unstow           Remove symlinks using GNU Stow
   link             Link dot into ~/.local/bin
   unlink           Remove ~/.local/bin/dot
-  completions      Print zsh completions
+  completions      Print shell completions
   edit             Open the dotfiles repo
   help             Show this help
 

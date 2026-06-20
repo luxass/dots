@@ -20,6 +20,7 @@ dots/
 |   `-- stow.sh         # GNU Stow links, backups, dot CLI linking
 |-- home/               # Stowed into $HOME
 |   |-- .config/
+|   |   |-- fish/       # Primary shell config
 |   |   |-- ghostty/    # Terminal config
 |   |   |-- pnpm/       # pnpm security policy
 |   |   `-- starship.toml
@@ -27,9 +28,6 @@ dots/
 |   |-- .bunfig.toml    # Bun install policy
 |   |-- .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 |   |-- .npmrc          # npm policy only; no auth
-|   |-- .zprofile
-|   |-- .zshenv
-|   |-- .zshrc
 |   `-- dot-gitignore   # Stowed as ~/.gitignore via stow --dotfiles
 |-- packages/
 |   |-- bundle          # Base Brewfile
@@ -53,7 +51,7 @@ dots/
 | Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
-| Change shell startup | `home/.zshenv`, `home/.zprofile`, `home/.zshrc` |
+| Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
 | Change Pi management | `lib/pi.sh`, `home/.pi/package.json`, `home/.pi/agent/settings.json` |
@@ -110,7 +108,7 @@ dot package list     # List managed packages
 dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
 dot pi update        # Update Pi to latest, update packages/extensions, sync skills
-dot completions      # Print zsh completions
+dot completions      # Print Fish completions
 ```
 
 Use `dot --verbose doctor` or `dot --verbose info` when diagnostics need more
@@ -120,7 +118,7 @@ detail.
 
 | Tool | Entry | Notes |
 | --- | --- | --- |
-| zsh | `home/.zshrc`, `.zprofile`, `.zshenv` | Shell startup and environment |
+| Fish | `home/.config/fish/` | Primary shell startup and environment |
 | Git | `home/.gitconfig` | Public config; private identity is local-only |
 | Ghostty | `home/.config/ghostty/config` | Terminal settings |
 | Starship | `home/.config/starship.toml` | Prompt |

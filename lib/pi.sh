@@ -58,10 +58,12 @@ set_pi_package_version() {
 }
 
 ensure_plannotator_share_disabled() {
-  local env_line='export PLANNOTATOR_SHARE="disabled";'
-  local zshenv="${HOME_DIR}/.zshenv"
+  local env_line='set -gx PLANNOTATOR_SHARE disabled'
+  local fish_env="${HOME_DIR}/.config/fish/conf.d/env.fish"
 
-  if grep -q '^export PLANNOTATOR_SHARE=' "$zshenv"; then
+  mkdir -p "$(dirname "$fish_env")"
+
+  if grep -q '^set -gx PLANNOTATOR_SHARE ' "$fish_env" 2>/dev/null; then
     print_success "PLANNOTATOR_SHARE is already configured"
     return 0
   fi
@@ -70,7 +72,7 @@ ensure_plannotator_share_disabled() {
     printf '\n'
     printf '# Plannotator sharing is opt-in for Pi sessions.\n'
     printf '%s\n' "$env_line"
-  } >> "$zshenv"
+  } >> "$fish_env"
 
   print_success "Disabled Plannotator sharing by default"
 }
