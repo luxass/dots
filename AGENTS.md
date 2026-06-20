@@ -109,8 +109,7 @@ dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
 dot pi update        # Update Pi to latest and update packages/extensions
-dot pi skills check  # Verify checked-in Pi skills match the local skills lock
-dot pi skills add X  # Install external Pi skills via pnpm dlx skills into tracked files
+dot skills check     # Verify checked-in Pi skills match the local skills lock
 dot completions      # Print Fish completions
 ```
 
@@ -141,5 +140,6 @@ detail.
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.
 - Only custom/local Pi skills should be edited directly. Install external Pi
-  skills with `dot pi skills add ...` so files remain under `home/.pi/agent/skills/`
-  and refresh `home/.pi/skills-lock.json`.
+  skills manually with `pnpm dlx skills add ... --global --agent pi --copy`,
+  then run `dot skills refresh` so files remain under `home/.pi/agent/skills/`
+  and `home/.pi/skills-lock.json` is updated.

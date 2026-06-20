@@ -292,10 +292,9 @@ Manage Pi and pinned Pi extensions through `dot pi`:
 dot pi status
 dot pi update
 dot pi update 0.79.8
-dot pi skills list
-dot pi skills check
-dot pi skills refresh
-dot pi skills add owner/repo --skill skill-name
+dot skills list
+dot skills check
+dot skills refresh
 dot pi extension install plannotator 0.20.2
 ```
 
@@ -310,22 +309,22 @@ external skills. When `VERSION` is omitted, it resolves the latest
 pnpm safety flags for self-updates, including disabled lifecycle scripts and a
 release-age override for fresh Pi releases.
 
-`dot pi skills list` and `dot pi skills check` inspect the checked-in skill
-inventory in `home/.pi/skills-lock.json`. `dot pi skills refresh` rebuilds that
-lock from the files under `home/.pi/agent/skills`.
+`dot skills list` and `dot skills check` inspect the checked-in skill inventory
+in `home/.pi/skills-lock.json`. `dot skills refresh` rebuilds that lock from the
+files under `home/.pi/agent/skills`.
 
-External skills are installed manually through the open `skills` CLI without
-installing that CLI globally. `dot pi skills add SOURCE [skills options...]`
-runs `pnpm dlx skills add SOURCE --global --agent pi --copy ...`, verifies that
-`~/.pi/agent/skills` points at this repo, and refreshes the tracked lock. The
-installed skill files stay visible to Git under `home/.pi/agent/skills`.
+External skills are installed manually through the open `skills` CLI. Do not
+install the CLI globally unless you explicitly want that; use `pnpm dlx`. Run
+`dot stow` first so `~/.pi/agent/skills` points at this repo and installed skill
+files stay visible to Git under `home/.pi/agent/skills`.
 
 Examples:
 
 ```sh
 dot stow
-dot pi skills add ogulcancelik/herdr --skill herdr
-dot pi skills check
+pnpm dlx skills add ogulcancelik/herdr --global --agent pi --copy --skill herdr
+dot skills refresh
+dot skills check
 git add home/.pi/agent/skills home/.pi/skills-lock.json
 ```
 
