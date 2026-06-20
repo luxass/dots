@@ -276,8 +276,7 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   commit bodies.
 - `skills/github/` teaches Pi to use the `gh` CLI for PRs, checks, workflow
   runs, issues, and GitHub API queries.
-- `../skills-lock.json` records the checked-in skill inventory and hashes for
-  drift checks.
+- `../skills-lock.json` records the checked-in skill inventory.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
 unattended work, run Pi in an isolated environment instead of relying only on the
@@ -292,8 +291,6 @@ Manage Pi and pinned Pi extensions through `dot pi`:
 dot pi status
 dot pi update
 dot pi update 0.79.8
-dot skills list
-dot skills check
 dot pi extension install plannotator 0.20.2
 ```
 
@@ -308,25 +305,11 @@ external skills. When `VERSION` is omitted, it resolves the latest
 pnpm safety flags for self-updates, including disabled lifecycle scripts and a
 release-age override for fresh Pi releases.
 
-`dot skills list` and `dot skills check` inspect the checked-in skill inventory
-in `home/.pi/skills-lock.json`. The check is intentionally simple: it reports
-tracked skills that are missing and checked-in skill directories that are not in
-the lock.
-
 External skills are installed manually through the open `skills` CLI. Do not
 install the CLI globally unless you explicitly want that; use `pnpm dlx`. Run
 `dot stow` first so `~/.pi/agent/skills` points at this repo and installed skill
 files stay visible to Git under `home/.pi/agent/skills`. After installing or
 removing skills, update `home/.pi/skills-lock.json` in the same change.
-
-Examples:
-
-```sh
-dot stow
-pnpm dlx skills add ogulcancelik/herdr --global --agent pi --copy --skill herdr
-dot skills check
-git add home/.pi/agent/skills home/.pi/skills-lock.json
-```
 
 `dot pi extension install plannotator VERSION` installs the pinned Plannotator
 Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This

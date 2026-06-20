@@ -1,7 +1,5 @@
 readonly PI_PACKAGE_JSON="${HOME_DIR}/.pi/package.json"
 readonly PI_SETTINGS_JSON="${HOME_DIR}/.pi/agent/settings.json"
-readonly PI_SKILLS_DIR="${HOME_DIR}/.pi/agent/skills"
-readonly PI_SKILLS_LOCK="${HOME_DIR}/.pi/skills-lock.json"
 readonly PLANNOTATOR_PACKAGE="@plannotator/pi-extension"
 
 require_pi_tooling() {
@@ -237,100 +235,6 @@ cmd_pi_extension() {
     install) cmd_pi_extension_install "$@" ;;
     help|-h|--help) cmd_pi_help ;;
     *) print_error "Unknown pi extension command: $subcommand"; cmd_pi_help; return 1 ;;
-  esac
-}
-
-cmd_skills_list() {
-  node - "$PI_SKILLS_LOCK" <<'NODE'
-const fs = require("fs");
-const lockPath = process.argv[2];
-
-if (!fs.existsSync(lockPath)) {
-  console.log(`Missing skills lock: ${lockPath}`);
-  process.exit(1);
-}
-
-const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-const rows = Object.entries(lock.skills ?? {}).sort(([a], [b]) => a.localeCompare(b));
-
-console.log(`Skills lock: ${lockPath}`);
-console.log(`Skills: ${rows.length}`);
-for (const [name, skill] of rows) {
-  console.log(`${name}\t${skill.source ?? "unknown"}\t${skill.localPath ?? ""}`);
-}
-NODE
-}
-
-cmd_skills_check() {
-  node - "$DOTFILES_DIR" "$PI_SKILLS_DIR" "$PI_SKILLS_LOCK" <<'NODE'
-const fs = require("fs");
-const path = require("path");
-
-const root = process.argv[2];
-const skillsDir = process.argv[3];
-const lockPath = process.argv[4];
-let failed = false;
-
-if (!fs.existsSync(lockPath)) {
-  console.error(`Missing skills lock: ${lockPath}`);
-  process.exit(1);
-}
-
-const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-const skills = lock.skills ?? {};
-const lockedNames = new Set(Object.keys(skills));
-
-for (const [name, skill] of Object.entries(skills).sort(([a], [b]) => a.localeCompare(b))) {
-  const localPath = skill.localPath ?? `home/.pi/agent/skills/${name}`;
-  const dir = path.join(root, localPath);
-  if (!fs.existsSync(path.join(dir, "SKILL.md"))) {
-    console.error(`missing: ${name} (${localPath})`);
-    failed = true;
-  } else {
-    console.log(`ok: ${name}`);
-  }
-}
-
-if (fs.existsSync(skillsDir)) {
-  for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
-    if (!fs.existsSync(path.join(skillsDir, entry.name, "SKILL.md"))) continue;
-    if (!lockedNames.has(entry.name)) {
-      console.error(`untracked: ${entry.name}`);
-      failed = true;
-    }
-  }
-}
-
-process.exit(failed ? 1 : 0);
-NODE
-}
-
-cmd_skills_help() {
-  cat <<EOF
-${BOLD}${SCRIPT_NAME} skills${RESET}
-
-${BOLD}USAGE:${RESET}
-  ${SCRIPT_NAME} skills list
-  ${SCRIPT_NAME} skills check
-
-${BOLD}COMMANDS:${RESET}
-  list   List tracked skills from the local skills lock
-  check  Verify checked-in skill names match the local skills lock
-EOF
-}
-
-cmd_skills() {
-  local subcommand="${1:-list}"
-  if [[ "$#" -gt 0 ]]; then
-    shift
-  fi
-
-  case "$subcommand" in
-    list) cmd_skills_list "$@" ;;
-    check) cmd_skills_check "$@" ;;
-    help|-h|--help) cmd_skills_help ;;
-    *) print_error "Unknown skills command: $subcommand"; cmd_skills_help; return 1 ;;
   esac
 }
 

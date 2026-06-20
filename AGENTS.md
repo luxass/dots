@@ -109,7 +109,6 @@ dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
 dot pi update        # Update Pi to latest and update packages/extensions
-dot skills check     # Verify checked-in Pi skills match the local skills lock
 dot completions      # Print Fish completions
 ```
 
