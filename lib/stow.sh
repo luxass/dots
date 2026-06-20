@@ -160,6 +160,18 @@ _link_dot() {
     target_dir="$HOME/.local/bin"
     link_path="$target_dir/dot"
     mkdir -p "$target_dir"
+
+    if [[ -L "$target_dir" ]]; then
+      local resolved_target_dir
+      resolved_target_dir="$(realpath "$target_dir")"
+
+      if [[ "$resolved_target_dir" == "$DOTFILES_DIR/"* ]]; then
+        print_warning "$target_dir is managed by Stow; not writing dot into the repo"
+        print_info "Fish adds $DOTFILES_DIR to PATH, so 'dot' is available after shell restart"
+        return 0
+      fi
+    fi
+
     print_info "Using $target_dir instead"
   fi
 
