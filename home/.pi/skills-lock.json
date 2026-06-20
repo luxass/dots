@@ -5,15 +5,13 @@
       "source": "dots",
       "sourceType": "local",
       "sourcePath": "home/.pi/agent/skills/commit",
-      "localPath": "home/.pi/agent/skills/commit",
-      "computedHash": "bab79c859de96ee0babac4a1b7c1cae4e37f8b38fe15210b4a05b6c1d11732b6"
+      "localPath": "home/.pi/agent/skills/commit"
     },
     "github": {
       "source": "dots",
       "sourceType": "local",
       "sourcePath": "home/.pi/agent/skills/github",
-      "localPath": "home/.pi/agent/skills/github",
-      "computedHash": "cf0168f1b4c142b3eda25e6f81cb8b438d305f03640c7538cebc5c912bfe41e2"
+      "localPath": "home/.pi/agent/skills/github"
     }
   }
 }

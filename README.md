@@ -294,7 +294,6 @@ dot pi update
 dot pi update 0.79.8
 dot skills list
 dot skills check
-dot skills refresh
 dot pi extension install plannotator 0.20.2
 ```
 
@@ -310,20 +309,21 @@ pnpm safety flags for self-updates, including disabled lifecycle scripts and a
 release-age override for fresh Pi releases.
 
 `dot skills list` and `dot skills check` inspect the checked-in skill inventory
-in `home/.pi/skills-lock.json`. `dot skills refresh` rebuilds that lock from the
-files under `home/.pi/agent/skills`.
+in `home/.pi/skills-lock.json`. The check is intentionally simple: it reports
+tracked skills that are missing and checked-in skill directories that are not in
+the lock.
 
 External skills are installed manually through the open `skills` CLI. Do not
 install the CLI globally unless you explicitly want that; use `pnpm dlx`. Run
 `dot stow` first so `~/.pi/agent/skills` points at this repo and installed skill
-files stay visible to Git under `home/.pi/agent/skills`.
+files stay visible to Git under `home/.pi/agent/skills`. After installing or
+removing skills, update `home/.pi/skills-lock.json` in the same change.
 
 Examples:
 
 ```sh
 dot stow
 pnpm dlx skills add ogulcancelik/herdr --global --agent pi --copy --skill herdr
-dot skills refresh
 dot skills check
 git add home/.pi/agent/skills home/.pi/skills-lock.json
 ```

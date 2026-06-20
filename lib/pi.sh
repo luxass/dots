@@ -256,72 +256,13 @@ const rows = Object.entries(lock.skills ?? {}).sort(([a], [b]) => a.localeCompar
 console.log(`Skills lock: ${lockPath}`);
 console.log(`Skills: ${rows.length}`);
 for (const [name, skill] of rows) {
-  const hash = String(skill.computedHash ?? "").slice(0, 12);
-  console.log(`${name}\t${skill.source ?? "unknown"}\t${skill.localPath ?? ""}\t${hash}`);
+  console.log(`${name}\t${skill.source ?? "unknown"}\t${skill.localPath ?? ""}`);
 }
-NODE
-}
-
-cmd_skills_refresh() {
-  node - "$DOTFILES_DIR" "$PI_SKILLS_DIR" "$PI_SKILLS_LOCK" <<'NODE'
-const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
-
-const root = process.argv[2];
-const skillsDir = process.argv[3];
-const lockPath = process.argv[4];
-
-function hashSkill(dir) {
-  const hash = crypto.createHash("sha256");
-  const files = [];
-
-  function walk(current) {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.isFile()) files.push(full);
-    }
-  }
-
-  walk(dir);
-  for (const file of files) {
-    const rel = path.relative(dir, file).split(path.sep).join("/");
-    hash.update(rel);
-    hash.update("\0");
-    hash.update(fs.readFileSync(file));
-    hash.update("\0");
-  }
-  return hash.digest("hex");
-}
-
-const skills = {};
-
-if (fs.existsSync(skillsDir)) {
-  for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
-    const dir = path.join(skillsDir, entry.name);
-    if (!fs.existsSync(path.join(dir, "SKILL.md"))) continue;
-
-    const localPath = path.relative(root, dir).split(path.sep).join("/");
-    skills[entry.name] = {
-      source: "local",
-      sourceType: "local",
-      sourcePath: localPath,
-      localPath,
-      computedHash: hashSkill(dir),
-    };
-  }
-}
-
-fs.writeFileSync(lockPath, `${JSON.stringify({ version: 1, skills }, null, 2)}\n`);
-console.log(`Updated ${lockPath} (${Object.keys(skills).length} skills)`);
 NODE
 }
 
 cmd_skills_check() {
   node - "$DOTFILES_DIR" "$PI_SKILLS_DIR" "$PI_SKILLS_LOCK" <<'NODE'
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -329,29 +270,6 @@ const root = process.argv[2];
 const skillsDir = process.argv[3];
 const lockPath = process.argv[4];
 let failed = false;
-
-function hashSkill(dir) {
-  const hash = crypto.createHash("sha256");
-  const files = [];
-
-  function walk(current) {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.isFile()) files.push(full);
-    }
-  }
-
-  walk(dir);
-  for (const file of files) {
-    const rel = path.relative(dir, file).split(path.sep).join("/");
-    hash.update(rel);
-    hash.update("\0");
-    hash.update(fs.readFileSync(file));
-    hash.update("\0");
-  }
-  return hash.digest("hex");
-}
 
 if (!fs.existsSync(lockPath)) {
   console.error(`Missing skills lock: ${lockPath}`);
@@ -367,15 +285,6 @@ for (const [name, skill] of Object.entries(skills).sort(([a], [b]) => a.localeCo
   const dir = path.join(root, localPath);
   if (!fs.existsSync(path.join(dir, "SKILL.md"))) {
     console.error(`missing: ${name} (${localPath})`);
-    failed = true;
-    continue;
-  }
-
-  const actual = hashSkill(dir);
-  if (actual !== skill.computedHash) {
-    console.error(`changed: ${name}`);
-    console.error(`  expected ${skill.computedHash}`);
-    console.error(`  actual   ${actual}`);
     failed = true;
   } else {
     console.log(`ok: ${name}`);
@@ -404,12 +313,10 @@ ${BOLD}${SCRIPT_NAME} skills${RESET}
 ${BOLD}USAGE:${RESET}
   ${SCRIPT_NAME} skills list
   ${SCRIPT_NAME} skills check
-  ${SCRIPT_NAME} skills refresh
 
 ${BOLD}COMMANDS:${RESET}
-  list    List tracked skills from the local skills lock
-  check   Verify checked-in skill files match the local skills lock
-  refresh Rebuild the local skills lock from checked-in skill files
+  list   List tracked skills from the local skills lock
+  check  Verify checked-in skill names match the local skills lock
 EOF
 }
 
@@ -422,7 +329,6 @@ cmd_skills() {
   case "$subcommand" in
     list) cmd_skills_list "$@" ;;
     check) cmd_skills_check "$@" ;;
-    refresh) cmd_skills_refresh "$@" ;;
     help|-h|--help) cmd_skills_help ;;
     *) print_error "Unknown skills command: $subcommand"; cmd_skills_help; return 1 ;;
   esac

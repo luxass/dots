@@ -26,5 +26,5 @@ complete -c dot -n '__fish_use_subcommand' -a help -d 'Show help'
 
 complete -c dot -n '__fish_seen_subcommand_from package' -a 'list check unmanaged add remove update help' -d 'Package command'
 complete -c dot -n '__fish_seen_subcommand_from pi' -a 'status update extension help' -d 'Pi command'
-complete -c dot -n '__fish_seen_subcommand_from skills' -a 'list check refresh help' -d 'Skills command'
+complete -c dot -n '__fish_seen_subcommand_from skills' -a 'list check help' -d 'Skills command'
 complete -c dot -n '__fish_seen_subcommand_from config' -a 'list get set unset reset help' -d 'Config command'

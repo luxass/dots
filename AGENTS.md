@@ -140,6 +140,6 @@ detail.
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.
 - Only custom/local Pi skills should be edited directly. Install external Pi
-  skills manually with `pnpm dlx skills add ... --global --agent pi --copy`,
-  then run `dot skills refresh` so files remain under `home/.pi/agent/skills/`
-  and `home/.pi/skills-lock.json` is updated.
+  skills manually with `pnpm dlx skills add ... --global --agent pi --copy` so
+  files remain under `home/.pi/agent/skills/`, and update
+  `home/.pi/skills-lock.json` in the same change.
