@@ -32,6 +32,14 @@ brew_bundle_check() {
   brew bundle check --no-upgrade --file "$bundle"
 }
 
+brew_bundle_satisfied() {
+  local bundle="$1"
+
+  [[ -f "$bundle" ]] || return 0
+
+  brew bundle check --no-upgrade --file "$bundle" >/dev/null
+}
+
 brew_bundle_install_resilient() {
   local bundle="$1"
 
@@ -165,12 +173,24 @@ _install_packages() {
   ensure_homebrew
   brew_bundle_install_resilient "$BASE_BUNDLE"
 
-  if [[ -f "$FONTS_BUNDLE" ]] && confirm "Install font packages?" "y"; then
-    brew_bundle_install_resilient "$FONTS_BUNDLE"
+  install_optional_bundle "$FONTS_BUNDLE" "font packages" "y"
+  install_optional_bundle "$WORK_BUNDLE" "work-specific packages" "n"
+}
+
+install_optional_bundle() {
+  local bundle="$1"
+  local label="$2"
+  local default="$3"
+
+  [[ -f "$bundle" ]] || return 0
+
+  if brew_bundle_satisfied "$bundle"; then
+    print_success "Already installed: $label"
+    return 0
   fi
 
-  if [[ -f "$WORK_BUNDLE" ]] && confirm "Install work-specific packages?" "n"; then
-    brew_bundle_install_resilient "$WORK_BUNDLE"
+  if confirm "Install $label?" "$default"; then
+    brew_bundle_install_resilient "$bundle"
   fi
 }
 

@@ -111,8 +111,8 @@ The manifest is stored in `.agent-repos` with rows shaped as `mode`, `name`, `pa
 
 The base package list is `packages/bundle`. Fonts live in
 `packages/bundle.fonts`, and optional work-only packages can be kept in
-`packages/bundle.work`. `dot init` asks before installing fonts and work
-packages; fonts default to yes, work defaults to no.
+`packages/bundle.work`. `dot init` asks before installing missing fonts and
+work packages; fonts default to yes, work defaults to no.
 
 ```sh
 dot package list [base|fonts|work|all]
