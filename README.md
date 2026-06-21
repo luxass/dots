@@ -272,10 +272,9 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   Pi's bash `PATH`, blocks install-policy bypass flags, and routes install-like
   `pnpm`/`npm`/`yarn`/`bun` commands and runner aliases through Socket Firewall
   when available.
-- `skills/commit/` teaches Pi to make focused Conventional Commits with useful
-  commit bodies.
-- `skills/github/` teaches Pi to use the `gh` CLI for PRs, checks, workflow
-  runs, issues, and GitHub API queries.
+- `skills/` contains the checked-in global Pi skills, including local helpers
+  like `commit`, `github`, and `bro`, plus imported engineering/productivity
+  workflows.
 - `../skills-lock.json` records the checked-in skill inventory.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
