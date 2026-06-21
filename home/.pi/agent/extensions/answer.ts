@@ -10,7 +10,7 @@
  * 4. Submits the compiled answers when done
  */
 
-import { complete, type Model, type Api, type UserMessage } from "@earendil-works/pi-ai";
+import { complete, type Api, type Model, type UserMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { BorderedLoader } from "@earendil-works/pi-coding-agent";
 import {
@@ -19,30 +19,54 @@ import {
 	type EditorTheme,
 	Key,
 	matchesKey,
+	Text,
 	truncateToWidth,
 	type TUI,
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
+import { Type } from "typebox";
 
 // Structured output format for question extraction
 interface ExtractedQuestion {
 	question: string;
 	context?: string;
+	metadata?: string[];
 }
 
 interface ExtractionResult {
+	metadata?: string[];
 	questions: ExtractedQuestion[];
 }
 
-const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering.
+interface AnsweredQuestion extends ExtractedQuestion {
+	answer: string;
+}
+
+interface AnswerCollectionDetails {
+	metadata?: string[];
+	answers: AnsweredQuestion[];
+	source: "explicit" | "sourceText" | "lastAssistant";
+	cancelled?: boolean;
+	error?: string;
+}
+
+type QnAResult = Omit<AnswerCollectionDetails, "source" | "cancelled" | "error">;
+
+const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering and any small contextual metadata that would help answer them.
 
 Output a JSON object with this structure:
 {
+  "metadata": [
+    "Optional batch-level context, constraints, assumptions, or facts relevant to all questions"
+  ],
   "questions": [
     {
       "question": "The question text",
-      "context": "Optional context that helps answer the question"
+      "context": "Optional context that helps answer the question",
+      "metadata": [
+        "Optional per-question context, constraints, assumptions, or facts useful when answering"
+      ]
     }
   ]
 }
@@ -52,23 +76,68 @@ Rules:
 - Keep questions in the order they appeared
 - Be concise with question text
 - Include context only when it provides essential information for answering
+- Include metadata only for helpful facts already present in the source text; do not invent metadata
+- Use batch metadata for shared information, and per-question metadata for question-specific information
+- Metadata should be short free-form strings, not rigid categories
 - If no questions are found, return {"questions": []}
 
 Example output:
 {
+  "metadata": [
+    "The project currently supports MySQL and PostgreSQL only."
+  ],
   "questions": [
     {
       "question": "What is your preferred database?",
-      "context": "We can only configure MySQL and PostgreSQL because of what is implemented."
+      "context": "We can only configure MySQL and PostgreSQL because of what is implemented.",
+      "metadata": ["SQLite support is not implemented yet."]
     },
     {
-      "question": "Should we use TypeScript or JavaScript?"
+      "question": "Should we use TypeScript or JavaScript?",
+      "metadata": ["The existing package already uses TypeScript tooling."]
     }
   ]
 }`;
 
 const CODEX_MODEL_ID = "gpt-5.4-mini";
 const HAIKU_MODEL_ID = "claude-haiku-4-5";
+
+const ToolQuestionSchema = Type.Object({
+	question: Type.String({ description: "Question to ask the user." }),
+	context: Type.Optional(Type.String({ description: "Optional context that helps the user answer this question." })),
+	metadata: Type.Optional(
+		Type.Array(Type.String(), {
+			description: "Short existing contextual facts or constraints relevant to this question.",
+		}),
+	),
+});
+
+const AnswerToolParams = Type.Object({
+	questions: Type.Optional(
+		Type.Array(ToolQuestionSchema, {
+			description:
+				"Explicit questions to ask. Prefer this when you already know the questions the user must answer.",
+		}),
+	),
+	sourceText: Type.Optional(
+		Type.String({
+			description:
+				"Text to extract questions and contextual metadata from. Used only when explicit questions are not provided.",
+		}),
+	),
+	batchMetadata: Type.Optional(
+		Type.Array(Type.String(), {
+			description:
+				"Short shared contextual facts or constraints that apply to the whole batch of explicit questions.",
+		}),
+	),
+});
+
+type AnswerToolParamsType = {
+	questions?: ExtractedQuestion[];
+	sourceText?: string;
+	batchMetadata?: string[];
+};
 
 /**
  * Prefer GPT-5.4 Mini for extraction when available, otherwise fallback to haiku or the current model.
@@ -98,8 +167,58 @@ async function selectExtractionModel(
 	return haikuModel;
 }
 
+function normalizeMetadata(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) {
+		return undefined;
+	}
+
+	const metadata = value
+		.filter((item): item is string => typeof item === "string")
+		.map((item) => item.trim())
+		.filter((item) => item.length > 0);
+
+	return metadata.length > 0 ? metadata : undefined;
+}
+
+function mergeMetadata(...values: Array<string[] | undefined>): string[] | undefined {
+	const merged: string[] = [];
+	const seen = new Set<string>();
+	for (const value of values) {
+		for (const item of value ?? []) {
+			const normalized = item.trim();
+			if (!normalized || seen.has(normalized)) continue;
+			seen.add(normalized);
+			merged.push(normalized);
+		}
+	}
+	return merged.length > 0 ? merged : undefined;
+}
+
+function normalizeQuestions(value: unknown): ExtractedQuestion[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map((item): ExtractedQuestion | null => {
+			if (!item || typeof item !== "object") return null;
+			const raw = item as Record<string, unknown>;
+			if (typeof raw.question !== "string" || raw.question.trim().length === 0) return null;
+
+			const question: ExtractedQuestion = {
+				question: raw.question.trim(),
+			};
+			if (typeof raw.context === "string" && raw.context.trim().length > 0) {
+				question.context = raw.context.trim();
+			}
+			question.metadata = normalizeMetadata(raw.metadata);
+			return question;
+		})
+		.filter((question): question is ExtractedQuestion => question !== null);
+}
+
 /**
- * Parse the JSON response from the LLM
+ * Parse the JSON response from the LLM.
  */
 function parseExtractionResult(text: string): ExtractionResult | null {
 	try {
@@ -112,9 +231,13 @@ function parseExtractionResult(text: string): ExtractionResult | null {
 			jsonStr = jsonMatch[1].trim();
 		}
 
-		const parsed = JSON.parse(jsonStr);
+		const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+		const questions = normalizeQuestions(parsed?.questions);
 		if (parsed && Array.isArray(parsed.questions)) {
-			return parsed as ExtractionResult;
+			return {
+				metadata: normalizeMetadata(parsed.metadata),
+				questions,
+			};
 		}
 		return null;
 	} catch {
@@ -122,16 +245,163 @@ function parseExtractionResult(text: string): ExtractionResult | null {
 	}
 }
 
+function getLastAssistantText(ctx: ExtensionContext):
+	| { ok: true; text: string }
+	| { ok: false; reason: "not_found" | "incomplete"; message: string } {
+	const branch = ctx.sessionManager.getBranch();
+
+	for (let i = branch.length - 1; i >= 0; i--) {
+		const entry = branch[i];
+		if (entry.type !== "message") continue;
+		const msg = entry.message;
+		if (!("role" in msg) || msg.role !== "assistant") continue;
+
+		if (msg.stopReason !== "stop") {
+			return {
+				ok: false,
+				reason: "incomplete",
+				message: `Last assistant message incomplete (${msg.stopReason})`,
+			};
+		}
+
+		const textParts = msg.content
+			.filter((c): c is { type: "text"; text: string } => c.type === "text")
+			.map((c) => c.text);
+		if (textParts.length > 0) {
+			return { ok: true, text: textParts.join("\n") };
+		}
+	}
+
+	return { ok: false, reason: "not_found", message: "No assistant messages found" };
+}
+
+async function extractQuestionsFromText(
+	ctx: ExtensionContext,
+	text: string,
+	signal?: AbortSignal,
+): Promise<ExtractionResult | null> {
+	if (!ctx.model) {
+		throw new Error("No model selected");
+	}
+
+	const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
+	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
+	if (auth.ok === false) {
+		throw new Error(auth.error);
+	}
+
+	const userMessage: UserMessage = {
+		role: "user",
+		content: [{ type: "text", text }],
+		timestamp: Date.now(),
+	};
+
+	const response = await complete(
+		extractionModel,
+		{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
+		{ apiKey: auth.apiKey, headers: auth.headers, signal },
+	);
+
+	if (response.stopReason === "aborted") {
+		return null;
+	}
+
+	const responseText = response.content
+		.filter((c): c is { type: "text"; text: string } => c.type === "text")
+		.map((c) => c.text)
+		.join("\n");
+
+	return parseExtractionResult(responseText);
+}
+
+async function extractQuestionsWithLoader(ctx: ExtensionContext, text: string): Promise<ExtractionResult | null> {
+	if (!ctx.model) {
+		ctx.ui.notify("No model selected", "error");
+		return null;
+	}
+
+	const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
+
+	return ctx.ui.custom<ExtractionResult | null>((tui, theme, _kb, done) => {
+		const loader = new BorderedLoader(tui, theme, `Extracting questions using ${extractionModel.id}...`);
+		loader.onAbort = () => done(null);
+
+		const doExtract = async () => {
+			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
+			if (auth.ok === false) {
+				throw new Error(auth.error);
+			}
+			const userMessage: UserMessage = {
+				role: "user",
+				content: [{ type: "text", text }],
+				timestamp: Date.now(),
+			};
+
+			const response = await complete(
+				extractionModel,
+				{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
+				{ apiKey: auth.apiKey, headers: auth.headers, signal: loader.signal },
+			);
+
+			if (response.stopReason === "aborted") {
+				return null;
+			}
+
+			const responseText = response.content
+				.filter((c): c is { type: "text"; text: string } => c.type === "text")
+				.map((c) => c.text)
+				.join("\n");
+
+			return parseExtractionResult(responseText);
+		};
+
+		doExtract()
+			.then(done)
+			.catch(() => done(null));
+
+		return loader;
+	});
+}
+
+function formatMetadataLines(metadata: string[] | undefined, prefix = "- "): string[] {
+	return (metadata ?? []).map((item) => `${prefix}${item}`);
+}
+
+function formatAnswers(details: AnswerCollectionDetails | QnAResult): string {
+	const parts: string[] = [];
+	if (details.metadata?.length) {
+		parts.push("Metadata:");
+		parts.push(...formatMetadataLines(details.metadata));
+		parts.push("");
+	}
+
+	for (const item of details.answers) {
+		parts.push(`Q: ${item.question}`);
+		if (item.context) {
+			parts.push(`> ${item.context}`);
+		}
+		if (item.metadata?.length) {
+			parts.push("Metadata:");
+			parts.push(...formatMetadataLines(item.metadata));
+		}
+		parts.push(`A: ${item.answer || "(no answer)"}`);
+		parts.push("");
+	}
+
+	return parts.join("\n").trim();
+}
+
 /**
- * Interactive Q&A component for answering extracted questions
+ * Interactive Q&A component for answering extracted questions.
  */
 class QnAComponent implements Component {
+	private readonly metadata?: string[];
 	private questions: ExtractedQuestion[];
 	private answers: string[];
 	private currentIndex: number = 0;
 	private editor: Editor;
 	private tui: TUI;
-	private onDone: (result: string | null) => void;
+	private onDone: (result: QnAResult | null) => void;
 	private showingConfirmation: boolean = false;
 
 	// Cache
@@ -147,12 +417,13 @@ class QnAComponent implements Component {
 	private gray = (s: string) => `\x1b[90m${s}\x1b[0m`;
 
 	constructor(
-		questions: ExtractedQuestion[],
+		extractionResult: ExtractionResult,
 		tui: TUI,
-		onDone: (result: string | null) => void,
+		onDone: (result: QnAResult | null) => void,
 	) {
-		this.questions = questions;
-		this.answers = questions.map(() => "");
+		this.metadata = extractionResult.metadata;
+		this.questions = extractionResult.questions;
+		this.answers = extractionResult.questions.map(() => "");
 		this.tui = tui;
 		this.onDone = onDone;
 
@@ -178,11 +449,6 @@ class QnAComponent implements Component {
 		};
 	}
 
-	private allQuestionsAnswered(): boolean {
-		this.saveCurrentAnswer();
-		return this.answers.every((a) => (a?.trim() || "").length > 0);
-	}
-
 	private saveCurrentAnswer(): void {
 		this.answers[this.currentIndex] = this.editor.getText();
 	}
@@ -198,20 +464,13 @@ class QnAComponent implements Component {
 	private submit(): void {
 		this.saveCurrentAnswer();
 
-		// Build the response text
-		const parts: string[] = [];
-		for (let i = 0; i < this.questions.length; i++) {
-			const q = this.questions[i];
-			const a = this.answers[i]?.trim() || "(no answer)";
-			parts.push(`Q: ${q.question}`);
-			if (q.context) {
-				parts.push(`> ${q.context}`);
-			}
-			parts.push(`A: ${a}`);
-			parts.push("");
-		}
-
-		this.onDone(parts.join("\n").trim());
+		this.onDone({
+			metadata: this.metadata,
+			answers: this.questions.map((question, index) => ({
+				...question,
+				answer: this.answers[index]?.trim() || "(no answer)",
+			})),
+		});
 	}
 
 	private cancel(): void {
@@ -335,6 +594,18 @@ class QnAComponent implements Component {
 		lines.push(padToWidth(boxLine(title)));
 		lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
 
+		if (this.metadata?.length) {
+			const metadataTitle = this.gray("Shared context:");
+			lines.push(padToWidth(boxLine(metadataTitle)));
+			for (const item of this.metadata) {
+				const wrapped = wrapTextWithAnsi(this.gray(`• ${item}`), contentWidth - 2);
+				for (const line of wrapped) {
+					lines.push(padToWidth(boxLine(line)));
+				}
+			}
+			lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
+		}
+
 		// Progress indicator
 		const progressParts: string[] = [];
 		for (let i = 0; i < this.questions.length; i++) {
@@ -366,6 +637,18 @@ class QnAComponent implements Component {
 			const wrappedContext = wrapTextWithAnsi(contextText, contentWidth - 2);
 			for (const line of wrappedContext) {
 				lines.push(padToWidth(boxLine(line)));
+			}
+		}
+
+		// Metadata if present
+		if (q.metadata?.length) {
+			lines.push(padToWidth(emptyBoxLine()));
+			lines.push(padToWidth(boxLine(this.gray("Question context:"))));
+			for (const item of q.metadata) {
+				const wrapped = wrapTextWithAnsi(this.gray(`• ${item}`), contentWidth - 2);
+				for (const line of wrapped) {
+					lines.push(padToWidth(boxLine(line)));
+				}
 			}
 		}
 
@@ -406,121 +689,220 @@ class QnAComponent implements Component {
 	}
 }
 
+async function runQnA(ctx: ExtensionContext, extractionResult: ExtractionResult): Promise<QnAResult | null> {
+	return ctx.ui.custom<QnAResult | null>((tui, _theme, _kb, done) => {
+		return new QnAComponent(extractionResult, tui, done);
+	});
+}
+
+async function resolveToolExtraction(
+	ctx: ExtensionContext,
+	params: AnswerToolParamsType,
+	signal?: AbortSignal,
+): Promise<{ result?: ExtractionResult; source: AnswerCollectionDetails["source"]; error?: string }> {
+	const explicitQuestions = normalizeQuestions(params.questions);
+	if (explicitQuestions.length > 0) {
+		return {
+			source: "explicit",
+			result: {
+				metadata: normalizeMetadata(params.batchMetadata),
+				questions: explicitQuestions,
+			},
+		};
+	}
+
+	const sourceText = params.sourceText?.trim();
+	if (sourceText) {
+		if (!ctx.model) {
+			return { source: "sourceText", error: "No model selected for question extraction." };
+		}
+		const extracted = await extractQuestionsFromText(ctx, sourceText, signal);
+		return {
+			source: "sourceText",
+			result: extracted
+				? { ...extracted, metadata: mergeMetadata(normalizeMetadata(params.batchMetadata), extracted.metadata) }
+				: undefined,
+		};
+	}
+
+	const lastAssistant = getLastAssistantText(ctx);
+	if (!lastAssistant.ok) {
+		return { source: "lastAssistant", error: lastAssistant.message };
+	}
+	if (!ctx.model) {
+		return { source: "lastAssistant", error: "No model selected for question extraction." };
+	}
+
+	const extracted = await extractQuestionsFromText(ctx, lastAssistant.text, signal);
+	return {
+		source: "lastAssistant",
+		result: extracted
+			? { ...extracted, metadata: mergeMetadata(normalizeMetadata(params.batchMetadata), extracted.metadata) }
+			: undefined,
+	};
+}
+
+function buildToolError(message: string, source: AnswerCollectionDetails["source"] = "explicit") {
+	const details: AnswerCollectionDetails = {
+		source,
+		answers: [],
+		error: message,
+	};
+	return {
+		content: [{ type: "text" as const, text: `Error: ${message}` }],
+		details,
+		isError: true,
+	};
+}
+
 export default function (pi: ExtensionAPI) {
 	const answerHandler = async (ctx: ExtensionContext) => {
-			if (!ctx.hasUI) {
-				ctx.ui.notify("answer requires interactive mode", "error");
-				return;
-			}
+		if (!ctx.hasUI) {
+			ctx.ui.notify("answer requires interactive mode", "error");
+			return;
+		}
 
-			if (!ctx.model) {
-				ctx.ui.notify("No model selected", "error");
-				return;
-			}
+		if (!ctx.model) {
+			ctx.ui.notify("No model selected", "error");
+			return;
+		}
 
-			// Find the last assistant message on the current branch
-			const branch = ctx.sessionManager.getBranch();
-			let lastAssistantText: string | undefined;
+		const lastAssistant = getLastAssistantText(ctx);
+		if (!lastAssistant.ok) {
+			ctx.ui.notify(lastAssistant.message, "error");
+			return;
+		}
 
-			for (let i = branch.length - 1; i >= 0; i--) {
-				const entry = branch[i];
-				if (entry.type === "message") {
-					const msg = entry.message;
-					if ("role" in msg && msg.role === "assistant") {
-						if (msg.stopReason !== "stop") {
-							ctx.ui.notify(`Last assistant message incomplete (${msg.stopReason})`, "error");
-							return;
-						}
-						const textParts = msg.content
-							.filter((c): c is { type: "text"; text: string } => c.type === "text")
-							.map((c) => c.text);
-						if (textParts.length > 0) {
-							lastAssistantText = textParts.join("\n");
-							break;
-						}
-					}
-				}
-			}
+		const extractionResult = await extractQuestionsWithLoader(ctx, lastAssistant.text);
 
-			if (!lastAssistantText) {
-				ctx.ui.notify("No assistant messages found", "error");
-				return;
-			}
+		if (extractionResult === null) {
+			ctx.ui.notify("Cancelled", "info");
+			return;
+		}
 
-			// Select the best model for extraction (prefer GPT-5.4 Mini, then haiku)
-			const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
+		if (extractionResult.questions.length === 0) {
+			ctx.ui.notify("No questions found in the last message", "info");
+			return;
+		}
 
-			// Run extraction with loader UI
-			const extractionResult = await ctx.ui.custom<ExtractionResult | null>((tui, theme, _kb, done) => {
-				const loader = new BorderedLoader(tui, theme, `Extracting questions using ${extractionModel.id}...`);
-				loader.onAbort = () => done(null);
+		const answersResult = await runQnA(ctx, extractionResult);
 
-				const doExtract = async () => {
-					const auth = await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
-					if (auth.ok === false) {
-						throw new Error(auth.error);
-					}
-					const userMessage: UserMessage = {
-						role: "user",
-						content: [{ type: "text", text: lastAssistantText! }],
-						timestamp: Date.now(),
-					};
+		if (answersResult === null) {
+			ctx.ui.notify("Cancelled", "info");
+			return;
+		}
 
-					const response = await complete(
-						extractionModel,
-						{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
-						{ apiKey: auth.apiKey, headers: auth.headers, signal: loader.signal },
-					);
+		const details: AnswerCollectionDetails = {
+			...answersResult,
+			source: "lastAssistant",
+		};
 
-					if (response.stopReason === "aborted") {
-						return null;
-					}
-
-					const responseText = response.content
-						.filter((c): c is { type: "text"; text: string } => c.type === "text")
-						.map((c) => c.text)
-						.join("\n");
-
-					return parseExtractionResult(responseText);
-				};
-
-				doExtract()
-					.then(done)
-					.catch(() => done(null));
-
-				return loader;
-			});
-
-			if (extractionResult === null) {
-				ctx.ui.notify("Cancelled", "info");
-				return;
-			}
-
-			if (extractionResult.questions.length === 0) {
-				ctx.ui.notify("No questions found in the last message", "info");
-				return;
-			}
-
-			// Show the Q&A component
-			const answersResult = await ctx.ui.custom<string | null>((tui, _theme, _kb, done) => {
-				return new QnAComponent(extractionResult.questions, tui, done);
-			});
-
-			if (answersResult === null) {
-				ctx.ui.notify("Cancelled", "info");
-				return;
-			}
-
-			// Send the answers directly as a message and trigger a turn
-			pi.sendMessage(
-				{
-					customType: "answers",
-					content: "I answered your questions in the following way:\n\n" + answersResult,
-					display: true,
-				},
-				{ triggerTurn: true },
-			);
+		// Send the answers directly as a message and trigger a turn.
+		pi.sendMessage(
+			{
+				customType: "answers",
+				content: "I answered your questions in the following way:\n\n" + formatAnswers(details),
+				details,
+				display: true,
+			},
+			{ triggerTurn: true },
+		);
 	};
+
+	pi.registerTool({
+		name: "answer",
+		label: "Answer Questions",
+		description:
+			"Ask the user one or more questions in an interactive Q&A UI and return their answers. Supports explicit questions or extracting questions from sourceText/the last completed assistant message.",
+		promptSnippet:
+			"Ask the user clarifying questions in an interactive Q&A UI and return structured answers with helpful contextual metadata",
+		promptGuidelines: [
+			"Use answer when you need user input to proceed; prefer calling answer over ending your response with a plain list of questions.",
+			"When using answer, prefer explicit questions and include short metadata notes for constraints or context already known from the conversation.",
+			"Use answer with sourceText, or with no arguments as a last-assistant-message fallback, only when you need to extract questions from prose.",
+		],
+		parameters: AnswerToolParams,
+
+		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+			if (!ctx.hasUI || ctx.mode !== "tui") {
+				return buildToolError("answer requires interactive TUI mode; UI is not available in this session.");
+			}
+
+			let resolved: Awaited<ReturnType<typeof resolveToolExtraction>>;
+			try {
+				resolved = await resolveToolExtraction(ctx, params as AnswerToolParamsType, signal);
+			} catch (error) {
+				return buildToolError(error instanceof Error ? error.message : String(error));
+			}
+
+			if (resolved.error) {
+				return buildToolError(resolved.error, resolved.source);
+			}
+
+			if (!resolved.result) {
+				return buildToolError("Question extraction was cancelled or failed.", resolved.source);
+			}
+
+			if (resolved.result.questions.length === 0) {
+				return buildToolError("No questions found to ask.", resolved.source);
+			}
+
+			const answersResult = await runQnA(ctx, resolved.result);
+			if (answersResult === null) {
+				const details: AnswerCollectionDetails = {
+					metadata: resolved.result.metadata,
+					answers: [],
+					source: resolved.source,
+					cancelled: true,
+				};
+				return {
+					content: [{ type: "text" as const, text: "User cancelled answer collection." }],
+					details,
+				};
+			}
+
+			const details: AnswerCollectionDetails = {
+				...answersResult,
+				source: resolved.source,
+			};
+			return {
+				content: [{ type: "text" as const, text: formatAnswers(details) }],
+				details,
+			};
+		},
+
+		renderCall(args, theme) {
+			const params = args as AnswerToolParamsType;
+			const questionCount = Array.isArray(params.questions) ? params.questions.length : 0;
+			const mode = questionCount > 0 ? `${questionCount} explicit question${questionCount === 1 ? "" : "s"}` : params.sourceText ? "extract from sourceText" : "extract from last assistant";
+			return new Text(theme.fg("toolTitle", theme.bold("answer ")) + theme.fg("muted", mode), 0, 0);
+		},
+
+		renderResult(result, _options, theme) {
+			const details = result.details as AnswerCollectionDetails | undefined;
+			if (!details) {
+				const text = result.content[0];
+				return new Text(text?.type === "text" ? text.text : "", 0, 0);
+			}
+
+			if (details.error) {
+				return new Text(theme.fg("error", `Error: ${details.error}`), 0, 0);
+			}
+			if (details.cancelled) {
+				return new Text(theme.fg("warning", "Cancelled"), 0, 0);
+			}
+
+			const lines = [
+				theme.fg("success", `✓ Collected ${details.answers.length} answer${details.answers.length === 1 ? "" : "s"}`),
+				...(details.metadata?.length ? [theme.fg("muted", `Context: ${details.metadata.join("; ")}`)] : []),
+				...details.answers.map((item, index) => {
+					const answer = item.answer.replace(/\s+/g, " ").trim();
+					return theme.fg("muted", `${index + 1}. `) + theme.fg("text", item.question) + theme.fg("dim", ` → ${answer}`);
+				}),
+			];
+			return new Text(lines.join("\n"), 0, 0);
+		},
+	});
 
 	pi.registerCommand("answer", {
 		description: "Extract questions from last assistant message into interactive Q&A",
