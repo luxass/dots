@@ -272,10 +272,10 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   Pi's bash `PATH`, blocks install-policy bypass flags, and routes install-like
   `pnpm`/`npm`/`yarn`/`bun` commands and runner aliases through Socket Firewall
   when available.
-- `skills/commit/` teaches Pi to make focused Conventional Commits with useful
-  commit bodies.
-- `skills/github/` teaches Pi to use the `gh` CLI for PRs, checks, workflow
-  runs, issues, and GitHub API queries.
+- `skills/` contains the checked-in global Pi skills, including local helpers
+  like `commit`, `github`, and `bro`, plus imported engineering/productivity
+  workflows.
+- `../skills-lock.json` records the checked-in skill inventory.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
 unattended work, run Pi in an isolated environment instead of relying only on the
@@ -289,20 +289,36 @@ Manage Pi and pinned Pi extensions through `dot pi`:
 ```sh
 dot pi status
 dot pi update
-dot pi update 0.79.3
+dot pi update 0.79.8
+dot pi skills add <url>
+dot pi skills list
 dot pi extension install plannotator 0.20.2
 ```
 
-`dot update` asks whether to update Pi and managed Pi extensions/skills after
+`dot update` asks whether to update Pi and managed Pi packages/extensions after
 the Homebrew and Stow steps.
 
 `dot pi update [VERSION]` updates the tracked Pi package pins in
 `home/.pi/package.json`, refreshes the lockfile, runs `pi update`, verifies
-`pi --version`, runs the optional manual skills sync workflow when installed,
-and finishes with `dot doctor`. When `VERSION` is omitted, it resolves the
-latest `@earendil-works/pi-coding-agent` version from npm. Pi's own updater
-supplies its pnpm safety flags for self-updates, including disabled lifecycle
-scripts and a release-age override for fresh Pi releases.
+`pi --version`, and finishes with `dot doctor`. It does not install or sync
+external skills. When `VERSION` is omitted, it resolves the latest
+`@earendil-works/pi-coding-agent` version from npm. Pi's own updater supplies its
+pnpm safety flags for self-updates, including disabled lifecycle scripts and a
+release-age override for fresh Pi releases.
+
+External skills are managed through `dot pi skills`, which wraps the open
+`skills` CLI with `pnpm dlx` so the CLI does not need to be installed globally.
+Run `dot stow` first so `~/.pi/agent/skills` points at this repo and installed
+skill files stay visible to Git under `home/.pi/agent/skills`.
+
+```sh
+dot pi skills add <url>
+dot pi skills add <url> --skill <name>
+dot pi skills list
+```
+
+`dot pi skills add` always installs to global Pi skills with `--global --agent pi
+--copy`. The skills CLI updates its lock/inventory as part of installation.
 
 `dot pi extension install plannotator VERSION` installs the pinned Plannotator
 Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This

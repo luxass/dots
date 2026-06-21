@@ -1,7 +1,6 @@
 readonly PI_PACKAGE_JSON="${HOME_DIR}/.pi/package.json"
 readonly PI_SETTINGS_JSON="${HOME_DIR}/.pi/agent/settings.json"
 readonly PLANNOTATOR_PACKAGE="@plannotator/pi-extension"
-readonly POCOCK_SYNC_SKILL="${HOME_DIR}/.pi/agent/skills/sync-pocock-skills/SKILL.md"
 
 require_pi_tooling() {
   local failed=0
@@ -104,21 +103,6 @@ print_pi_settings_packages() {
   ' "$PI_SETTINGS_JSON"
 }
 
-run_pocock_skills_sync() {
-  if [[ ! -f "$POCOCK_SYNC_SKILL" ]]; then
-    print_warning "sync-pocock-skills is not installed; skipping skills sync"
-    return 0
-  fi
-
-  print_info "Running headless Pi skills sync..."
-  if (cd "$DOTFILES_DIR" && pi -p --no-skills --skill "$POCOCK_SYNC_SKILL" "/skill:sync-pocock-skills"); then
-    print_success "Matt Pocock skills sync complete"
-  else
-    print_error "Matt Pocock skills sync failed"
-    return 1
-  fi
-}
-
 cmd_pi_status() {
   print_header "Pi status"
 
@@ -197,7 +181,6 @@ cmd_pi_update() {
   fi
   print_success "Pi version verified: $installed_version"
 
-  run_pocock_skills_sync
   cmd_doctor
 }
 
@@ -262,11 +245,15 @@ ${BOLD}${SCRIPT_NAME} pi${RESET}
 ${BOLD}USAGE:${RESET}
   ${SCRIPT_NAME} pi status
   ${SCRIPT_NAME} pi update [VERSION]
+  ${SCRIPT_NAME} pi skills add URL [skills options...]
+  ${SCRIPT_NAME} pi skills list
   ${SCRIPT_NAME} pi extension install plannotator VERSION
 
 ${BOLD}COMMANDS:${RESET}
   status                         Show installed, latest, and pinned Pi state
-  update [VERSION]               Update tracked Pi pins, run 'pi update', verify version, sync skills, and run doctor
+  update [VERSION]               Update tracked Pi pins, run 'pi update', verify version, and run doctor
+  skills add URL                 Install global Pi skills with the skills CLI
+  skills list                    List installed global Pi skills with the skills CLI
   extension install NAME VERSION Install a managed pinned Pi extension
 EOF
 }
@@ -280,6 +267,7 @@ cmd_pi() {
   case "$subcommand" in
     status) cmd_pi_status "$@" ;;
     update) cmd_pi_update "$@" ;;
+    skills) cmd_pi_skills "$@" ;;
     extension) cmd_pi_extension "$@" ;;
     help|-h|--help) cmd_pi_help ;;
     *) print_error "Unknown pi command: $subcommand"; cmd_pi_help; return 1 ;;

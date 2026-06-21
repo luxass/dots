@@ -21,7 +21,7 @@ This is a prompt-driven skill, not a deterministic script. Explore, present what
 Look at the current repo to understand its starting state. Read whatever exists; don't assume:
 
 - `git remote -v` and `.git/config` — is this a GitHub repo? Which one?
-- `AGENTS.md` and `CLAUDE.md` at the repo root — does either exist? Is there already an `## Agent skills` section in either? (Prefer `AGENTS.md` when both exist.)
+- `AGENTS.md` and `CLAUDE.md` at the repo root — does either exist? Is there already an `## Agent skills` section in either?
 - `CONTEXT.md` and `CONTEXT-MAP.md` at the repo root
 - `docs/adr/` and any `src/*/docs/adr/` directories
 - `docs/agents/` — does this skill's prior output already exist?
@@ -77,7 +77,7 @@ Confirm the layout:
 
 Show the user a draft of:
 
-- The `## Agent skills` block to add to whichever of `AGENTS.md` / `CLAUDE.md` is being edited (see step 4 for selection rules)
+- The `## Agent skills` block to add to whichever of `CLAUDE.md` / `AGENTS.md` is being edited (see step 4 for selection rules)
 - The contents of `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/domain.md`
 
 Let them edit before writing.
@@ -86,8 +86,8 @@ Let them edit before writing.
 
 **Pick the file to edit:**
 
-- If `AGENTS.md` exists, edit it.
-- Else if `CLAUDE.md` exists, edit it.
+- If `CLAUDE.md` exists, edit it.
+- Else if `AGENTS.md` exists, edit it.
 - If neither exists, ask the user which one to create — don't pick for them.
 
 Never create `AGENTS.md` when `CLAUDE.md` already exists (or vice versa) — always edit the one that's already there.
