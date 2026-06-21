@@ -77,6 +77,8 @@ type SideSessionRuntime = {
 	unsubscribe: () => void;
 };
 
+type ScrollDirection = "up" | "down" | "top" | "bottom";
+
 type ToolCallInfo = {
 	toolCallId: string;
 	toolName: string;
@@ -200,6 +202,38 @@ function notify(ctx: ExtensionContext | ExtensionCommandContext, message: string
 	}
 }
 
+function mouseButtonToWheelDirection(button: number): "up" | "down" | null {
+	if (!Number.isFinite(button) || (button & 64) === 0) {
+		return null;
+	}
+
+	const wheelDirection = button & 3;
+	if (wheelDirection === 0) return "up";
+	if (wheelDirection === 1) return "down";
+	return null;
+}
+
+function parseMouseWheelDirection(data: string): "up" | "down" | null {
+	// SGR mouse mode: ESC [ < Cb ; Cx ; Cy M/m
+	const sgrMatch = data.match(/^\x1b\[<(\d+);\d+;\d+[Mm]$/);
+	if (sgrMatch) {
+		return mouseButtonToWheelDirection(Number.parseInt(sgrMatch[1], 10));
+	}
+
+	// urxvt mouse mode: ESC [ Cb ; Cx ; Cy M
+	const urxvtMatch = data.match(/^\x1b\[(\d+);\d+;\d+M$/);
+	if (urxvtMatch) {
+		return mouseButtonToWheelDirection(Number.parseInt(urxvtMatch[1], 10));
+	}
+
+	// X10 mouse mode: ESC [ M (Cb + 32) (Cx + 32) (Cy + 32)
+	if (data.startsWith("\x1b[M") && data.length >= 6) {
+		return mouseButtonToWheelDirection(data.charCodeAt(3) - 32);
+	}
+
+	return null;
+}
+
 
 class BtwOverlay extends Container implements Focusable {
 	private readonly input: Input;
@@ -208,6 +242,8 @@ class BtwOverlay extends Container implements Focusable {
 	private readonly keybindings: KeybindingsManager;
 	private readonly getTranscript: (width: number, theme: ExtensionContext["ui"]["theme"]) => string[];
 	private readonly getStatus: () => string;
+	private readonly getScrollOffset: () => number;
+	private readonly onScrollCallback: (direction: ScrollDirection, pageSize: number) => void;
 	private readonly onSubmitCallback: (value: string) => void;
 	private readonly onDismissCallback: () => void;
 	private _focused = false;
@@ -227,6 +263,8 @@ class BtwOverlay extends Container implements Focusable {
 		keybindings: KeybindingsManager,
 		getTranscript: (width: number, theme: ExtensionContext["ui"]["theme"]) => string[],
 		getStatus: () => string,
+		getScrollOffset: () => number,
+		onScroll: (direction: ScrollDirection, pageSize: number) => void,
 		onSubmit: (value: string) => void,
 		onDismiss: () => void,
 	) {
@@ -236,6 +274,8 @@ class BtwOverlay extends Container implements Focusable {
 		this.keybindings = keybindings;
 		this.getTranscript = getTranscript;
 		this.getStatus = getStatus;
+		this.getScrollOffset = getScrollOffset;
+		this.onScrollCallback = onScroll;
 		this.onSubmitCallback = onSubmit;
 		this.onDismissCallback = onDismiss;
 
@@ -249,8 +289,33 @@ class BtwOverlay extends Container implements Focusable {
 	}
 
 	handleInput(data: string): void {
+		const wheelDirection = parseMouseWheelDirection(data);
+		if (wheelDirection) {
+			this.onScrollCallback(wheelDirection, 3);
+			return;
+		}
+
 		if (this.keybindings.matches(data, "tui.select.cancel")) {
 			this.onDismissCallback();
+			return;
+		}
+
+		const isPageUp =
+			this.keybindings.matches(data, "tui.select.pageUp") ||
+			this.keybindings.matches(data, "tui.editor.pageUp") ||
+			data === "\x1b[5~";
+		const isPageDown =
+			this.keybindings.matches(data, "tui.select.pageDown") ||
+			this.keybindings.matches(data, "tui.editor.pageDown") ||
+			data === "\x1b[6~";
+		const isHome = data === "\x1b[H" || data === "\x1b[1~";
+		const isEnd = data === "\x1b[F" || data === "\x1b[4~";
+
+		if (isPageUp || isPageDown || isHome || isEnd) {
+			if (isPageUp) this.onScrollCallback("up", 8);
+			if (isPageDown) this.onScrollCallback("down", 8);
+			if (isHome) this.onScrollCallback("top", 8);
+			if (isEnd) this.onScrollCallback("bottom", 8);
 			return;
 		}
 
@@ -288,10 +353,20 @@ class BtwOverlay extends Container implements Focusable {
 
 		// Markdown renders to innerWidth already — no manual wrapping needed
 		const transcript = this.getTranscript(innerWidth, this.theme);
-		const visibleTranscript = transcript.slice(-transcriptHeight);
+		const maxScrollOffset = Math.max(0, transcript.length - transcriptHeight);
+		const scrollOffset = Math.min(Math.max(0, this.getScrollOffset()), maxScrollOffset);
+		const transcriptStart = Math.max(0, transcript.length - transcriptHeight - scrollOffset);
+		const transcriptEnd = Math.min(transcriptStart + transcriptHeight, transcript.length);
+		const visibleTranscript = transcript.slice(transcriptStart, transcriptEnd);
 		const transcriptPadding = Math.max(0, transcriptHeight - visibleTranscript.length);
 
 		const status = this.getStatus();
+		const scrollHint =
+			maxScrollOffset > 0
+				? scrollOffset > 0
+					? `Wheel/PgUp/PgDn scroll · End latest · ${transcriptStart + 1}-${transcriptEnd}/${transcript.length}`
+					: `Wheel/PgUp scroll transcript · latest ${transcriptEnd}/${transcript.length}`
+				: "Wheel/PgUp/PgDn scroll transcript when history overflows";
 
 		const previousFocused = this.input.focused;
 		this.input.focused = false;
@@ -301,7 +376,7 @@ class BtwOverlay extends Container implements Focusable {
 		const lines = [
 			this.borderLine(innerWidth, "top"),
 			this.frameLine(this.theme.fg("accent", this.theme.bold(" BTW side chat ")), innerWidth),
-			this.frameLine(this.theme.fg("dim", "Separate side conversation. Esc closes."), innerWidth),
+			this.frameLine(this.theme.fg("dim", `Separate side conversation. Esc closes. ${scrollHint}`), innerWidth),
 			this.theme.fg("borderMuted", `├${"─".repeat(innerWidth)}┤`),
 		];
 
@@ -333,7 +408,10 @@ export default function (pi: ExtensionAPI) {
 	let sideBusy = false;
 	let overlayStatus = "Ready";
 	let overlayDraft = "";
+	let transcriptScrollOffset = 0;
 	let overlayRuntime: OverlayRuntime | null = null;
+	let mouseTrackingEnabled = false;
+	let mouseTrackingTerminal: TUI["terminal"] | null = null;
 	let activeSideSession: SideSessionRuntime | null = null;
 	let overlayRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -470,6 +548,7 @@ export default function (pi: ExtensionAPI) {
 
 	function dismissOverlay(): void {
 		overlayRuntime?.close?.();
+		disableMouseTracking();
 		overlayRuntime = null;
 		if (overlayRefreshTimer) {
 			clearTimeout(overlayRefreshTimer);
@@ -480,6 +559,43 @@ export default function (pi: ExtensionAPI) {
 	function setOverlayDraft(value: string): void {
 		overlayDraft = value;
 		overlayRuntime?.setDraft?.(value);
+	}
+
+	function enableMouseTracking(tui?: TUI): void {
+		if (tui) {
+			mouseTrackingTerminal = tui.terminal;
+		}
+		if (mouseTrackingEnabled || !mouseTrackingTerminal) {
+			return;
+		}
+		mouseTrackingTerminal.write("\x1b[?1000h\x1b[?1002h\x1b[?1015h\x1b[?1006h");
+		mouseTrackingEnabled = true;
+	}
+
+	function disableMouseTracking(): void {
+		if (!mouseTrackingEnabled || !mouseTrackingTerminal) {
+			return;
+		}
+		mouseTrackingTerminal.write("\x1b[?1006l\x1b[?1015l\x1b[?1002l\x1b[?1000l");
+		mouseTrackingEnabled = false;
+	}
+
+	function scrollTranscript(direction: ScrollDirection, pageSize: number): void {
+		switch (direction) {
+			case "up":
+				transcriptScrollOffset += pageSize;
+				break;
+			case "down":
+				transcriptScrollOffset = Math.max(0, transcriptScrollOffset - pageSize);
+				break;
+			case "top":
+				transcriptScrollOffset = Number.MAX_SAFE_INTEGER;
+				break;
+			case "bottom":
+				transcriptScrollOffset = 0;
+				break;
+		}
+		syncOverlay();
 	}
 
 	async function disposeSideSession(): Promise<void> {
@@ -514,6 +630,7 @@ export default function (pi: ExtensionAPI) {
 		pendingAnswer = "";
 		pendingError = null;
 		pendingToolCalls = [];
+		transcriptScrollOffset = 0;
 		sideBusy = false;
 		setOverlayDraft("");
 		setOverlayStatus("Ready");
@@ -532,6 +649,7 @@ export default function (pi: ExtensionAPI) {
 		pendingAnswer = "";
 		pendingError = null;
 		pendingToolCalls = [];
+		transcriptScrollOffset = 0;
 		sideBusy = false;
 		overlayStatus = "Ready";
 		overlayDraft = "";
@@ -657,6 +775,7 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		if (overlayRuntime?.handle) {
+			enableMouseTracking();
 			overlayRuntime.handle.setHidden(false);
 			overlayRuntime.handle.focus();
 			overlayRuntime.refresh?.();
@@ -668,6 +787,7 @@ export default function (pi: ExtensionAPI) {
 			if (runtime.closed) {
 				return;
 			}
+			disableMouseTracking();
 			runtime.closed = true;
 			runtime.handle?.hide();
 			if (overlayRuntime === runtime) {
@@ -681,6 +801,7 @@ export default function (pi: ExtensionAPI) {
 		void ctx.ui
 			.custom<void>(
 				async (tui, theme, keybindings, done) => {
+					enableMouseTracking(tui);
 					runtime.finish = () => done();
 
 					const overlay = new BtwOverlay(
@@ -689,6 +810,8 @@ export default function (pi: ExtensionAPI) {
 						keybindings,
 						(width, t) => getTranscriptLines(width, t),
 						() => overlayStatus,
+						() => transcriptScrollOffset,
+						(direction, pageSize) => scrollTranscript(direction, pageSize),
 						(value) => {
 							void submitFromOverlay(ctx, value);
 						},
@@ -734,6 +857,7 @@ export default function (pi: ExtensionAPI) {
 				},
 			)
 			.catch((error) => {
+				disableMouseTracking();
 				if (overlayRuntime === runtime) {
 					overlayRuntime = null;
 				}
@@ -856,6 +980,7 @@ export default function (pi: ExtensionAPI) {
 		pendingAnswer = "";
 		pendingError = null;
 		pendingToolCalls = [];
+		transcriptScrollOffset = 0;
 		setOverlayStatus("Streaming side response...");
 		syncOverlay();
 
