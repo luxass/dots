@@ -1,7 +1,12 @@
-readonly PI_SKILLS_DIR="${HOME_DIR}/.pi/agent/skills"
+readonly PI_SKILLS_DIR="${DOTFILES_DIR}/home/.pi/agent/skills"
 readonly SKILLS_CLI_PACKAGE="${SKILLS_CLI_PACKAGE:-skills}"
 
 cmd_pi_skills_list() {
+  if [[ "$#" -gt 0 ]]; then
+    print_error "Usage: ${SCRIPT_NAME} pi skills list"
+    return 1
+  fi
+
   if ! command_exists pnpm; then
     print_error "pnpm is required to run the skills CLI"
     return 1
@@ -80,15 +85,15 @@ cmd_pi_skills_add() {
 
   if [[ "$list_only" != "true" ]]; then
     local home_pi_skills="$HOME/.pi/agent/skills"
-    if [[ ! -e "$home_pi_skills" && ! -L "$home_pi_skills" ]]; then
-      print_error "$home_pi_skills does not exist"
+    if [[ ! -L "$home_pi_skills" ]]; then
+      print_error "$home_pi_skills is not a symlink"
       print_info "Run 'dot stow' before installing skills so installed files are visible in Git"
       return 1
     fi
 
     local repo_skills real_home_skills
-    repo_skills="$(realpath "$PI_SKILLS_DIR")"
-    real_home_skills="$(realpath "$home_pi_skills")"
+    repo_skills="$(realpath "$PI_SKILLS_DIR")" || return 1
+    real_home_skills="$(realpath "$home_pi_skills")" || return 1
     if [[ "$repo_skills" != "$real_home_skills" ]]; then
       print_error "$home_pi_skills does not point at $PI_SKILLS_DIR"
       print_info "Run 'dot stow' before installing skills so installed files are visible in Git"
