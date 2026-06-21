@@ -26,7 +26,7 @@
     "autoResize": true
   },
   "collapseChangelog": true,
-  "lastChangelogVersion": "0.79.8",
+  "lastChangelogVersion": "0.79.9",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.5",
   "packages": [
