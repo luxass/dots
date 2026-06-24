@@ -245,15 +245,11 @@ ${BOLD}${SCRIPT_NAME} pi${RESET}
 ${BOLD}USAGE:${RESET}
   ${SCRIPT_NAME} pi status
   ${SCRIPT_NAME} pi update [VERSION]
-  ${SCRIPT_NAME} pi skills add URL [skills options...]
-  ${SCRIPT_NAME} pi skills list
   ${SCRIPT_NAME} pi extension install plannotator VERSION
 
 ${BOLD}COMMANDS:${RESET}
   status                         Show installed, latest, and pinned Pi state
   update [VERSION]               Update tracked Pi pins, run 'pi update', verify version, and run doctor
-  skills add URL                 Install global Pi skills with the skills CLI
-  skills list                    List installed global Pi skills with the skills CLI
   extension install NAME VERSION Install a managed pinned Pi extension
 EOF
 }
@@ -267,7 +263,6 @@ cmd_pi() {
   case "$subcommand" in
     status) cmd_pi_status "$@" ;;
     update) cmd_pi_update "$@" ;;
-    skills) cmd_pi_skills "$@" ;;
     extension) cmd_pi_extension "$@" ;;
     help|-h|--help) cmd_pi_help ;;
     *) print_error "Unknown pi command: $subcommand"; cmd_pi_help; return 1 ;;

@@ -28,7 +28,7 @@ source "${DOTFILES_DIR}/lib/runtime.sh"
 source "${DOTFILES_DIR}/lib/stow.sh"
 source "${DOTFILES_DIR}/lib/git.sh"
 source "${DOTFILES_DIR}/lib/pi.sh"
-source "${DOTFILES_DIR}/lib/pi_skills.sh"
+source "${DOTFILES_DIR}/lib/skills.sh"
 
 TOOL_REGISTRY=(
   "Homebrew          ;; brew ;; fn:ensure_homebrew             ;; true  ;; - ;; true"
@@ -290,7 +290,8 @@ complete -c dot -n '__fish_use_subcommand' -a links -d 'Check managed symlinks'
 complete -c dot -n '__fish_use_subcommand' -a hooks -d 'Install repository Git hooks'
 complete -c dot -n '__fish_use_subcommand' -a secret-scan -d 'Scan repository for secrets'
 complete -c dot -n '__fish_use_subcommand' -a package -d 'Manage Homebrew bundle packages'
-complete -c dot -n '__fish_use_subcommand' -a pi -d 'Manage Pi, Pi extensions, and skills'
+complete -c dot -n '__fish_use_subcommand' -a skills -d 'Manage shared global Agent Skills'
+complete -c dot -n '__fish_use_subcommand' -a pi -d 'Manage Pi and Pi extensions'
 complete -c dot -n '__fish_use_subcommand' -a config -d 'Manage local-only preferences'
 complete -c dot -n '__fish_use_subcommand' -a retry-failed -d 'Retry failed package installs'
 complete -c dot -n '__fish_use_subcommand' -a git-identity -d 'Create or update local Git identity'
@@ -303,8 +304,8 @@ complete -c dot -n '__fish_use_subcommand' -a edit -d 'Open dotfiles repo'
 complete -c dot -n '__fish_use_subcommand' -a help -d 'Show help'
 
 complete -c dot -n '__fish_seen_subcommand_from package' -a 'list check unmanaged add remove update help' -d 'Package command'
-complete -c dot -n '__fish_seen_subcommand_from pi; and not __fish_seen_subcommand_from skills' -a 'status update skills extension help' -d 'Pi command'
-complete -c dot -n '__fish_seen_subcommand_from pi; and __fish_seen_subcommand_from skills' -a 'add list help' -d 'Pi skills command'
+complete -c dot -n '__fish_seen_subcommand_from skills' -a 'add list help' -d 'Skills command'
+complete -c dot -n '__fish_seen_subcommand_from pi' -a 'status update extension help' -d 'Pi command'
 complete -c dot -n '__fish_seen_subcommand_from config' -a 'list get set unset reset help' -d 'Config command'
 EOF
 }
@@ -335,7 +336,8 @@ ${BOLD}COMMANDS:${RESET}
   hooks            Install repository Git hooks
   secret-scan      Scan repository for secrets
   package          Package management commands
-  pi               Manage Pi, Pi extensions, and skills
+  skills           Manage shared global Agent Skills
+  pi               Manage Pi and Pi extensions
   config           Manage local-only preferences
   retry-failed     Retry failed package installations
   git-identity     Create or update ~/.gitconfig.local
@@ -385,6 +387,7 @@ main() {
     hooks) cmd_hooks "$@" ;;
     secret-scan) cmd_secret_scan "$@" ;;
     package) cmd_package "$@" ;;
+    skills) cmd_skills "$@" ;;
     pi) cmd_pi "$@" ;;
     config) cmd_config "$@" ;;
     retry-failed) cmd_retry_failed "$@" ;;

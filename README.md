@@ -272,10 +272,13 @@ The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
   Pi's bash `PATH`, blocks install-policy bypass flags, and routes install-like
   `pnpm`/`npm`/`yarn`/`bun` commands and runner aliases through Socket Firewall
   when available.
-- `skills/` contains the checked-in global Pi skills, including local helpers
-  like `commit`, `github`, and `bro`, plus imported engineering/productivity
-  workflows.
-- `../skills-lock.json` records the checked-in skill inventory.
+
+The repo also tracks shared global Agent Skills in `home/.agents/`:
+
+- `skills/` contains checked-in global skills loaded by Pi, including local
+  helpers like `commit`, `github`, and `bro`, plus imported
+  engineering/productivity workflows.
+- `.skill-lock.json` records shared skills CLI state.
 
 This is a host-side guard, not a sandbox. For untrusted repositories or
 unattended work, run Pi in an isolated environment instead of relying only on the
@@ -290,8 +293,8 @@ Manage Pi and pinned Pi extensions through `dot pi`:
 dot pi status
 dot pi update
 dot pi update 0.79.8
-dot pi skills add <url>
-dot pi skills list
+dot skills add <url>
+dot skills list
 dot pi extension install plannotator 0.20.2
 ```
 
@@ -306,19 +309,20 @@ external skills. When `VERSION` is omitted, it resolves the latest
 pnpm safety flags for self-updates, including disabled lifecycle scripts and a
 release-age override for fresh Pi releases.
 
-External skills are managed through `dot pi skills`, which wraps the open
-`skills` CLI with `pnpm dlx` so the CLI does not need to be installed globally.
-Run `dot stow` first so `~/.pi/agent/skills` points at this repo and installed
-skill files stay visible to Git under `home/.pi/agent/skills`.
+External skills are managed through `dot skills`, which wraps the open `skills`
+CLI with `pnpm dlx` so the CLI does not need to be installed globally.
+Run `dot stow` first so `~/.agents/skills` points at this repo and installed
+skill files stay visible to Git under `home/.agents/skills`.
 
 ```sh
-dot pi skills add <url>
-dot pi skills add <url> --skill <name>
-dot pi skills list
+dot skills add <url>
+dot skills add <url> --skill <name>
+dot skills list
 ```
 
-`dot pi skills add` always installs to global Pi skills with `--global --agent pi
---copy`. The skills CLI updates its lock/inventory as part of installation.
+`dot skills add` installs to the shared global Agent Skills directory with
+`--global --agent cline --copy`. Pi loads `~/.agents/skills` directly, and the
+skills CLI updates its lock/inventory as part of installation.
 
 `dot pi extension install plannotator VERSION` installs the pinned Plannotator
 Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This

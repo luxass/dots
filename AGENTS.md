@@ -16,7 +16,7 @@ dots/
 |   |-- core.sh         # Shared output, prompts, command helpers
 |   |-- git.sh          # Git hooks, identity, secret scanning
 |   |-- pi.sh           # Managed Pi package and extension commands
-|   |-- pi_skills.sh    # Pi skills wrapper around the skills CLI
+|   |-- skills.sh       # Agent Skills wrapper around the skills CLI
 |   |-- runtime.sh      # pnpm, Node.js, npm, and global runtime tools
 |   `-- stow.sh         # GNU Stow links, backups, dot CLI linking
 |-- home/               # Stowed into $HOME
@@ -55,7 +55,8 @@ dots/
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
-| Change Pi management | `lib/pi.sh`, `lib/pi_skills.sh`, `home/.pi/package.json`, `home/.pi/agent/settings.json` |
+| Change Pi management | `lib/pi.sh`, `home/.pi/package.json`, `home/.pi/agent/settings.json` |
+| Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
 
@@ -110,8 +111,8 @@ dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
 dot pi status        # Show managed Pi status
 dot pi update        # Update Pi to latest and update packages/extensions
-dot pi skills add U  # Add global Pi skills from a URL/source
-dot pi skills list   # List installed global Pi skills
+dot skills add U     # Add shared global Agent Skills from a URL/source
+dot skills list      # List installed shared global Agent Skills
 dot completions      # Print Fish completions
 ```
 
@@ -130,7 +131,7 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
-| Pi | `home/.pi/package.json`, `home/.pi/pnpm-lock.yaml`, `home/.pi/skills-lock.json`, `home/.pi/agent/settings.json`, `home/.pi/agent/skills/` | Managed by `dot pi` |
+| Pi | `home/.pi/package.json`, `home/.pi/pnpm-lock.yaml`, `home/.pi/agent/settings.json`, `home/.agents/.skill-lock.json`, `home/.agents/skills/` | Managed by `dot pi` |
 
 ## NOTES
 
@@ -141,7 +142,7 @@ detail.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.
-- Only custom/local Pi skills should be edited directly. Install external Pi
-  skills with `dot pi skills add <url>` so files remain under
-  `home/.pi/agent/skills/`. Use `dot pi skills list` to inspect installed
-  global Pi skills; the wrapped skills CLI updates its lock/inventory.
+- Only custom/local Agent Skills should be edited directly. Install external
+  skills with `dot skills add <url>` so files remain under
+  `home/.agents/skills/`. Use `dot skills list` to inspect installed shared
+  global Agent Skills; the wrapped skills CLI updates its lock/inventory.
