@@ -1,5 +1,6 @@
 readonly AGENT_SKILLS_DIR="${DOTFILES_DIR}/home/.agents/skills"
 readonly HOME_AGENT_SKILLS_DIR="$HOME/.agents/skills"
+readonly AGENT_SKILLS_LINK_TARGET="../${DOTFILES_DIR#$HOME/}/home/.agents/skills"
 readonly SKILLS_CLI_PACKAGE="${SKILLS_CLI_PACKAGE:-skills}"
 readonly SKILLS_CLI_AGENT="${SKILLS_CLI_AGENT:-cline}"
 
@@ -25,9 +26,13 @@ ensure_agent_skills_link() {
 
   if [[ -L "$HOME_AGENT_SKILLS_DIR" ]]; then
     if [[ "$(realpath "$HOME_AGENT_SKILLS_DIR")" == "$(realpath "$AGENT_SKILLS_DIR")" ]]; then
-      return 0
+      if [[ "$(readlink "$HOME_AGENT_SKILLS_DIR")" == "$AGENT_SKILLS_LINK_TARGET" ]]; then
+        return 0
+      fi
+      rm "$HOME_AGENT_SKILLS_DIR"
+    else
+      backup_path "$HOME_AGENT_SKILLS_DIR" "$BACKUP_ROOT/$(timestamp)"
     fi
-    backup_path "$HOME_AGENT_SKILLS_DIR" "$BACKUP_ROOT/$(timestamp)"
   elif [[ -e "$HOME_AGENT_SKILLS_DIR" ]]; then
     if [[ -d "$HOME_AGENT_SKILLS_DIR" ]] && skills_directory_contains_only_managed_links "$HOME_AGENT_SKILLS_DIR" "$AGENT_SKILLS_DIR"; then
       find "$HOME_AGENT_SKILLS_DIR" -mindepth 1 -maxdepth 1 -type l -delete
@@ -37,7 +42,7 @@ ensure_agent_skills_link() {
     fi
   fi
 
-  ln -s "$AGENT_SKILLS_DIR" "$HOME_AGENT_SKILLS_DIR"
+  ln -s "$AGENT_SKILLS_LINK_TARGET" "$HOME_AGENT_SKILLS_DIR"
   print_success "Linked ~/.agents/skills -> home/.agents/skills"
 }
 
