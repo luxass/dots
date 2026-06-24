@@ -166,7 +166,7 @@ cmd_pi_update() {
   (cd "${HOME_DIR}/.pi" && pnpm install --lockfile-only --ignore-scripts --config.minimumReleaseAge=0)
 
   print_info "Updating Pi and configured packages"
-  if (cd "$DOTFILES_DIR" && pi update); then
+  if (cd "$DOTFILES_DIR" && env -u PI_SKIP_VERSION_CHECK pi update); then
     print_success "Pi and configured packages updated"
   else
     print_error "Failed to update Pi and configured packages"
