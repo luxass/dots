@@ -1,6 +1,7 @@
 readonly AGENT_SKILLS_DIR="${DOTFILES_DIR}/home/.agents/skills"
-readonly HOME_AGENT_SKILLS_DIR="$HOME/.agents/skills"
-readonly AGENT_SKILLS_LINK_TARGET="../${DOTFILES_DIR#$HOME/}/home/.agents/skills"
+readonly HOME_AGENTS_DIR="$HOME/.agents"
+readonly HOME_AGENT_SKILLS_DIR="$HOME_AGENTS_DIR/skills"
+readonly AGENT_SKILLS_LINK_TARGET="$AGENT_SKILLS_DIR"
 readonly SKILLS_CLI_PACKAGE="${SKILLS_CLI_PACKAGE:-skills}"
 readonly SKILLS_CLI_AGENT="${SKILLS_CLI_AGENT:-cline}"
 
@@ -20,8 +21,33 @@ skills_directory_contains_only_managed_links() {
   return 0
 }
 
+ensure_agent_skills_parent_dir() {
+  local source_agents_dir="${DOTFILES_DIR}/home/.agents"
+  local source_resolved resolved
+
+  mkdir -p "$source_agents_dir"
+  source_resolved="$(realpath "$source_agents_dir")"
+
+  if [[ -L "$HOME_AGENTS_DIR" ]]; then
+    resolved="$(realpath "$HOME_AGENTS_DIR" 2>/dev/null || true)"
+    if [[ "$resolved" == "$source_resolved" ]]; then
+      rm "$HOME_AGENTS_DIR"
+      mkdir -p "$HOME_AGENTS_DIR"
+      print_info "Unfolded ~/.agents so ~/.agents/skills can be managed directly"
+    else
+      backup_path "$HOME_AGENTS_DIR" "$BACKUP_ROOT/$(timestamp)"
+      mkdir -p "$HOME_AGENTS_DIR"
+    fi
+  elif [[ -e "$HOME_AGENTS_DIR" && ! -d "$HOME_AGENTS_DIR" ]]; then
+    backup_path "$HOME_AGENTS_DIR" "$BACKUP_ROOT/$(timestamp)"
+    mkdir -p "$HOME_AGENTS_DIR"
+  else
+    mkdir -p "$HOME_AGENTS_DIR"
+  fi
+}
+
 ensure_agent_skills_link() {
-  mkdir -p "$(dirname "$HOME_AGENT_SKILLS_DIR")"
+  ensure_agent_skills_parent_dir
   mkdir -p "$AGENT_SKILLS_DIR"
 
   if [[ -L "$HOME_AGENT_SKILLS_DIR" ]]; then
@@ -44,6 +70,16 @@ ensure_agent_skills_link() {
 
   ln -s "$AGENT_SKILLS_LINK_TARGET" "$HOME_AGENT_SKILLS_DIR"
   print_success "Linked ~/.agents/skills -> home/.agents/skills"
+}
+
+check_agent_skills_link() {
+  if [[ -L "$HOME_AGENT_SKILLS_DIR" ]] && [[ "$(realpath "$HOME_AGENT_SKILLS_DIR")" == "$(realpath "$AGENT_SKILLS_DIR")" ]]; then
+    print_success "Agent skills link"
+    return 0
+  fi
+
+  print_error "Agent skills are not linked at ~/.agents/skills"
+  return 1
 }
 
 cmd_skills_list() {

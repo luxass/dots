@@ -136,6 +136,7 @@ check_managed_links() {
 _stow_dotfiles() {
   ensure_stow
   print_verbose "Preparing to stow files from $HOME_DIR to $HOME"
+  ensure_agent_skills_link
   backup_conflicts
   print_info "Stowing files from $HOME_DIR to $HOME"
   print_verbose "Running GNU Stow in restow mode for package: home"
