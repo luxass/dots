@@ -135,8 +135,17 @@ cmd_update() {
   print_header "Updating dotfiles"
 
   if git -C "$DOTFILES_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local old_head new_head
+    old_head="$(git -C "$DOTFILES_DIR" rev-parse HEAD)"
+
     print_info "Pulling latest repo changes"
     git -C "$DOTFILES_DIR" pull --ff-only
+
+    new_head="$(git -C "$DOTFILES_DIR" rev-parse HEAD)"
+    if [[ "$old_head" != "$new_head" && "${DOT_UPDATE_REEXECED:-false}" != "true" ]]; then
+      print_info "Restarting dot update with latest code"
+      DOT_UPDATE_REEXECED=true exec "$DOTFILES_DIR/dot" update "$@"
+    fi
   fi
 
   print_info "Updating Homebrew"

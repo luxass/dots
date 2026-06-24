@@ -1,7 +1,8 @@
 readonly AGENT_SKILLS_DIR="${DOTFILES_DIR}/home/.agents/skills"
 readonly HOME_AGENTS_DIR="$HOME/.agents"
 readonly HOME_AGENT_SKILLS_DIR="$HOME_AGENTS_DIR/skills"
-readonly AGENT_SKILLS_LINK_TARGET="$AGENT_SKILLS_DIR"
+# Keep this relative so GNU Stow recognises ~/.agents/skills as an owned link.
+readonly AGENT_SKILLS_LINK_TARGET="../${DOTFILES_DIR#$HOME/}/home/.agents/skills"
 readonly SKILLS_CLI_PACKAGE="${SKILLS_CLI_PACKAGE:-skills}"
 readonly SKILLS_CLI_AGENT="${SKILLS_CLI_AGENT:-cline}"
 
