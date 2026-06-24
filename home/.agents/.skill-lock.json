@@ -5,20 +5,9 @@
     "findSkillsPrompt": true
   },
   "lastSelectedAgents": [
-    "amp",
-    "antigravity",
-    "cline",
+    "claude-code",
     "codex",
-    "cursor",
-    "deepagents",
-    "dexto",
-    "firebender",
-    "gemini-cli",
-    "github-copilot",
-    "kimi-cli",
     "opencode",
-    "warp",
-    "zed",
     "pi"
   ]
 }
