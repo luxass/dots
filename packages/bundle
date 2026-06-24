@@ -1,6 +1,6 @@
-tap "anomalyco/tap", trusted: { formula: "opencode" }
+tap "anomalyco/tap", trusted: true
 tap "luxass/tap", trusted: { formula: "actioneer" }
-tap "oven-sh/bun", trusted: { formula: "bun" }
+tap "oven-sh/bun", trusted: true
 
 brew "anomalyco/tap/opencode"
 brew "bat"
