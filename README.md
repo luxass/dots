@@ -310,7 +310,8 @@ pnpm safety flags for self-updates, including disabled lifecycle scripts and a
 release-age override for fresh Pi releases.
 
 External skills are managed through `dot skills`, which wraps the open `skills`
-CLI with `pnpm dlx` so the CLI does not need to be installed globally.
+CLI with `sfw pnpm dlx` so the CLI does not need to be installed globally and
+package execution goes through Socket Firewall.
 Run `dot stow` first so `~/.agents/skills` points at this repo and installed
 skill files stay visible to Git under `home/.agents/skills`.
 
@@ -321,8 +322,9 @@ dot skills list
 ```
 
 `dot skills add` installs to the shared global Agent Skills directory with
-`--global --agent cline --copy`. Pi loads `~/.agents/skills` directly, and the
-skills CLI updates its lock/inventory as part of installation.
+`sfw pnpm dlx skills add --global --agent universal --copy`. Pi loads
+`~/.agents/skills` directly, and the skills CLI updates its lock/inventory as
+part of installation.
 
 `dot pi extension install plannotator VERSION` installs the pinned Plannotator
 Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This

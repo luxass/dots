@@ -4,7 +4,6 @@ readonly HOME_AGENT_SKILLS_DIR="$HOME_AGENTS_DIR/skills"
 # Keep this relative so GNU Stow recognises ~/.agents/skills as an owned link.
 readonly AGENT_SKILLS_LINK_TARGET="../${DOTFILES_DIR#$HOME/}/home/.agents/skills"
 readonly SKILLS_CLI_PACKAGE="${SKILLS_CLI_PACKAGE:-skills}"
-readonly SKILLS_CLI_AGENT="${SKILLS_CLI_AGENT:-cline}"
 
 skills_directory_contains_only_managed_links() {
   local target_dir="$1"
@@ -93,8 +92,12 @@ cmd_skills_list() {
     print_error "pnpm is required to run the skills CLI"
     return 1
   fi
+  if ! command_exists sfw; then
+    print_error "Socket Firewall (sfw) is required to run the skills CLI"
+    return 1
+  fi
 
-  pnpm dlx "$SKILLS_CLI_PACKAGE" list --global --agent "$SKILLS_CLI_AGENT"
+  sfw pnpm dlx "$SKILLS_CLI_PACKAGE" list --global --agent universal
 }
 
 cmd_skills_add() {
@@ -164,12 +167,16 @@ cmd_skills_add() {
     print_error "pnpm is required to run the skills CLI"
     return 1
   fi
+  if ! command_exists sfw; then
+    print_error "Socket Firewall (sfw) is required to run the skills CLI"
+    return 1
+  fi
 
   if [[ "$list_only" != "true" ]]; then
     ensure_agent_skills_link
   fi
 
-  pnpm dlx "$SKILLS_CLI_PACKAGE" add "$source" --global --agent "$SKILLS_CLI_AGENT" --copy "${extra_args[@]}"
+  sfw pnpm dlx "$SKILLS_CLI_PACKAGE" add "$source" --global --agent universal --copy "${extra_args[@]}"
 }
 
 cmd_skills_help() {
@@ -181,7 +188,7 @@ ${BOLD}USAGE:${RESET}
   ${SCRIPT_NAME} skills list
 
 ${BOLD}COMMANDS:${RESET}
-  add URL [OPTIONS]  Install shared global skills with 'pnpm dlx skills add --global --agent cline --copy'
+  add URL [OPTIONS]  Install shared global skills with 'sfw pnpm dlx skills add --global --agent universal --copy'
   list               List installed shared global skills with the skills CLI
   help               Show this help
 
