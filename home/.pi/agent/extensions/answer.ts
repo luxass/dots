@@ -10,7 +10,7 @@
  * 4. Submits the compiled answers when done
  */
 
-import { complete, type Api, type Model, type UserMessage } from "@earendil-works/pi-ai";
+import { complete, parseJsonWithRepair, type Api, type Model, type UserMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { BorderedLoader } from "@earendil-works/pi-coding-agent";
 import {
@@ -31,7 +31,6 @@ import { Type } from "typebox";
 interface ExtractedQuestion {
 	question: string;
 	context?: string;
-	metadata?: string[];
 	choices?: string[];
 	multiSelect?: boolean;
 	minSelections?: number;
@@ -58,20 +57,17 @@ interface AnswerCollectionDetails {
 
 type QnAResult = Omit<AnswerCollectionDetails, "source" | "cancelled" | "error">;
 
-const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering and any small contextual metadata that would help answer them.
+const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering and any small shared context that would help answer them.
 
 Output a JSON object with this structure:
 {
   "metadata": [
-    "Optional batch-level context, constraints, assumptions, or facts relevant to all questions"
+    "Optional batch-level facts, constraints, assumptions, or context relevant to all questions"
   ],
   "questions": [
     {
       "question": "The question text",
-      "context": "Optional context that helps answer the question",
-      "metadata": [
-        "Optional per-question context, constraints, assumptions, or facts useful when answering"
-      ],
+      "context": "Optional one-sentence reason this question is being asked or how the answer will be used",
       "choices": [
         "Optional answer choices to show instead of a free-text editor"
       ],
@@ -87,10 +83,9 @@ Rules:
 - If the input contains TARGET_TEXT and CONVERSATION_CONTEXT sections, extract questions only from TARGET_TEXT
 - Keep questions in the order they appeared
 - Be concise with question text
-- Include context only when it provides essential information for answering
-- Include metadata for helpful facts already present in the source text or conversation context; do not invent metadata
+- Include context only when a short explanation of why the question matters would help the user answer
+- Include metadata only for shared facts or constraints already present in the source text or conversation context; do not invent metadata
 - Use conversation context only to populate context/metadata fields, not to add extra questions
-- Use batch metadata for shared information, and per-question metadata for question-specific information
 - Metadata should be short free-form strings, not rigid categories
 - Include choices only when the source text already provides a finite list of options
 - Use multiSelect when the user should be able to pick more than one option
@@ -105,28 +100,21 @@ Example output:
   "questions": [
     {
       "question": "What is your preferred database?",
-      "context": "We can only configure MySQL and PostgreSQL because of what is implemented.",
-      "metadata": ["SQLite support is not implemented yet."]
+      "context": "The database choice determines which supported adapter to configure."
     },
     {
       "question": "Should we use TypeScript or JavaScript?",
-      "metadata": ["The existing package already uses TypeScript tooling."],
       "choices": ["TypeScript", "JavaScript"]
     }
   ]
 }`;
 
-const CODEX_MODEL_ID = "gpt-5.4-mini";
+const CODEX_MODEL_IDS = ["gpt-5.4-mini", "gpt-5.3-codex-spark", "gpt-5.4", "gpt-5.3-codex"];
 const HAIKU_MODEL_ID = "claude-haiku-4-5";
 
 const ToolQuestionSchema = Type.Object({
 	question: Type.String({ description: "Question to ask the user." }),
-	context: Type.Optional(Type.String({ description: "Optional context that helps the user answer this question." })),
-	metadata: Type.Optional(
-		Type.Array(Type.String(), {
-			description: "Short existing contextual facts or constraints relevant to this question.",
-		}),
-	),
+	context: Type.Optional(Type.String({ description: "Optional one-sentence reason this question is being asked or how the answer will be used." })),
 	choices: Type.Optional(
 		Type.Array(Type.String(), {
 			description: "Optional finite answer choices to show instead of a free-text editor.",
@@ -159,7 +147,7 @@ const AnswerToolParams = Type.Object({
 	sourceText: Type.Optional(
 		Type.String({
 			description:
-				"Text to extract questions and contextual metadata from. Used only when explicit questions are not provided.",
+				"Text to extract questions and shared context from. Used only when explicit questions are not provided.",
 		}),
 	),
 	batchMetadata: Type.Optional(
@@ -177,14 +165,16 @@ type AnswerToolParamsType = {
 };
 
 /**
- * Prefer GPT-5.4 Mini for extraction when available, otherwise fallback to haiku or the current model.
+ * Prefer a fast configured extraction model, then Haiku, then the current model.
  */
 async function selectExtractionModel(
 	currentModel: Model<Api>,
 	modelRegistry: ModelRegistry,
 ): Promise<Model<Api>> {
-	const codexModel = modelRegistry.find("openai-codex", CODEX_MODEL_ID);
-	if (codexModel) {
+	for (const modelId of CODEX_MODEL_IDS) {
+		const codexModel = modelRegistry.find("openai-codex", modelId);
+		if (!codexModel) continue;
+
 		const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
 		if (auth.ok) {
 			return codexModel;
@@ -310,10 +300,9 @@ function normalizeQuestions(value: unknown): ExtractedQuestion[] {
 			if (typeof raw.context === "string" && raw.context.trim().length > 0) {
 				question.context = raw.context.trim();
 			}
-			question.metadata = normalizeMetadata(raw.metadata);
 			question.choices = normalizeChoices(raw.choices);
 			if (question.choices) {
-				const inferenceText = [question.question, question.context, ...(question.metadata ?? [])].filter(Boolean).join(" ");
+				const inferenceText = [question.question, question.context].filter(Boolean).join(" ");
 				const inferredLimits = inferSelectionLimits(inferenceText, question.choices.length);
 				question.minSelections = normalizeSelectionLimit(raw.minSelections, question.choices.length) ?? inferredLimits.minSelections;
 				question.maxSelections = normalizeSelectionLimit(raw.maxSelections, question.choices.length) ?? inferredLimits.maxSelections;
@@ -338,7 +327,7 @@ function buildExtractionInput(text: string, contextText?: string): string {
 	}
 
 	return [
-		"Use CONVERSATION_CONTEXT only to enrich context/metadata. Extract questions only from TARGET_TEXT.",
+		"Use CONVERSATION_CONTEXT only to enrich shared metadata or question context. Extract questions only from TARGET_TEXT.",
 		"",
 		"CONVERSATION_CONTEXT:",
 		contextText.trim(),
@@ -348,29 +337,54 @@ function buildExtractionInput(text: string, contextText?: string): string {
 	].join("\n");
 }
 
-function parseExtractionResult(text: string): ExtractionResult | null {
-	try {
-		// Try to find JSON in the response (it might be wrapped in markdown code blocks)
-		let jsonStr = text;
-
-		// Remove markdown code block if present
-		const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-		if (jsonMatch) {
-			jsonStr = jsonMatch[1].trim();
-		}
-
-		const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
-		const questions = normalizeQuestions(parsed?.questions);
-		if (parsed && Array.isArray(parsed.questions)) {
-			return {
-				metadata: normalizeMetadata(parsed.metadata),
-				questions,
-			};
-		}
-		return null;
-	} catch {
+function toExtractionResult(value: unknown): ExtractionResult | null {
+	if (!value || typeof value !== "object") {
 		return null;
 	}
+
+	const parsed = value as Record<string, unknown>;
+	if (!Array.isArray(parsed.questions)) {
+		return null;
+	}
+
+	return {
+		metadata: normalizeMetadata(parsed.metadata),
+		questions: normalizeQuestions(parsed.questions),
+	};
+}
+
+function parseExtractionResult(text: string): ExtractionResult | null {
+	const trimmed = text.trim();
+	const candidates: string[] = [];
+	const seen = new Set<string>();
+	const addCandidate = (candidate: string | undefined) => {
+		const normalized = candidate?.trim();
+		if (!normalized || seen.has(normalized)) return;
+		seen.add(normalized);
+		candidates.push(normalized);
+	};
+
+	addCandidate(text.match(/```(?:json)?\s*([\s\S]*?)```/)?.[1]);
+	addCandidate(trimmed);
+
+	const firstBrace = trimmed.indexOf("{");
+	const lastBrace = trimmed.lastIndexOf("}");
+	if (firstBrace !== -1 && lastBrace > firstBrace) {
+		addCandidate(trimmed.slice(firstBrace, lastBrace + 1));
+	}
+
+	for (const candidate of candidates) {
+		try {
+			const result = toExtractionResult(parseJsonWithRepair<unknown>(candidate));
+			if (result) {
+				return result;
+			}
+		} catch {
+			// Try the next candidate.
+		}
+	}
+
+	return null;
 }
 
 function getMessageRoleAndText(message: unknown): { role: "user" | "assistant"; text: string } | undefined {
@@ -465,17 +479,13 @@ function getLastAssistantText(ctx: ExtensionContext):
 	return { ok: false, reason: "not_found", message: "No assistant messages found" };
 }
 
-async function extractQuestionsFromText(
+async function runQuestionExtraction(
 	ctx: ExtensionContext,
+	extractionModel: Model<Api>,
 	text: string,
 	signal?: AbortSignal,
 	contextText?: string,
 ): Promise<ExtractionResult | null> {
-	if (!ctx.model) {
-		throw new Error("No model selected");
-	}
-
-	const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
 	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
 	if (auth.ok === false) {
 		throw new Error(auth.error);
@@ -505,6 +515,20 @@ async function extractQuestionsFromText(
 	return preferMarkdownQuestionList(text, parseExtractionResult(responseText));
 }
 
+async function extractQuestionsFromText(
+	ctx: ExtensionContext,
+	text: string,
+	signal?: AbortSignal,
+	contextText?: string,
+): Promise<ExtractionResult | null> {
+	if (!ctx.model) {
+		throw new Error("No model selected");
+	}
+
+	const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
+	return runQuestionExtraction(ctx, extractionModel, text, signal, contextText);
+}
+
 async function extractQuestionsWithLoader(ctx: ExtensionContext, text: string, contextText?: string): Promise<ExtractionResult | null> {
 	if (!ctx.model) {
 		ctx.ui.notify("No model selected", "error");
@@ -517,36 +541,7 @@ async function extractQuestionsWithLoader(ctx: ExtensionContext, text: string, c
 		const loader = new BorderedLoader(tui, theme, `Extracting questions using ${extractionModel.id}...`);
 		loader.onAbort = () => done(null);
 
-		const doExtract = async () => {
-			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
-			if (auth.ok === false) {
-				throw new Error(auth.error);
-			}
-			const userMessage: UserMessage = {
-				role: "user",
-				content: [{ type: "text", text: buildExtractionInput(text, contextText) }],
-				timestamp: Date.now(),
-			};
-
-			const response = await complete(
-				extractionModel,
-				{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
-				{ apiKey: auth.apiKey, headers: auth.headers, signal: loader.signal },
-			);
-
-			if (response.stopReason === "aborted") {
-				return null;
-			}
-
-			const responseText = response.content
-				.filter((c): c is { type: "text"; text: string } => c.type === "text")
-				.map((c) => c.text)
-				.join("\n");
-
-			return preferMarkdownQuestionList(text, parseExtractionResult(responseText));
-		};
-
-		doExtract()
+		runQuestionExtraction(ctx, extractionModel, text, loader.signal, contextText)
 			.then(done)
 			.catch(() => done(null));
 
@@ -556,39 +551,6 @@ async function extractQuestionsWithLoader(ctx: ExtensionContext, text: string, c
 
 function formatMetadataLines(metadata: string[] | undefined, prefix = "- "): string[] {
 	return (metadata ?? []).map((item) => `${prefix}${item}`);
-}
-
-function shouldAutoCollectAnswers(text: string): boolean {
-	const questionCount = text.match(/\?/g)?.length ?? 0;
-	if (questionCount < 2) {
-		return false;
-	}
-
-	const hasDecisionHeading = /(?:remaining things to decide|things to decide|open questions|questions to answer|decisions to make|clarifying questions)/i.test(text);
-	const hasNumberedQuestions = /(?:^|\n)\s*\d+[.)]\s+[^\n?]+\?/m.test(text);
-	const hasRecommendation = /\bmy recommendation\b/i.test(text);
-
-	return hasDecisionHeading || (hasNumberedQuestions && hasRecommendation) || questionCount >= 3 && hasNumberedQuestions;
-}
-
-function getAssistantMessageText(message: unknown): string | undefined {
-	if (!message || typeof message !== "object") {
-		return undefined;
-	}
-	const raw = message as { role?: unknown; stopReason?: unknown; content?: unknown };
-	if (raw.role !== "assistant" || raw.stopReason !== "stop" || !Array.isArray(raw.content)) {
-		return undefined;
-	}
-
-	const text = raw.content
-		.filter((item): item is { type: "text"; text: string } => {
-			return Boolean(item && typeof item === "object" && (item as { type?: unknown }).type === "text" && typeof (item as { text?: unknown }).text === "string");
-		})
-		.map((item) => item.text)
-		.join("\n")
-		.trim();
-
-	return text.length > 0 ? text : undefined;
 }
 
 function stripListMarker(line: string): string | undefined {
@@ -688,14 +650,10 @@ function preferMarkdownQuestionList(text: string, extracted: ExtractionResult | 
 
 	return {
 		metadata: extracted?.metadata,
-		questions: markdownQuestions.map((question, index) => {
-			const extractedQuestion = extracted?.questions[index];
-			return {
-				...question,
-				context: question.context ?? extractedQuestion?.context,
-				metadata: mergeMetadata(question.metadata, extractedQuestion?.metadata),
-			};
-		}),
+		questions: markdownQuestions.map((question, index) => ({
+			...question,
+			context: question.context ?? extracted?.questions[index]?.context,
+		})),
 	};
 }
 
@@ -712,15 +670,31 @@ function formatAnswers(details: AnswerCollectionDetails | QnAResult): string {
 		if (item.context) {
 			parts.push(`> ${item.context}`);
 		}
-		if (item.metadata?.length) {
-			parts.push("Metadata:");
-			parts.push(...formatMetadataLines(item.metadata));
-		}
 		parts.push(`A: ${item.answer || "(no answer)"}`);
 		parts.push("");
 	}
 
 	return parts.join("\n").trim();
+}
+
+interface QuestionState {
+	answer: string;
+	selectedChoices: number[];
+	choiceCursor: number;
+	customAnswer: string;
+	mode: "text" | "choices" | "custom";
+}
+
+interface QnARenderFrame {
+	width: number;
+	boxWidth: number;
+	contentWidth: number;
+	lines: string[];
+	horizontalLine: (count: number) => string;
+	boxLine: (content: string, leftPad?: number) => string;
+	emptyBoxLine: () => string;
+	padToWidth: (line: string) => string;
+	wrapWidth: (offset?: number) => number;
 }
 
 /**
@@ -729,16 +703,12 @@ function formatAnswers(details: AnswerCollectionDetails | QnAResult): string {
 class QnAComponent implements Component {
 	private readonly metadata?: string[];
 	private questions: ExtractedQuestion[];
-	private answers: string[];
-	private selectedChoices: number[][];
-	private choiceCursors: number[];
-	private customAnswers: string[];
-	private choiceTextMode: boolean[];
-	private currentIndex: number = 0;
+	private state: QuestionState[];
+	private currentIndex = 0;
 	private editor: Editor;
 	private tui: TUI;
 	private onDone: (result: QnAResult | null) => void;
-	private showingConfirmation: boolean = false;
+	private showingConfirmation = false;
 	private selectionWarning?: string;
 
 	// Cache
@@ -760,11 +730,13 @@ class QnAComponent implements Component {
 	) {
 		this.metadata = extractionResult.metadata;
 		this.questions = extractionResult.questions;
-		this.answers = extractionResult.questions.map(() => "");
-		this.selectedChoices = extractionResult.questions.map(() => []);
-		this.choiceCursors = extractionResult.questions.map(() => 0);
-		this.customAnswers = extractionResult.questions.map(() => "");
-		this.choiceTextMode = extractionResult.questions.map(() => false);
+		this.state = extractionResult.questions.map((question) => ({
+			answer: "",
+			selectedChoices: [],
+			choiceCursor: 0,
+			customAnswer: "",
+			mode: this.isChoiceQuestion(question) ? "choices" : "text",
+		}));
 		this.tui = tui;
 		this.onDone = onDone;
 
@@ -785,18 +757,29 @@ class QnAComponent implements Component {
 		// We'll handle Enter ourselves to preserve the text
 		this.editor.disableSubmit = true;
 		this.editor.onChange = () => {
+			this.saveCurrentAnswer();
 			this.invalidate();
 			this.tui.requestRender();
 		};
 	}
 
+	private currentQuestion(): ExtractedQuestion {
+		return this.questions[this.currentIndex];
+	}
+
+	private currentState(): QuestionState {
+		return this.state[this.currentIndex];
+	}
+
 	private saveCurrentAnswer(): void {
-		if (this.isChoiceQuestion(this.questions[this.currentIndex]) && this.choiceTextMode[this.currentIndex]) {
-			this.customAnswers[this.currentIndex] = this.editor.getText();
+		const question = this.currentQuestion();
+		const state = this.currentState();
+		if (this.isChoiceQuestion(question) && state.mode === "custom") {
+			state.customAnswer = this.editor.getText();
 			return;
 		}
-		if (!this.isChoiceQuestion(this.questions[this.currentIndex])) {
-			this.answers[this.currentIndex] = this.editor.getText();
+		if (!this.isChoiceQuestion(question)) {
+			state.answer = this.editor.getText();
 		}
 	}
 
@@ -805,19 +788,21 @@ class QnAComponent implements Component {
 	}
 
 	private useCustomAnswer(): void {
-		if (!this.isChoiceQuestion(this.questions[this.currentIndex])) return;
-		this.selectedChoices[this.currentIndex] = [];
-		this.choiceTextMode[this.currentIndex] = true;
-		this.editor.setText(this.customAnswers[this.currentIndex] || "");
+		if (!this.isChoiceQuestion(this.currentQuestion())) return;
+		const state = this.currentState();
+		state.selectedChoices = [];
+		state.mode = "custom";
+		this.editor.setText(state.customAnswer || "");
 		this.selectionWarning = undefined;
 		this.invalidate();
 		this.tui.requestRender();
 	}
 
 	private useChoiceAnswer(): void {
-		if (!this.isChoiceQuestion(this.questions[this.currentIndex])) return;
-		this.customAnswers[this.currentIndex] = this.editor.getText();
-		this.choiceTextMode[this.currentIndex] = false;
+		if (!this.isChoiceQuestion(this.currentQuestion())) return;
+		const state = this.currentState();
+		state.customAnswer = this.editor.getText();
+		state.mode = "choices";
 		this.editor.setText("");
 		this.selectionWarning = undefined;
 		this.invalidate();
@@ -826,27 +811,29 @@ class QnAComponent implements Component {
 
 	private getSelectedChoiceLabels(index: number): string[] {
 		const question = this.questions[index];
-		return (this.selectedChoices[index] ?? [])
+		return this.state[index].selectedChoices
 			.map((choiceIndex) => question.choices?.[choiceIndex])
 			.filter((choice): choice is string => Boolean(choice));
 	}
 
 	private getAnswer(index: number): string {
+		const state = this.state[index];
 		if (this.isChoiceQuestion(this.questions[index])) {
-			const customAnswer = this.customAnswers[index]?.trim();
-			if (this.choiceTextMode[index] || customAnswer) {
+			const customAnswer = state.customAnswer.trim();
+			if (state.mode === "custom" || customAnswer) {
 				return customAnswer || "(none)";
 			}
 			const selected = this.getSelectedChoiceLabels(index);
 			return selected.length > 0 ? selected.join(", ") : "(no answer)";
 		}
-		return this.answers[index]?.trim() || "(no answer)";
+		return state.answer.trim() || "(no answer)";
 	}
 
 	private advanceOrConfirm(): void {
 		this.saveCurrentAnswer();
-		const question = this.questions[this.currentIndex];
-		if (question.choices?.length && question.minSelections && !this.choiceTextMode[this.currentIndex]) {
+		const question = this.currentQuestion();
+		const state = this.currentState();
+		if (question.choices?.length && question.minSelections && state.mode !== "custom") {
 			const selectedCount = this.getSelectedChoiceLabels(this.currentIndex).length;
 			if (selectedCount < question.minSelections) {
 				this.selectionWarning = `Select at least ${question.minSelections} option${question.minSelections === 1 ? "" : "s"}.`;
@@ -865,16 +852,19 @@ class QnAComponent implements Component {
 	}
 
 	private toggleChoice(choiceIndex: number): void {
-		const question = this.questions[this.currentIndex];
+		const question = this.currentQuestion();
 		if (!question.choices?.[choiceIndex]) return;
 
-		this.choiceCursors[this.currentIndex] = choiceIndex;
+		const state = this.currentState();
+		state.choiceCursor = choiceIndex;
+		state.mode = "choices";
+		state.customAnswer = "";
 		this.selectionWarning = undefined;
-		const selected = this.selectedChoices[this.currentIndex] ?? [];
+		const selected = state.selectedChoices;
 		const existingIndex = selected.indexOf(choiceIndex);
 
 		if (!question.multiSelect) {
-			this.selectedChoices[this.currentIndex] = [choiceIndex];
+			state.selectedChoices = [choiceIndex];
 			this.invalidate();
 			return;
 		}
@@ -885,17 +875,18 @@ class QnAComponent implements Component {
 			selected.push(choiceIndex);
 			selected.sort((a, b) => a - b);
 		}
-		this.selectedChoices[this.currentIndex] = selected;
 		this.invalidate();
 	}
 
 	private handleChoiceInput(data: string): boolean {
-		const question = this.questions[this.currentIndex];
+		const question = this.currentQuestion();
 		const choices = question.choices;
 		if (!choices?.length) {
 			return false;
 		}
-		if (this.choiceTextMode[this.currentIndex]) {
+
+		const state = this.currentState();
+		if (state.mode === "custom") {
 			return false;
 		}
 		if (data.toLowerCase() === "o") {
@@ -903,9 +894,9 @@ class QnAComponent implements Component {
 			return true;
 		}
 		if (data.toLowerCase() === "n") {
-			this.selectedChoices[this.currentIndex] = [];
-			this.customAnswers[this.currentIndex] = "none";
-			this.choiceTextMode[this.currentIndex] = true;
+			state.selectedChoices = [];
+			state.customAnswer = "none";
+			state.mode = "custom";
 			this.editor.setText("none");
 			this.selectionWarning = undefined;
 			this.invalidate();
@@ -914,15 +905,15 @@ class QnAComponent implements Component {
 		}
 
 		const customChoiceIndex = choices.length;
-		let cursor = this.choiceCursors[this.currentIndex] ?? 0;
+		const cursor = state.choiceCursor;
 		if (matchesKey(data, Key.up)) {
-			this.choiceCursors[this.currentIndex] = Math.max(0, cursor - 1);
+			state.choiceCursor = Math.max(0, cursor - 1);
 			this.invalidate();
 			this.tui.requestRender();
 			return true;
 		}
 		if (matchesKey(data, Key.down)) {
-			this.choiceCursors[this.currentIndex] = Math.min(customChoiceIndex, cursor + 1);
+			state.choiceCursor = Math.min(customChoiceIndex, cursor + 1);
 			this.invalidate();
 			this.tui.requestRender();
 			return true;
@@ -941,7 +932,7 @@ class QnAComponent implements Component {
 				this.useCustomAnswer();
 				return true;
 			}
-			if (!question.multiSelect && this.selectedChoices[this.currentIndex]?.length === 0) {
+			if (!question.multiSelect && state.selectedChoices.length === 0) {
 				this.toggleChoice(cursor);
 			}
 			this.advanceOrConfirm();
@@ -963,12 +954,14 @@ class QnAComponent implements Component {
 		this.saveCurrentAnswer();
 		this.currentIndex = index;
 		this.selectionWarning = undefined;
+		const question = this.questions[index];
+		const state = this.state[index];
 		this.editor.setText(
-			this.isChoiceQuestion(this.questions[index])
-				? this.choiceTextMode[index]
-					? this.customAnswers[index] || ""
+			this.isChoiceQuestion(question)
+				? state.mode === "custom"
+					? state.customAnswer || ""
 					: ""
-				: this.answers[index] || "",
+				: state.answer || "",
 		);
 		this.invalidate();
 	}
@@ -1015,8 +1008,8 @@ class QnAComponent implements Component {
 		}
 
 		if (
-			this.isChoiceQuestion(this.questions[this.currentIndex]) &&
-			this.choiceTextMode[this.currentIndex] &&
+			this.isChoiceQuestion(this.currentQuestion()) &&
+			this.currentState().mode === "custom" &&
 			matchesKey(data, Key.escape)
 		) {
 			this.useChoiceAnswer();
@@ -1085,173 +1078,167 @@ class QnAComponent implements Component {
 			return this.cachedLines;
 		}
 
+		const frame = this.createRenderFrame(width);
+		this.renderHeader(frame);
+		this.renderProgress(frame);
+		this.renderQuestion(frame);
+		this.renderAnswer(frame);
+		this.renderFooter(frame);
+
+		this.cachedWidth = width;
+		this.cachedLines = frame.lines;
+		return frame.lines;
+	}
+
+	private createRenderFrame(width: number): QnARenderFrame {
 		const lines: string[] = [];
-		const boxWidth = Math.min(width - 4, 120); // Allow wider box
-		const contentWidth = boxWidth - 4; // 2 chars padding on each side
-
-		// Helper to create horizontal lines (dim the whole thing at once)
-		const horizontalLine = (count: number) => "─".repeat(count);
-
-		// Helper to create a box line
-		const boxLine = (content: string, leftPad: number = 2): string => {
+		const boxWidth = Math.min(Math.max(2, width), 120);
+		const contentWidth = Math.max(1, boxWidth - 4);
+		const horizontalLine = (count: number) => "─".repeat(Math.max(0, count));
+		const boxLine = (content: string, leftPad = 2): string => {
 			const paddedContent = " ".repeat(leftPad) + content;
 			const contentLen = visibleWidth(paddedContent);
 			const rightPad = Math.max(0, boxWidth - contentLen - 2);
 			return this.dim("│") + paddedContent + " ".repeat(rightPad) + this.dim("│");
 		};
+		const emptyBoxLine = (): string => this.dim("│") + " ".repeat(Math.max(0, boxWidth - 2)) + this.dim("│");
+		const padToWidth = (line: string): string => line + " ".repeat(Math.max(0, width - visibleWidth(line)));
+		const wrapWidth = (offset = 0): number => Math.max(1, contentWidth + offset);
 
-		const emptyBoxLine = (): string => {
-			return this.dim("│") + " ".repeat(boxWidth - 2) + this.dim("│");
-		};
+		return { width, boxWidth, contentWidth, lines, horizontalLine, boxLine, emptyBoxLine, padToWidth, wrapWidth };
+	}
 
-		const padToWidth = (line: string): string => {
-			const len = visibleWidth(line);
-			return line + " ".repeat(Math.max(0, width - len));
-		};
+	private addSeparator(frame: QnARenderFrame): void {
+		frame.lines.push(frame.padToWidth(this.dim("├" + frame.horizontalLine(frame.boxWidth - 2) + "┤")));
+	}
 
-		// Title
-		lines.push(padToWidth(this.dim("╭" + horizontalLine(boxWidth - 2) + "╮")));
+	private addWrappedBox(frame: QnARenderFrame, text: string, width = frame.contentWidth): void {
+		for (const line of wrapTextWithAnsi(text, Math.max(1, width))) {
+			frame.lines.push(frame.padToWidth(frame.boxLine(line)));
+		}
+	}
+
+	private renderHeader(frame: QnARenderFrame): void {
+		frame.lines.push(frame.padToWidth(this.dim("╭" + frame.horizontalLine(frame.boxWidth - 2) + "╮")));
 		const title = `${this.bold(this.cyan("Questions"))} ${this.dim(`(${this.currentIndex + 1}/${this.questions.length})`)}`;
-		lines.push(padToWidth(boxLine(title)));
-		lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
+		frame.lines.push(frame.padToWidth(frame.boxLine(title)));
+		this.addSeparator(frame);
 
-		if (this.metadata?.length) {
-			const metadataTitle = this.gray("Shared context:");
-			lines.push(padToWidth(boxLine(metadataTitle)));
-			for (const item of this.metadata) {
-				const wrapped = wrapTextWithAnsi(this.gray(`• ${item}`), contentWidth - 2);
-				for (const line of wrapped) {
-					lines.push(padToWidth(boxLine(line)));
-				}
-			}
-			lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
+		if (!this.metadata?.length) {
+			return;
 		}
 
-		// Progress indicator
-		const progressParts: string[] = [];
-		for (let i = 0; i < this.questions.length; i++) {
-			const answered = this.isChoiceQuestion(this.questions[i])
-				? this.getSelectedChoiceLabels(i).length > 0 || (this.customAnswers[i]?.trim() || "").length > 0
-				: (this.answers[i]?.trim() || "").length > 0;
-			const current = i === this.currentIndex;
-			if (current) {
-				progressParts.push(this.cyan("●"));
-			} else if (answered) {
-				progressParts.push(this.green("●"));
-			} else {
-				progressParts.push(this.dim("○"));
-			}
+		frame.lines.push(frame.padToWidth(frame.boxLine(this.gray("Shared context:"))));
+		for (const item of this.metadata) {
+			this.addWrappedBox(frame, this.gray(`• ${item}`), frame.wrapWidth(-2));
 		}
-		lines.push(padToWidth(boxLine(progressParts.join(" "))));
-		lines.push(padToWidth(emptyBoxLine()));
+		this.addSeparator(frame);
+	}
 
-		// Current question
-		const q = this.questions[this.currentIndex];
-		const questionText = `${this.bold("Q:")} ${q.question}`;
-		const wrappedQuestion = wrapTextWithAnsi(questionText, contentWidth);
-		for (const line of wrappedQuestion) {
-			lines.push(padToWidth(boxLine(line)));
-		}
+	private renderProgress(frame: QnARenderFrame): void {
+		const progressParts = this.questions.map((question, index) => {
+			const state = this.state[index];
+			const answered = this.isChoiceQuestion(question)
+				? this.getSelectedChoiceLabels(index).length > 0 || state.customAnswer.trim().length > 0
+				: state.answer.trim().length > 0;
+			if (index === this.currentIndex) return this.cyan("●");
+			return answered ? this.green("●") : this.dim("○");
+		});
+		frame.lines.push(frame.padToWidth(frame.boxLine(progressParts.join(" "))));
+		frame.lines.push(frame.padToWidth(frame.emptyBoxLine()));
+	}
 
-		// Context if present
-		if (q.context) {
-			lines.push(padToWidth(emptyBoxLine()));
-			const contextText = this.gray(`> ${q.context}`);
-			const wrappedContext = wrapTextWithAnsi(contextText, contentWidth - 2);
-			for (const line of wrappedContext) {
-				lines.push(padToWidth(boxLine(line)));
-			}
+	private renderQuestion(frame: QnARenderFrame): void {
+		const question = this.currentQuestion();
+		this.addWrappedBox(frame, `${this.bold("Q:")} ${question.question}`);
+
+		if (question.context) {
+			frame.lines.push(frame.padToWidth(frame.emptyBoxLine()));
+			this.addWrappedBox(frame, this.gray(`> ${question.context}`), frame.wrapWidth(-2));
 		}
 
-		// Metadata if present
-		if (q.metadata?.length) {
-			lines.push(padToWidth(emptyBoxLine()));
-			lines.push(padToWidth(boxLine(this.gray("Question context:"))));
-			for (const item of q.metadata) {
-				const wrapped = wrapTextWithAnsi(this.gray(`• ${item}`), contentWidth - 2);
-				for (const line of wrapped) {
-					lines.push(padToWidth(boxLine(line)));
-				}
-			}
+		frame.lines.push(frame.padToWidth(frame.emptyBoxLine()));
+	}
+
+	private renderAnswer(frame: QnARenderFrame): void {
+		const question = this.currentQuestion();
+		if (question.choices?.length) {
+			this.renderChoiceAnswer(frame, question);
+			return;
+		}
+		this.renderTextAnswer(frame);
+	}
+
+	private renderChoiceAnswer(frame: QnARenderFrame, question: ExtractedQuestion): void {
+		const state = this.currentState();
+		const choices = question.choices ?? [];
+		const isCustomMode = state.mode === "custom";
+		const mode = isCustomMode ? "Custom answer" : question.multiSelect ? "Select one or more" : "Select one";
+		const limit = !isCustomMode && question.multiSelect && question.maxSelections ? ` (max ${question.maxSelections})` : "";
+		frame.lines.push(frame.padToWidth(frame.boxLine(this.bold("A: ") + this.dim(`${mode}${limit}`))));
+
+		for (let choiceIndex = 0; choiceIndex < choices.length; choiceIndex++) {
+			const choice = choices[choiceIndex] ?? "";
+			const isSelected = state.selectedChoices.includes(choiceIndex);
+			const isCursor = !isCustomMode && choiceIndex === state.choiceCursor;
+			const marker = question.multiSelect ? (isSelected ? this.green("☑") : "☐") : isSelected ? this.green("●") : "○";
+			const quickKey = choiceIndex < 9 ? String(choiceIndex + 1) : choiceIndex === 9 ? "0" : " ";
+			const prefix = `${isCursor ? this.cyan("›") : " "} ${marker} ${quickKey}. `;
+			const label = isCustomMode ? this.dim(choice) : choice;
+			this.addWrappedBox(frame, prefix + label, frame.wrapWidth(-2));
 		}
 
-		lines.push(padToWidth(emptyBoxLine()));
+		const customText = state.customAnswer.trim();
+		const customLabel = customText ? `Other: ${customText}` : "Other / none / custom answer";
+		const customPrefix = `${isCustomMode || state.choiceCursor === choices.length ? this.cyan("›") : " "} ${customText || isCustomMode ? this.green("✎") : "✎"}    `;
+		this.addWrappedBox(frame, customPrefix + customLabel, frame.wrapWidth(-2));
 
-		if (q.choices?.length) {
-			if (this.choiceTextMode[this.currentIndex]) {
-				const answerPrefix = this.bold("A: ") + this.dim("Custom answer ");
-				const editorWidth = contentWidth - 4 - visibleWidth("A: Custom answer ");
-				const editorLines = this.editor.render(Math.max(20, editorWidth));
-				for (let i = 1; i < editorLines.length - 1; i++) {
-					lines.push(padToWidth(boxLine((i === 1 ? answerPrefix : " ".repeat(17)) + editorLines[i])));
-				}
-			} else {
-				const selected = this.selectedChoices[this.currentIndex] ?? [];
-				const cursor = this.choiceCursors[this.currentIndex] ?? 0;
-				const mode = q.multiSelect ? "Select one or more" : "Select one";
-				const limit = q.multiSelect && q.maxSelections ? ` (max ${q.maxSelections})` : "";
-				lines.push(padToWidth(boxLine(this.bold("A: ") + this.dim(`${mode}${limit}`))));
-				for (let choiceIndex = 0; choiceIndex < q.choices.length; choiceIndex++) {
-					const choice = q.choices[choiceIndex] ?? "";
-					const isSelected = selected.includes(choiceIndex);
-					const isCursor = choiceIndex === cursor;
-					const marker = q.multiSelect ? (isSelected ? this.green("☑") : "☐") : isSelected ? this.green("●") : "○";
-					const quickKey = choiceIndex < 9 ? String(choiceIndex + 1) : choiceIndex === 9 ? "0" : " ";
-					const prefix = `${isCursor ? this.cyan("›") : " "} ${marker} ${quickKey}. `;
-					const wrapped = wrapTextWithAnsi(prefix + choice, contentWidth - 2);
-					for (const line of wrapped) {
-						lines.push(padToWidth(boxLine(line)));
-					}
-				}
-				const customCursor = cursor === q.choices.length;
-				const customText = this.customAnswers[this.currentIndex]?.trim();
-				const customLabel = customText ? `Other: ${customText}` : "Other / none / custom answer";
-				const customPrefix = `${customCursor ? this.cyan("›") : " "} ${customText ? this.green("✎") : "✎"}    `;
-				for (const line of wrapTextWithAnsi(customPrefix + customLabel, contentWidth - 2)) {
-					lines.push(padToWidth(boxLine(line)));
-				}
-				if (this.selectionWarning) {
-					lines.push(padToWidth(boxLine(this.yellow(this.selectionWarning))));
-				}
-			}
-		} else {
-			// Render the editor component (multi-line input) with padding
-			// Skip the first and last lines (editor's own border lines)
-			const answerPrefix = this.bold("A: ");
-			const editorWidth = contentWidth - 4 - 3; // Extra padding + space for "A: "
-			const editorLines = this.editor.render(editorWidth);
-			for (let i = 1; i < editorLines.length - 1; i++) {
-				if (i === 1) {
-					// First content line gets the "A: " prefix
-					lines.push(padToWidth(boxLine(answerPrefix + editorLines[i])));
-				} else {
-					// Subsequent lines get padding to align with the first line
-					lines.push(padToWidth(boxLine("   " + editorLines[i])));
-				}
-			}
+		if (isCustomMode) {
+			this.renderCustomAnswerEditor(frame);
+		} else if (this.selectionWarning) {
+			frame.lines.push(frame.padToWidth(frame.boxLine(this.yellow(this.selectionWarning))));
 		}
+	}
 
-		lines.push(padToWidth(emptyBoxLine()));
+	private renderCustomAnswerEditor(frame: QnARenderFrame): void {
+		frame.lines.push(frame.padToWidth(frame.emptyBoxLine()));
+		const answerPrefix = this.bold("A: ") + this.dim("Custom answer ");
+		const prefixWidth = visibleWidth("A: Custom answer ");
+		const continuationPrefix = " ".repeat(prefixWidth);
+		const editorWidth = Math.max(1, frame.contentWidth - 4 - prefixWidth);
+		const editorLines = this.editor.render(editorWidth);
+		for (let i = 1; i < editorLines.length - 1; i++) {
+			frame.lines.push(frame.padToWidth(frame.boxLine((i === 1 ? answerPrefix : continuationPrefix) + editorLines[i])));
+		}
+	}
 
-		// Confirmation dialog or footer with controls
+	private renderTextAnswer(frame: QnARenderFrame): void {
+		const answerPrefix = this.bold("A: ");
+		const editorWidth = Math.max(1, frame.contentWidth - 4 - 3);
+		const editorLines = this.editor.render(editorWidth);
+		for (let i = 1; i < editorLines.length - 1; i++) {
+			frame.lines.push(frame.padToWidth(frame.boxLine((i === 1 ? answerPrefix : "   ") + editorLines[i])));
+		}
+	}
+
+	private renderFooter(frame: QnARenderFrame): void {
+		frame.lines.push(frame.padToWidth(frame.emptyBoxLine()));
+		this.addSeparator(frame);
+
 		if (this.showingConfirmation) {
-			lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
 			const confirmMsg = `${this.yellow("Submit all answers?")} ${this.dim("(Enter/y to confirm, Esc/n to cancel)")}`;
-			lines.push(padToWidth(boxLine(truncateToWidth(confirmMsg, contentWidth))));
+			frame.lines.push(frame.padToWidth(frame.boxLine(truncateToWidth(confirmMsg, frame.contentWidth))));
 		} else {
-			lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
-			const controls = q.choices?.length
-				? this.choiceTextMode[this.currentIndex]
+			const question = this.currentQuestion();
+			const controls = question.choices?.length
+				? this.currentState().mode === "custom"
 					? `${this.dim("Enter")} next · ${this.dim("Shift+Enter")} newline · ${this.dim("Esc")} back to choices · ${this.dim("Ctrl+C")} cancel`
 					: `${this.dim("↑/↓")} move · ${this.dim("Space/1-0")} select · ${this.dim("Other line")} custom · ${this.dim("Enter")} next`
 				: `${this.dim("Tab/Enter")} next · ${this.dim("Shift+Tab")} prev · ${this.dim("Shift+Enter")} newline · ${this.dim("Esc")} cancel`;
-			lines.push(padToWidth(boxLine(truncateToWidth(controls, contentWidth))));
+			frame.lines.push(frame.padToWidth(frame.boxLine(truncateToWidth(controls, frame.contentWidth))));
 		}
-		lines.push(padToWidth(this.dim("╰" + horizontalLine(boxWidth - 2) + "╯")));
 
-		this.cachedWidth = width;
-		this.cachedLines = lines;
-		return lines;
+		frame.lines.push(frame.padToWidth(this.dim("╰" + frame.horizontalLine(frame.boxWidth - 2) + "╯")));
 	}
 }
 
@@ -1322,13 +1309,9 @@ function buildToolError(message: string, source: AnswerCollectionDetails["source
 }
 
 export default function (pi: ExtensionAPI) {
-	let autoAnswerInProgress = false;
-
-	const collectAndSendAnswers = async (
-		ctx: ExtensionContext,
+	async function collectAndSendAnswers(ctx: ExtensionContext,
 		extractionResult: ExtractionResult,
-		source: AnswerCollectionDetails["source"],
-	): Promise<boolean> => {
+		source: AnswerCollectionDetails["source"]): Promise<boolean> {
 		const answersResult = await runQnA(ctx, extractionResult);
 
 		if (answersResult === null) {
@@ -1349,12 +1332,12 @@ export default function (pi: ExtensionAPI) {
 				details,
 				display: true,
 			},
-			{ triggerTurn: true },
+			{ triggerTurn: true }
 		);
 		return true;
-	};
+	}
 
-	const answerHandler = async (ctx: ExtensionContext) => {
+	async function answerHandler(ctx: ExtensionContext) {
 		if (!ctx.hasUI) {
 			ctx.ui.notify("answer requires interactive mode", "error");
 			return;
@@ -1384,42 +1367,21 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		await collectAndSendAnswers(ctx, extractionResult, "lastAssistant");
-	};
-
-	pi.on("message_end", async (event, ctx) => {
-		if (autoAnswerInProgress || !ctx.hasUI || ctx.mode !== "tui" || !ctx.model) {
-			return;
-		}
-
-		const text = getAssistantMessageText(event.message);
-		if (!text || !shouldAutoCollectAnswers(text)) {
-			return;
-		}
-
-		autoAnswerInProgress = true;
-		try {
-			const extractionResult = await extractQuestionsWithLoader(ctx, text, getRecentConversationContext(ctx, text));
-			if (!extractionResult || extractionResult.questions.length === 0) {
-				return;
-			}
-			await collectAndSendAnswers(ctx, extractionResult, "lastAssistant");
-		} finally {
-			autoAnswerInProgress = false;
-		}
-	});
+	}
 
 	pi.registerTool({
 		name: "answer",
 		label: "Answer Questions",
 		description:
-			"Ask the user one or more questions in an interactive Q&A UI and return their answers. Supports explicit questions or extracting questions from sourceText/the last completed assistant message.",
+			"Ask the user one or more explicit questions in an interactive Q&A UI and return their answers. Choice questions always include an Other/custom free-text option.",
 		promptSnippet:
-			"Ask the user clarifying questions in an interactive Q&A UI and return structured answers with helpful contextual metadata",
+			"Ask the user clarifying questions in an interactive Q&A UI and return structured answers with helpful shared context",
 		promptGuidelines: [
 			"Use answer when you need user input to proceed; prefer calling answer over ending your response with a plain list of questions.",
-			"When using answer, prefer explicit questions and include short metadata notes for constraints or context already known from the conversation.",
+			"When using answer, prefer explicit questions and include batchMetadata for shared constraints or context already known from the conversation.",
 			"Use choices for finite option prompts, and set multiSelect when the user may choose more than one option.",
-			"Use answer with sourceText, or with no arguments as a last-assistant-message fallback, only when you need to extract questions from prose.",
+			"Do not add an Other option yourself; answer always provides an Other/custom free-text path for choice questions.",
+			"Use answer with sourceText only when the questions must be extracted from prose; prefer explicit questions for Claude Code/opencode-style deterministic prompts.",
 		],
 		parameters: AnswerToolParams,
 
