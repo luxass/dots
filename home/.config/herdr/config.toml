@@ -1,10 +1,13 @@
 # Herdr configuration managed by dots.
-# Keep this intentionally small; agent integrations can add their own files.
+# Global terminal/workspace defaults; keep machine-local state out of this file.
 
 onboarding = false
 
 [terminal]
+# Use fish for new panes while preserving macOS login-shell behavior.
+default_shell = "fish"
 shell_mode = "auto"
+# Start new tabs/panes in the active pane's current directory.
 new_cwd = "follow"
 
 [theme]
@@ -14,11 +17,67 @@ name = "catppuccin"
 channel = "stable"
 
 [keys]
-# Keep the default prefix (ctrl+b), but add quick indexed agent focusing.
+# Keep Herdr's default-style prefix explicit.
+prefix = "ctrl+b"
+
+help = "prefix+?"
+settings = "prefix+shift+s"
+detach = ["prefix+d", "prefix+q"]
+reload_config = "prefix+r"
+goto = "prefix+g"
+
+# Workspaces.
+workspace_picker = ["prefix+s", "prefix+w"]
+new_workspace = "prefix+shift+n"
+rename_workspace = "prefix+shift+w"
+close_workspace = "prefix+shift+d"
+previous_workspace = "prefix+("
+next_workspace = "prefix+)"
+
+# Agents.
 focus_agent = "prefix+alt+1..9"
 
+# Tabs.
+new_tab = "prefix+c"
+previous_tab = "prefix+p"
+next_tab = "prefix+n"
+switch_tab = "prefix+1..9"
+rename_tab = "prefix+comma"
+close_tab = "prefix+shift+x"
+
+# Panes.
+split_vertical = "prefix+backslash"
+split_horizontal = "prefix+enter"
+close_pane = "prefix+x"
+zoom = "prefix+m"
+copy_mode = "prefix+v"
+resize_mode = "prefix+shift+r"
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+cycle_pane_next = "prefix+tab"
+cycle_pane_previous = "prefix+shift+tab"
+
+toggle_sidebar = "prefix+b"
+
+# Navigate-mode movement.
+navigate_workspace_up = "up"
+navigate_workspace_down = "down"
+navigate_pane_left = "h"
+navigate_pane_down = "j"
+navigate_pane_up = "k"
+navigate_pane_right = "l"
+
 [ui]
+sidebar_width = 32
+sidebar_min_width = 18
+sidebar_max_width = 36
+mouse_capture = true
+right_click_passthrough_modifier = "ctrl"
+mouse_scroll_lines = 3
 agent_panel_scope = "all"
+agent_panel_sort = "spaces"
 prompt_new_tab_name = true
 show_agent_labels_on_pane_borders = false
 
@@ -38,5 +97,10 @@ manage_ssh_config = true
 
 [experimental]
 allow_nested = false
-kitty_graphics = false
+kitty_graphics = true
+# Keep pane history off because persisted terminal output may include secrets.
 pane_history = false
+
+[advanced]
+# 50 MiB scrollback, matching the larger-history intent from the reference config.
+scrollback_limit_bytes = 52428800
