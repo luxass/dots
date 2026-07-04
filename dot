@@ -35,6 +35,7 @@ TOOL_REGISTRY=(
   "Brewfile packages ;; -    ;; fn:_install_packages           ;; true  ;; - ;; false"
   "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
   "Fish shell        ;; fish ;; fn:_setup_fish_shell           ;; false ;; - ;; true"
+  "Rustup            ;; rustup ;; fn:ensure_rustup             ;; false ;; - ;; true"
   "pnpm              ;; pnpm ;; fn:ensure_pnpm                 ;; true  ;; - ;; true"
   "Node.js runtime   ;; node ;; fn:ensure_node_runtime         ;; true  ;; - ;; true"
   "pnpm globals      ;; -    ;; fn:ensure_pnpm_globals         ;; true  ;; - ;; false"

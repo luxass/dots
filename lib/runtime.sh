@@ -1,3 +1,37 @@
+enable_cargo_path() {
+  local cargo_home="${CARGO_HOME:-$HOME/.cargo}"
+  case ":$PATH:" in
+    *":$cargo_home/bin:"*) ;;
+    *) export PATH="$cargo_home/bin:$PATH" ;;
+  esac
+}
+
+ensure_rustup() {
+  enable_cargo_path
+
+  if command_exists rustup; then
+    print_success "rustup is installed"
+    return 0
+  fi
+
+  print_info "Installing rustup..."
+
+  if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; then
+    enable_cargo_path
+    hash -r 2>/dev/null || true
+  else
+    print_error "Failed to install rustup"
+    return 1
+  fi
+
+  if command_exists rustup; then
+    print_success "rustup installed"
+  else
+    print_error "rustup install completed, but rustup is not on PATH"
+    return 1
+  fi
+}
+
 enable_pnpm_path() {
   export PNPM_HOME
   case ":$PATH:" in
