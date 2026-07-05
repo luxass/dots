@@ -33,6 +33,8 @@ dots/
 |   |-- bundle          # Base Brewfile
 |   |-- bundle.fonts    # Optional font casks
 |   `-- bundle.work     # Optional work-only Brewfile
+|-- private/
+|   `-- opencode/       # Private OpenCode plugins submodule
 |-- backups/            # Local Stow conflict backups; do not rely on contents
 |-- .githooks/          # Tracked repository hooks
 |-- AGENTS.md           # Agent instructions
@@ -55,6 +57,7 @@ dots/
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
 | Change OpenCode config/plugins | `home/.config/opencode/` |
+| Change private OpenCode plugins | `private/opencode/plugins/` |
 | Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
@@ -76,6 +79,10 @@ dots/
 - `home/.config/opencode/node_modules/` may exist locally for editor/type
   resolution, but it is ignored by Git and Stow. Keep `package-lock.json`
   tracked.
+- Private OpenCode plugins live in the private submodule at
+  `private/opencode/`. It uses a flat `plugins/` layout and `dot stow` links
+  plugin files into `~/.config/opencode/plugins/`; do not add a mirrored
+  `home/.config/opencode/` tree there unless explicitly requested.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.
@@ -146,6 +153,8 @@ detail.
 - Managed Vite+ globals currently include Socket Firewall (`sfw`).
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
   Restart OpenCode after editing config or plugins.
+- The private OpenCode submodule is initialized by `dot init` / `dot stow` and
+  should install dependencies with `sfw vp install` from `private/opencode/`.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.

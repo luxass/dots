@@ -60,6 +60,8 @@ command is not available immediately.
 │   ├── bundle          # Base Brewfile
 │   ├── bundle.fonts    # Optional font casks
 │   └── bundle.work     # Optional work-only Brewfile
+├── private/
+│   └── opencode/       # Private OpenCode plugins submodule
 ├── AGENTS.md           # Notes for AI/code agents
 └── README.md
 ```
@@ -271,6 +273,28 @@ sfw vp install
 
 Restart OpenCode after changing `opencode.json` or plugin files; running
 sessions keep the config and plugin code loaded from startup.
+
+Private OpenCode plugins live in the private Git submodule at
+`private/opencode/`. That repo intentionally uses a flat plugin layout:
+
+```text
+private/opencode/
+├── plugins/
+│   └── private-plugin.ts
+├── package.json
+└── package-lock.json
+```
+
+`dot init` and `dot stow` initialize the submodule when needed and symlink
+`private/opencode/plugins/*.ts` and `*.js` into `~/.config/opencode/plugins/`.
+The private repo does not need to mirror `$HOME` with a `home/` directory.
+
+Install or refresh private plugin dependencies with:
+
+```sh
+cd ~/dots/private/opencode
+sfw vp install
+```
 
 ## Agent Skills
 

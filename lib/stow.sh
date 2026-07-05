@@ -22,6 +22,25 @@ managed_target_for() {
   printf '%s/%s\n' "$HOME" "$rel"
 }
 
+private_opencode_dir() {
+  printf '%s/private/opencode\n' "$DOTFILES_DIR"
+}
+
+private_opencode_plugins_dir() {
+  printf '%s/plugins\n' "$(private_opencode_dir)"
+}
+
+prepare_opencode_plugins_target() {
+  local target source
+  target="$HOME/.config/opencode/plugins"
+  source="$HOME_DIR/.config/opencode/plugins"
+
+  if [[ -L "$target" ]] && [[ "$(realpath "$target")" == "$(realpath "$source")" ]]; then
+    rm "$target"
+    mkdir -p "$target"
+  fi
+}
+
 find_managed_sources() {
   find "$HOME_DIR" \
     \( \
@@ -71,6 +90,60 @@ backup_conflicts() {
   else
     print_success "Conflicts backed up to $backup_dir"
   fi
+}
+
+ensure_private_opencode_submodule() {
+  local private_dir
+  private_dir="$(private_opencode_dir)"
+
+  if [[ ! -f "$DOTFILES_DIR/.gitmodules" ]] || ! git -C "$DOTFILES_DIR" config -f .gitmodules --get submodule.private/opencode.path >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ -d "$private_dir/.git" || -f "$private_dir/.git" ]]; then
+    print_verbose "Private OpenCode submodule is available"
+    return 0
+  fi
+
+  print_info "Initializing private OpenCode submodule"
+  git -C "$DOTFILES_DIR" submodule update --init --recursive private/opencode
+}
+
+link_private_opencode_plugins() {
+  local plugins_dir target_dir plugin target
+  plugins_dir="$(private_opencode_plugins_dir)"
+  target_dir="$HOME/.config/opencode/plugins"
+
+  [[ -d "$plugins_dir" ]] || return 0
+
+  mkdir -p "$target_dir"
+
+  while IFS= read -r -d '' plugin; do
+    target="$target_dir/$(basename "$plugin")"
+
+    if [[ -e "$target" || -L "$target" ]] && ! is_repo_path "$target" "$plugin"; then
+      backup_path "$target" "$BACKUP_ROOT/$(timestamp)"
+    fi
+
+    ln -sfn "$plugin" "$target"
+  done < <(find "$plugins_dir" -maxdepth 1 -type f \( -name '*.js' -o -name '*.ts' \) -print0)
+
+  print_success "Private OpenCode plugins linked"
+}
+
+unlink_private_opencode_plugins() {
+  local plugins_dir target_dir plugin target
+  plugins_dir="$(private_opencode_plugins_dir)"
+  target_dir="$HOME/.config/opencode/plugins"
+
+  [[ -d "$plugins_dir" && -d "$target_dir" ]] || return 0
+
+  while IFS= read -r -d '' plugin; do
+    target="$target_dir/$(basename "$plugin")"
+    if [[ -L "$target" ]] && [[ "$(realpath "$target")" == "$(realpath "$plugin")" ]]; then
+      rm "$target"
+    fi
+  done < <(find "$plugins_dir" -maxdepth 1 -type f \( -name '*.js' -o -name '*.ts' \) -print0)
 }
 
 ensure_stow() {
@@ -125,17 +198,21 @@ check_managed_links() {
 _stow_dotfiles() {
   ensure_stow
   print_verbose "Preparing to stow files from $HOME_DIR to $HOME"
+  ensure_private_opencode_submodule
   ensure_agent_skills_link
+  prepare_opencode_plugins_target
   backup_conflicts
   print_info "Stowing files from $HOME_DIR to $HOME"
   print_verbose "Running GNU Stow in restow mode for package: home"
   stow --dotfiles -R -d "$DOTFILES_DIR" -t "$HOME" home
+  link_private_opencode_plugins
   print_success "Dotfiles stowed"
 }
 
 _unstow_dotfiles() {
   ensure_stow
   print_verbose "Preparing to unstow files from $HOME_DIR"
+  unlink_private_opencode_plugins
   print_verbose "Running GNU Stow in delete mode for package: home"
   stow --dotfiles -D -d "$DOTFILES_DIR" -t "$HOME" home
   print_success "Dotfiles unstowed"

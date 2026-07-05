@@ -1,0 +1,3 @@
+[submodule "private/opencode"]
+	path = private/opencode
+	url = git@github.com:luxass/opencode-private.git
