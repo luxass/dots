@@ -32,130 +32,159 @@ ensure_rustup() {
   fi
 }
 
-enable_pnpm_path() {
-  export PNPM_HOME
+enable_vite_plus_path() {
+  export VP_HOME
   case ":$PATH:" in
-    *":$PNPM_HOME:"*) ;;
-    *) export PATH="$PNPM_HOME:$PATH" ;;
-  esac
-  case ":$PATH:" in
-    *":$PNPM_HOME/bin:"*) ;;
-    *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+    *":$VP_HOME/bin:"*) ;;
+    *) export PATH="$VP_HOME/bin:$PATH" ;;
   esac
 }
 
-ensure_pnpm() {
-  enable_pnpm_path
+ensure_vite_plus() {
+  enable_vite_plus_path
 
-  if command_exists pnpm; then
-    print_success "pnpm is installed"
+  local vp_path
+  vp_path="$(command -v vp 2>/dev/null || true)"
+  if [[ -n "$vp_path" && "$vp_path" == "$VP_HOME"/* ]]; then
+    print_success "Vite+ is installed"
     return 0
   fi
 
-  print_info "Installing pnpm standalone..."
+  if [[ -n "$vp_path" ]]; then
+    print_warning "vp is not managed from VP_HOME: $vp_path"
+  fi
 
-  local installer_env
-  installer_env="$(mktemp)"
+  print_info "Installing Vite+..."
 
-  if curl -fsSL https://get.pnpm.io/install.sh | ENV="$installer_env" SHELL="/bin/sh" sh -; then
-    rm -f "$installer_env"
-    enable_pnpm_path
+  if curl -fsSL https://vite.plus | VP_NODE_MANAGER=yes bash; then
+    enable_vite_plus_path
     hash -r 2>/dev/null || true
   else
-    rm -f "$installer_env"
-    print_error "Failed to install pnpm"
+    print_error "Failed to install Vite+"
     return 1
   fi
 
-  if command_exists pnpm; then
-    print_success "pnpm installed"
+  if command_exists vp; then
+    print_success "Vite+ installed"
   else
-    print_error "pnpm install completed, but pnpm is not on PATH"
+    print_error "Vite+ install completed, but vp is not on PATH"
     return 1
   fi
 }
 
 ensure_node_runtime() {
-  ensure_pnpm
+  ensure_vite_plus
 
-  if command_exists node && [[ "$(command -v node)" == "$PNPM_HOME"* ]]; then
-    if command_exists npm; then
-      print_success "Node.js and npm are managed by pnpm"
-      return 0
-    fi
-    print_info "Node.js is managed by pnpm; npm is missing"
-  fi
-
-  print_info "Installing Node.js runtime with pnpm..."
-  pnpm runtime set node "$NODE_RUNTIME_VERSION" -g
-  enable_pnpm_path
+  print_info "Ensuring Vite+ Node.js shims"
+  vp env setup
+  vp env default "$NODE_RUNTIME_VERSION"
+  vp env install "$NODE_RUNTIME_VERSION"
+  enable_vite_plus_path
   hash -r 2>/dev/null || true
 
-  if ! command_exists npm; then
-    print_info "Installing npm with pnpm..."
-    pnpm add -g npm
-    hash -r 2>/dev/null || true
-  fi
+  local node_path npm_path
+  node_path="$(command -v node 2>/dev/null || true)"
+  npm_path="$(command -v npm 2>/dev/null || true)"
 
-  if command_exists node && command_exists npm; then
-    print_success "Node.js runtime and npm installed"
+  if command_path_in_vite_plus_home "$node_path" && command_path_in_vite_plus_home "$npm_path"; then
+    print_success "Node.js and npm are managed by Vite+"
   else
-    print_error "Node.js runtime installation did not expose node/npm"
+    print_error "Vite+ Node.js setup did not expose managed node/npm"
     return 1
   fi
 }
 
-ensure_pnpm_globals() {
+ensure_vite_plus_globals() {
   ensure_node_runtime
 
   local entry package command_name
-  for entry in "${PNPM_GLOBAL_PACKAGES[@]}"; do
+  for entry in "${VITE_PLUS_GLOBAL_PACKAGES[@]}"; do
     package="${entry%%:*}"
     command_name="${entry#*:}"
     if [[ "$command_name" == "$entry" ]]; then
       command_name="$package"
     fi
 
-    if command_exists "$command_name"; then
+    local command_path
+    command_path="$(command -v "$command_name" 2>/dev/null || true)"
+    if command_path_in_vite_plus_home "$command_path"; then
       print_success "$command_name is installed"
       continue
     fi
 
-    print_info "Installing pnpm global: $package"
-    pnpm add -g "$package"
+    if [[ -n "$command_path" ]]; then
+      print_warning "$command_name is not managed from VP_HOME: $command_path"
+    fi
+
+    print_info "Installing Vite+ global: $package"
+    if command_exists sfw; then
+      NPM_CONFIG_MIN_RELEASE_AGE=0 sfw vp install -g "$package"
+    else
+      NPM_CONFIG_MIN_RELEASE_AGE=0 vp install -g "$package"
+    fi
     hash -r 2>/dev/null || true
 
-    if command_exists "$command_name"; then
+    command_path="$(command -v "$command_name" 2>/dev/null || true)"
+    if command_path_in_vite_plus_home "$command_path"; then
       print_success "$command_name installed"
     else
-      print_error "$package install completed, but $command_name is not on PATH"
+      print_error "$package install completed, but $command_name is not managed from VP_HOME"
       return 1
     fi
+
   done
 }
 
-command_path_in_pnpm_home() {
-  local command_name="$1"
-  local command_path
+runtime_lookup_path() {
+  local old_ifs="$IFS"
+  local path_part
+  local result=""
 
-  command_path="$(command -v "$command_name" 2>/dev/null || true)"
-  [[ -n "$command_path" && "$command_path" == "$PNPM_HOME"/* ]]
+  IFS=:
+  for path_part in $PATH; do
+    if [[ -z "$result" ]]; then
+      result="$path_part"
+    else
+      result="$result:$path_part"
+    fi
+  done
+  IFS="$old_ifs"
+  printf '%s\n' "$result"
+}
+
+command_path_in_vite_plus_home() {
+  local command_path="$1"
+  [[ -n "$command_path" && "$command_path" == "$VP_HOME"/* ]]
 }
 
 check_runtime_origins() {
   local failed=0
-  local command_name command_path
+  local lookup_path command_name command_path
 
-  for command_name in pnpm node npm; do
-    command_path="$(command -v "$command_name" 2>/dev/null || true)"
+  lookup_path="$(runtime_lookup_path)"
+
+  for command_name in vp node npm corepack; do
+    command_path="$(PATH="$lookup_path" command -v "$command_name" 2>/dev/null || true)"
 
     if [[ -z "$command_path" ]]; then
       print_error "$command_name is missing"
       failed=1
-    elif command_path_in_pnpm_home "$command_name"; then
-      print_success "$command_name resolves from PNPM_HOME"
+    elif command_path_in_vite_plus_home "$command_path"; then
+      print_success "$command_name resolves from VP_HOME"
     else
-      print_error "$command_name is not managed by pnpm: $command_path"
+      print_error "$command_name is not managed by Vite+: $command_path"
+      failed=1
+    fi
+  done
+
+  for command_name in pnpm yarn; do
+    command_path="$(PATH="$lookup_path" command -v "$command_name" 2>/dev/null || true)"
+    [[ -n "$command_path" ]] || continue
+
+    if command_path_in_vite_plus_home "$command_path"; then
+      print_success "$command_name resolves from VP_HOME"
+    else
+      print_error "$command_name is not managed by Vite+: $command_path"
       failed=1
     fi
   done
@@ -163,34 +192,36 @@ check_runtime_origins() {
   return "$failed"
 }
 
-check_pnpm_config_value() {
-  local key="$1"
-  local expected="$2"
-  local actual
+check_file_contains() {
+  local path="$1"
+  local pattern="$2"
+  local label="$3"
 
-  actual="$(pnpm config get "$key" 2>/dev/null || true)"
-
-  if [[ "$actual" == "$expected" ]]; then
-    print_success "pnpm $key=$expected"
-    return 0
-  fi
-
-  print_error "pnpm $key is ${actual:-unset}; expected $expected"
-  return 1
-}
-
-check_pnpm_policy() {
-  if ! command_exists pnpm; then
-    print_error "pnpm policy cannot be checked because pnpm is missing"
+  if [[ ! -f "$path" ]]; then
+    print_error "Missing $path"
     return 1
   fi
 
+  if grep -Eq "$pattern" "$path"; then
+    print_success "$label"
+    return 0
+  fi
+
+  print_error "$label is not configured in $path"
+  return 1
+}
+
+check_package_manager_policy() {
   local failed=0
 
-  check_pnpm_config_value "ignore-scripts" "true" || failed=1
-  check_pnpm_config_value "minimumReleaseAge" "7200" || failed=1
-  check_pnpm_config_value "minimumReleaseAgeStrict" "true" || failed=1
-  check_pnpm_config_value "dangerouslyAllowAllBuilds" "false" || failed=1
+  check_file_contains "${HOME_DIR}/.npmrc" '^ignore-scripts=true$' "npm ignore-scripts policy" || failed=1
+  check_file_contains "${HOME_DIR}/.npmrc" '^min-release-age=5$' "npm release-age policy" || failed=1
+  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^ignoreScripts: true$' "pnpm ignoreScripts policy" || failed=1
+  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^minimumReleaseAge: 7200$' "pnpm release-age policy" || failed=1
+  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^minimumReleaseAgeStrict: true$' "pnpm strict release-age policy" || failed=1
+  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^dangerouslyAllowAllBuilds: false$' "pnpm build approval policy" || failed=1
+  check_file_contains "${HOME_DIR}/.bunfig.toml" '^ignoreScripts = true$' "Bun ignoreScripts policy" || failed=1
+  check_file_contains "${HOME_DIR}/.bunfig.toml" '^minimumReleaseAge = 432000$' "Bun release-age policy" || failed=1
 
   return "$failed"
 }

@@ -17,8 +17,8 @@ other configs that are not currently wanted.
 - One-command setup through `./dot init`
 - GNU Stow symlink management from `home/` to `$HOME`
 - Resilient Homebrew bundle installation with failed package retry files
-- pnpm-managed Node.js runtime and npm installation
-- Managed pnpm global tools, including Socket Firewall (`sfw`) and Pi (`pi`)
+- Vite+-managed Node.js runtime and npm installation
+- Managed Vite+ global tools, including Socket Firewall (`sfw`)
 - Public-safe Git config with private identity in `~/.gitconfig.local`
 - Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for disabled scripts and release age checks
@@ -45,7 +45,7 @@ command is not available immediately.
 │   ├── brew.sh         # Homebrew bundle and package commands
 │   ├── core.sh         # Shared output, prompts, and generic helpers
 │   ├── git.sh          # Git hooks, identity, and secret scanning
-│   ├── runtime.sh      # pnpm, Node.js, and global runtime tools
+│   ├── runtime.sh      # Vite+, Node.js, and global runtime tools
 │   └── stow.sh         # GNU Stow links, backups, and dot CLI linking
 ├── home/               # Files stowed into $HOME
 │   ├── .config/
@@ -70,7 +70,7 @@ example `dot --verbose doctor`.
 
 ```sh
 dot init             # install packages, stow files, create local identity, link dot
-dot update           # pull, update Homebrew, install bundle, restow, optionally update Pi
+dot update           # pull, update Homebrew, install bundle, restow
 dot doctor           # run diagnostics and secret scan
 dot info             # show repo paths, runtime tools, and git status
 dot links            # verify every managed symlink
@@ -186,7 +186,7 @@ Fish is the primary interactive shell. The tracked Fish config keeps a small
 
 - `home/.config/fish/config.fish` stays small.
 - `home/.config/fish/conf.d/*.fish` contains environment, paths, Homebrew,
-  Starship, Zoxide, Direnv, Bun, and OrbStack setup.
+  Starship, Zoxide, Direnv, Vite+, Bun, and OrbStack setup.
 - `home/.config/fish/completions/` contains Fish completions.
 
 `dot init` installs Fish through Homebrew, adds it to `/etc/shells` when needed,
@@ -225,18 +225,17 @@ The repo tracks policy-only configs:
 These disable dependency lifecycle scripts and require packages to be at least
 five days old before installation. Auth tokens must stay out of the repo.
 
-`dot init` stows these configs before installing the pnpm-managed Node.js
-runtime or pnpm global tools, so the package-manager policy is active during
+`dot init` stows these configs before installing the Vite+-managed Node.js
+runtime or Vite+ global tools, so the package-manager policy is active during
 setup.
 
-`dot doctor` verifies that `pnpm`, `node`, and `npm` resolve from `PNPM_HOME`
-and checks the tracked pnpm security policy values.
+`dot doctor` verifies that `vp`, `node`, `npm`, and `corepack` resolve from
+`VP_HOME` and checks the tracked npm, pnpm, and Bun policy files.
 
-`dot init` also installs managed pnpm globals:
+`dot init` also installs managed Vite+ globals:
 
 ```text
 sfw
-pi
 ```
 
 Socket Firewall can be used by prefixing supported package-manager commands:
@@ -246,72 +245,17 @@ sfw pnpm install
 sfw npm install
 ```
 
-## Pi Coding Agent
+## Agent Skills
 
-Pi is installed by default as a pnpm global package:
+The repo tracks shared global Agent Skills in `home/.agents/`:
 
-```sh
-pnpm add -g @earendil-works/pi-coding-agent
-```
-
-The repo tracks a public-safe global Pi setup in `home/.pi/agent/`:
-
-- `settings.json` keeps project trust on `ask`, disables Pi telemetry/analytics,
-  and enables compaction/retry defaults.
-- `AGENTS.md` contains global safety notes for Pi sessions.
-- `extensions/safety-guard.ts` blocks writes outside the current project,
-  blocks protected credential/config paths, blocks catastrophic shell commands,
-  and asks before high-risk shell commands when a TUI is available.
-- `extensions/trust-github-repos.ts` automatically trusts GitHub checkouts
-  owned by `owner` or `luxass`.
-- `extensions/notify.ts` sends a Ghostty-compatible desktop notification when
-  Pi finishes a turn and waits for input.
-- `extensions/review.ts` adds `/review` and `/end-review` workflows for code
-  review sessions over PRs, branches, commits, folders, or local changes.
-- `extensions/package-manager-interceptor.ts` prepends package-manager shims to
-  Pi's bash `PATH`, blocks install-policy bypass flags, and routes install-like
-  `pnpm`/`npm`/`yarn`/`bun` commands and runner aliases through Socket Firewall
-  when available.
-
-The repo also tracks shared global Agent Skills in `home/.agents/`:
-
-- `skills/` contains checked-in global skills loaded by Pi, including local
-  helpers like `commit`, `github`, and `bro`, plus imported
-  engineering/productivity workflows.
+- `skills/` contains checked-in global skills, including local helpers like
+  `commit`, `github`, and `bro`, plus imported engineering/productivity
+  workflows.
 - `.skill-lock.json` records shared skills CLI state.
 
-This is a host-side guard, not a sandbox. For untrusted repositories or
-unattended work, run Pi in an isolated environment instead of relying only on the
-extension.
-
-The shell environment sets `PI_SKIP_VERSION_CHECK=1` so Pi does not write update
-or changelog state into the tracked settings file during startup.
-
-Manage Pi and pinned Pi extensions through `dot pi`:
-
-```sh
-dot pi status
-dot pi update
-dot pi update 0.79.8
-dot skills add <url>
-dot skills list
-dot pi extension install plannotator 0.20.2
-```
-
-`dot update` asks whether to update Pi and managed Pi packages/extensions after
-the Homebrew and Stow steps.
-
-`dot pi update [VERSION]` updates the tracked Pi package pins in
-`home/.pi/package.json`, refreshes the lockfile, runs `pi update`, verifies
-`pi --version`, and finishes with `dot doctor`. It does not install or sync
-external skills. When `VERSION` is omitted, it resolves the latest
-`@earendil-works/pi-coding-agent` version from npm. Pi's own updater supplies its
-pnpm safety flags for self-updates, including disabled lifecycle scripts and a
-release-age override for fresh Pi releases.
-
 External skills are managed through `dot skills`, which wraps the open `skills`
-CLI with `sfw pnpm dlx` so the CLI does not need to be installed globally and
-package execution goes through Socket Firewall.
+CLI with `vp dlx` so the CLI does not need to be installed globally.
 Run `dot stow` first so `~/.agents/skills` points at this repo and installed
 skill files stay visible to Git under `home/.agents/skills`.
 
@@ -322,17 +266,8 @@ dot skills list
 ```
 
 `dot skills add` installs to the shared global Agent Skills directory with
-`sfw pnpm dlx skills add --global --agent universal --copy`. Pi loads
-`~/.agents/skills` directly, and the skills CLI updates its lock/inventory as
-part of installation.
-
-`dot pi extension install plannotator VERSION` installs the pinned Plannotator
-Pi extension with sharing disabled by default through `PLANNOTATOR_SHARE`. This
-explicit pinned install disables npm lifecycle scripts and overrides npm's
-release-age gate for that command only.
-
-Do not commit Pi auth, trust decisions, sessions, package installs, logs, or
-caches. Those paths are ignored by the global gitignore.
+`vp dlx skills add --global --agent universal --copy`. The skills CLI updates
+its lock/inventory as part of installation.
 
 ## Troubleshooting
 

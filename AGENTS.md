@@ -10,14 +10,13 @@ content. Personal Git identity belongs in `~/.gitconfig.local`.
 
 ```text
 dots/
-|-- dot                 # Main CLI: init/update/doctor/stow/package/pi
+|-- dot                 # Main CLI: init/update/doctor/stow/package
 |-- lib/
 |   |-- brew.sh         # Homebrew bundle install, update, retry, package ops
 |   |-- core.sh         # Shared output, prompts, command helpers
 |   |-- git.sh          # Git hooks, identity, secret scanning
-|   |-- pi.sh           # Managed Pi package and extension commands
 |   |-- skills.sh       # Agent Skills wrapper around the skills CLI
-|   |-- runtime.sh      # pnpm, Node.js, npm, and global runtime tools
+|   |-- runtime.sh      # Vite+, Node.js, npm, and global runtime tools
 |   `-- stow.sh         # GNU Stow links, backups, dot CLI linking
 |-- home/               # Stowed into $HOME
 |   |-- .config/
@@ -25,7 +24,6 @@ dots/
 |   |   |-- ghostty/    # Terminal config
 |   |   |-- pnpm/       # pnpm security policy
 |   |   `-- starship.toml
-|   |-- .pi/            # Managed Pi runtime/config
 |   |-- .bunfig.toml    # Bun install policy
 |   |-- .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 |   |-- .npmrc          # npm policy only; no auth
@@ -49,13 +47,12 @@ dots/
 | Change setup/update behavior | `dot`, then relevant `lib/*.sh` helper |
 | Change Homebrew behavior | `lib/brew.sh` |
 | Change symlink/Stow behavior | `lib/stow.sh` |
-| Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml` |
+| Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/vite-plus.fish` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
-| Change Pi management | `lib/pi.sh`, `home/.pi/package.json`, `home/.pi/agent/settings.json` |
 | Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
@@ -95,7 +92,7 @@ dots/
 
 ```sh
 dot init             # Install packages, stow files, create local identity, link dot
-dot update           # Pull repo changes, update packages, restow, optionally update Pi
+dot update           # Pull repo changes, update packages, restow
 dot doctor           # Run diagnostics and secret scan
 dot info             # Show repo paths, runtime tools, and git status
 dot links            # Verify managed home symlinks
@@ -109,8 +106,6 @@ dot retry-failed     # Retry failed package installations
 dot package list     # List managed packages
 dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
-dot pi status        # Show managed Pi status
-dot pi update        # Update Pi to latest and update packages/extensions
 dot skills add U     # Add shared global Agent Skills from a URL/source
 dot skills list      # List installed shared global Agent Skills
 dot completions      # Print Fish completions
@@ -131,14 +126,13 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
-| Pi | `home/.pi/package.json`, `home/.pi/pnpm-lock.yaml`, `home/.pi/agent/settings.json`, `home/.agents/.skill-lock.json`, `home/.agents/skills/` | Managed by `dot pi` |
 
 ## NOTES
 
 - The tracked pre-push hook runs `dot secret-scan`.
-- `dot init` stows package-manager policy before installing pnpm-managed
+- `dot init` stows package-manager policy before installing Vite+-managed
   runtime tools, so install policy is active during setup.
-- Managed pnpm globals currently include Socket Firewall (`sfw`) and Pi (`pi`).
+- Managed Vite+ globals currently include Socket Firewall (`sfw`).
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.

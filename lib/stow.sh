@@ -25,18 +25,7 @@ managed_target_for() {
 find_managed_sources() {
   find "$HOME_DIR" \
     \( \
-      -path "$HOME_DIR/.config/opencode/node_modules" -o \
-      -path "$HOME_DIR/.pi/node_modules" -o \
-      -path "$HOME_DIR/.pi/agent/bin" -o \
-      -path "$HOME_DIR/.pi/agent/cache" -o \
-      -path "$HOME_DIR/.pi/agent/logs" -o \
-      -path "$HOME_DIR/.pi/agent/node_modules" -o \
-      -path "$HOME_DIR/.pi/agent/npm" -o \
-      -path "$HOME_DIR/.pi/agent/packages" -o \
-      -path "$HOME_DIR/.pi/agent/sessions" -o \
-      -path "$HOME_DIR/.pi/agent/mcp-oauth" -o \
-      -path "$HOME_DIR/.pi/agent/extensions/*/node_modules" -o \
-      -path "$HOME_DIR/.pi/todos" \
+      -path "$HOME_DIR/.config/opencode/node_modules" \
     \) -prune -o \
     \( -type f -o -type l \) \
     ! -name auth.json \
