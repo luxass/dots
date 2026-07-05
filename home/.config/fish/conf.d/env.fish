@@ -10,11 +10,5 @@ set -gx NODE_REPL_HISTORY_SIZE 32768
 set -gx NODE_REPL_MODE sloppy
 
 # Managed runtime locations
-set -gx PNPM_HOME "$HOME/.local/share/pnpm"
+set -gx VP_HOME "$HOME/.vite-plus"
 set -gx GOPATH "$HOME/go"
-
-# Pi writes changelog/update state into settings during version checks.
-set -gx PI_SKIP_VERSION_CHECK 1
-
-# Plannotator sharing is opt-in for Pi sessions.
-set -gx PLANNOTATOR_SHARE disabled

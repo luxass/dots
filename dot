@@ -13,9 +13,9 @@ readonly BASE_BUNDLE="${PACKAGES_DIR}/bundle"
 readonly FONTS_BUNDLE="${PACKAGES_DIR}/bundle.fonts"
 readonly WORK_BUNDLE="${PACKAGES_DIR}/bundle.work"
 readonly BACKUP_ROOT="${DOTFILES_DIR}/backups"
-readonly PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
+readonly VP_HOME="${VP_HOME:-$HOME/.vite-plus}"
 readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
-readonly PNPM_GLOBAL_PACKAGES=("sfw" "@earendil-works/pi-coding-agent:pi")
+readonly VITE_PLUS_GLOBAL_PACKAGES=("sfw")
 
 CURRENT_STEP=0
 TOTAL_STEPS=0
@@ -27,7 +27,6 @@ source "${DOTFILES_DIR}/lib/brew.sh"
 source "${DOTFILES_DIR}/lib/runtime.sh"
 source "${DOTFILES_DIR}/lib/stow.sh"
 source "${DOTFILES_DIR}/lib/git.sh"
-source "${DOTFILES_DIR}/lib/pi.sh"
 source "${DOTFILES_DIR}/lib/skills.sh"
 
 TOOL_REGISTRY=(
@@ -36,9 +35,9 @@ TOOL_REGISTRY=(
   "Stow dotfiles     ;; -    ;; fn:_stow_dotfiles              ;; true  ;; - ;; false"
   "Fish shell        ;; fish ;; fn:_setup_fish_shell           ;; false ;; - ;; true"
   "Rustup            ;; rustup ;; fn:ensure_rustup             ;; false ;; - ;; true"
-  "pnpm              ;; pnpm ;; fn:ensure_pnpm                 ;; true  ;; - ;; true"
-  "Node.js runtime   ;; node ;; fn:ensure_node_runtime         ;; true  ;; - ;; true"
-  "pnpm globals      ;; -    ;; fn:ensure_pnpm_globals         ;; true  ;; - ;; false"
+  "Vite+             ;; vp   ;; fn:ensure_vite_plus          ;; true  ;; - ;; true"
+  "Node.js runtime   ;; node ;; fn:ensure_node_runtime       ;; true  ;; - ;; true"
+  "Vite+ globals     ;; -    ;; fn:ensure_vite_plus_globals ;; true  ;; - ;; false"
   "Git hooks         ;; -    ;; fn:ensure_git_hooks            ;; false ;; - ;; false"
   "Git identity      ;; -    ;; fn:ensure_gitconfig_local      ;; false ;; - ;; false"
   "dot CLI           ;; dot  ;; fn:_link_dot                   ;; true  ;; - ;; true"
@@ -48,7 +47,6 @@ TOOL_REGISTRY=(
   "Zoxide            ;; zoxide ;; -                            ;; false ;; - ;; true"
   "Bun               ;; bun  ;; -                              ;; false ;; - ;; true"
   "Socket Firewall   ;; sfw  ;; -                              ;; false ;; - ;; true"
-  "Pi                ;; pi   ;; -                              ;; false ;; - ;; true"
 )
 
 _parse_tool_entry() {
@@ -154,11 +152,6 @@ cmd_update() {
   brew_bundle_install_resilient "$BASE_BUNDLE"
   _stow_dotfiles
 
-  if confirm "Update Pi and managed Pi packages/extensions?" "n"; then
-    cmd_pi_update
-  else
-    print_info "Skipping Pi update"
-  fi
 }
 
 cmd_info() {
@@ -173,8 +166,8 @@ cmd_info() {
   print_header "Runtime"
   printf "Homebrew:           "
   command_exists brew && command -v brew || echo "missing"
-  printf "pnpm:               "
-  command_exists pnpm && command -v pnpm || echo "missing"
+  printf "Vite+:              "
+  command_exists vp && command -v vp || echo "missing"
   printf "Node.js:            "
   command_exists node && node --version || echo "missing"
   printf "npm:                "
@@ -250,11 +243,11 @@ cmd_doctor() {
     print_warning "~/.local/bin is not on PATH"
   fi
 
-  print_verbose "Checking pnpm-managed runtime origins"
+  print_verbose "Checking Vite+-managed runtime origins"
   check_runtime_origins || failed=1
 
-  print_verbose "Checking pnpm security policy"
-  check_pnpm_policy || failed=1
+  print_verbose "Checking package-manager policy files"
+  check_package_manager_policy || failed=1
 
   print_verbose "Checking Homebrew bundle state"
   if ! brew_bundle_check "$BASE_BUNDLE"; then
@@ -302,7 +295,6 @@ complete -c dot -n '__fish_use_subcommand' -a hooks -d 'Install repository Git h
 complete -c dot -n '__fish_use_subcommand' -a secret-scan -d 'Scan repository for secrets'
 complete -c dot -n '__fish_use_subcommand' -a package -d 'Manage Homebrew bundle packages'
 complete -c dot -n '__fish_use_subcommand' -a skills -d 'Manage shared global Agent Skills'
-complete -c dot -n '__fish_use_subcommand' -a pi -d 'Manage Pi and Pi extensions'
 complete -c dot -n '__fish_use_subcommand' -a config -d 'Manage local-only preferences'
 complete -c dot -n '__fish_use_subcommand' -a retry-failed -d 'Retry failed package installs'
 complete -c dot -n '__fish_use_subcommand' -a git-identity -d 'Create or update local Git identity'
@@ -316,7 +308,6 @@ complete -c dot -n '__fish_use_subcommand' -a help -d 'Show help'
 
 complete -c dot -n '__fish_seen_subcommand_from package' -a 'list check unmanaged add remove update help' -d 'Package command'
 complete -c dot -n '__fish_seen_subcommand_from skills' -a 'add list help' -d 'Skills command'
-complete -c dot -n '__fish_seen_subcommand_from pi' -a 'status update extension help' -d 'Pi command'
 complete -c dot -n '__fish_seen_subcommand_from config' -a 'list get set unset reset help' -d 'Config command'
 EOF
 }
@@ -348,7 +339,6 @@ ${BOLD}COMMANDS:${RESET}
   secret-scan      Scan repository for secrets
   package          Package management commands
   skills           Manage shared global Agent Skills
-  pi               Manage Pi and Pi extensions
   config           Manage local-only preferences
   retry-failed     Retry failed package installations
   git-identity     Create or update ~/.gitconfig.local
@@ -399,7 +389,6 @@ main() {
     secret-scan) cmd_secret_scan "$@" ;;
     package) cmd_package "$@" ;;
     skills) cmd_skills "$@" ;;
-    pi) cmd_pi "$@" ;;
     config) cmd_config "$@" ;;
     retry-failed) cmd_retry_failed "$@" ;;
     git-identity) cmd_git_identity "$@" ;;
