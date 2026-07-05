@@ -22,6 +22,7 @@ dots/
 |   |-- .config/
 |   |   |-- fish/       # Primary shell config
 |   |   |-- ghostty/    # Terminal config
+|   |   |-- opencode/   # OpenCode config, TS plugins, package lock
 |   |   |-- pnpm/       # pnpm security policy
 |   |   `-- starship.toml
 |   |-- .bunfig.toml    # Bun install policy
@@ -53,6 +54,7 @@ dots/
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
+| Change OpenCode config/plugins | `home/.config/opencode/` |
 | Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
@@ -68,6 +70,12 @@ dots/
   must not contain name, email, signing key, or work-only identity values.
 - Keep package policy public and token-free. `home/.npmrc`, pnpm config, and
   Bun config should contain install policy, not registry auth.
+- Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
+  provider secret files. TypeScript plugin dependencies must be installed with
+  `sfw vp install` from `home/.config/opencode/`.
+- `home/.config/opencode/node_modules/` may exist locally for editor/type
+  resolution, but it is ignored by Git and Stow. Keep `package-lock.json`
+  tracked.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.
@@ -87,6 +95,8 @@ dots/
   user explicitly asks for them.
 - Creating nested git repositories or unmanaged dependency installs inside
   stowed config directories.
+- Running package-manager installs without Socket Firewall. Use `sfw vp install`,
+  `sfw npm install`, or another `sfw ...` wrapper as appropriate.
 
 ## COMMANDS
 
@@ -126,6 +136,7 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
+| OpenCode | `home/.config/opencode/` | Global config and local TypeScript plugins |
 
 ## NOTES
 
@@ -133,6 +144,8 @@ detail.
 - `dot init` stows package-manager policy before installing Vite+-managed
   runtime tools, so install policy is active during setup.
 - Managed Vite+ globals currently include Socket Firewall (`sfw`).
+- OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
+  Restart OpenCode after editing config or plugins.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.

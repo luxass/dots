@@ -28,9 +28,9 @@ find_managed_sources() {
       -path "$HOME_DIR/.config/opencode/node_modules" \
     \) -prune -o \
     \( -type f -o -type l \) \
+    ! -name .stow-local-ignore \
     ! -name auth.json \
     ! -name trust.json \
-    ! -name package-lock.json \
     ! -name mcp-cache.json \
     ! -name mcp-npx-cache.json \
     ! -name mcp-auth.json \

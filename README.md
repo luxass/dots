@@ -51,6 +51,7 @@ command is not available immediately.
 │   ├── .config/
 │   │   ├── fish/
 │   │   ├── ghostty/
+│   │   ├── opencode/
 │   │   └── pnpm/
 │   ├── .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 │   ├── .npmrc          # Public npm policy only; no auth
@@ -243,7 +244,33 @@ Socket Firewall can be used by prefixing supported package-manager commands:
 ```sh
 sfw pnpm install
 sfw npm install
+sfw vp install
 ```
+
+## OpenCode
+
+Global OpenCode config is tracked under `home/.config/opencode/` and stowed to
+`~/.config/opencode/`.
+
+Tracked files include:
+
+- `opencode.json` for shared global OpenCode settings.
+- `plugins/notification.ts`, a small AppleScript notification plugin that fires
+  when a session becomes idle.
+- `package.json` and `package-lock.json` for TypeScript plugin types.
+
+Keep `node_modules/` local-only. It is ignored by Git and by Stow through
+`home/.stow-local-ignore`, but can exist in the source tree for editor/type
+resolution. Install or refresh plugin dependencies from the managed config
+directory with Socket Firewall:
+
+```sh
+cd ~/dots/home/.config/opencode
+sfw vp install
+```
+
+Restart OpenCode after changing `opencode.json` or plugin files; running
+sessions keep the config and plugin code loaded from startup.
 
 ## Agent Skills
 
