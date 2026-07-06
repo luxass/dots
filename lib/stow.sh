@@ -128,6 +128,16 @@ link_private_opencode_plugins() {
     ln -sfn "$plugin" "$target"
   done < <(find "$plugins_dir" -maxdepth 1 -type f \( -name '*.js' -o -name '*.ts' \) -print0)
 
+  while IFS= read -r -d '' plugin; do
+    target="$target_dir/$(basename "$plugin")"
+
+    if [[ -e "$target" || -L "$target" ]] && ! is_repo_path "$target" "$plugin"; then
+      backup_path "$target" "$BACKUP_ROOT/$(timestamp)"
+    fi
+
+    ln -sfn "$plugin" "$target"
+  done < <(find "$plugins_dir" -maxdepth 1 -type d ! -path "$plugins_dir" -print0)
+
   print_success "Private OpenCode plugins linked"
 }
 
@@ -144,6 +154,13 @@ unlink_private_opencode_plugins() {
       rm "$target"
     fi
   done < <(find "$plugins_dir" -maxdepth 1 -type f \( -name '*.js' -o -name '*.ts' \) -print0)
+
+  while IFS= read -r -d '' plugin; do
+    target="$target_dir/$(basename "$plugin")"
+    if [[ -L "$target" ]] && [[ "$(realpath "$target")" == "$(realpath "$plugin")" ]]; then
+      rm "$target"
+    fi
+  done < <(find "$plugins_dir" -maxdepth 1 -type d ! -path "$plugins_dir" -print0)
 }
 
 ensure_stow() {
