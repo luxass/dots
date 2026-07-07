@@ -123,6 +123,8 @@ whether fonts or work packages are enabled or intentionally skipped.
 dot package list [base|fonts|work|all]
 dot package check
 dot package unmanaged
+dot package trusted
+dot package untrusted
 dot package add NAME [brew|cask|auto] [base|fonts|work]
 dot package remove NAME [base|fonts|work|all]
 dot package update [NAME|all]
@@ -131,7 +133,8 @@ dot retry-failed
 
 Use `dot package check` for base/fonts/work bundle status. Use
 `dot package unmanaged` separately to review installed Homebrew items that are
-not tracked by these bundles.
+not tracked by these bundles. Use `dot package trusted` and
+`dot package untrusted` to review Homebrew trust state.
 
 Failed package installs are written to `packages/failed_packages_<timestamp>.txt`
 and ignored by Git.

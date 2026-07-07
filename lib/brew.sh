@@ -269,6 +269,7 @@ cmd_package_check() {
   check_bundle_group "$BASE_BUNDLE" "Base packages (required)" "true" || failed=1
   check_bundle_group "$FONTS_BUNDLE" "Font packages (optional)" "false" "packages.brew.fonts.enabled"
   check_bundle_group "$WORK_BUNDLE" "Work packages (optional)" "false" "packages.brew.work.enabled"
+  print_homebrew_trust_state
 
   return "$failed"
 }
@@ -395,6 +396,43 @@ cmd_package_unmanaged() {
   fi
 }
 
+print_homebrew_trust_state() {
+  if ! command_exists brew; then
+    ensure_homebrew
+    return 1
+  fi
+
+  echo -e "\n${BOLD}Trusted Homebrew entries${RESET}"
+  brew trust
+
+  echo -e "\n${BOLD}Untrusted Homebrew entries${RESET}"
+  brew untrust
+}
+
+cmd_package_trusted() {
+  print_header "Trusted Homebrew entries"
+
+  if ! command_exists brew; then
+    ensure_homebrew
+    return 1
+  fi
+
+  echo
+  brew trust
+}
+
+cmd_package_untrusted() {
+  print_header "Untrusted Homebrew entries"
+
+  if ! command_exists brew; then
+    ensure_homebrew
+    return 1
+  fi
+
+  echo
+  brew untrust
+}
+
 cmd_package_add() {
   local name="${1:-}"
   local type="${2:-auto}"
@@ -510,6 +548,8 @@ Usage:
   ${SCRIPT_NAME} package list [base|fonts|work|all]
   ${SCRIPT_NAME} package check
   ${SCRIPT_NAME} package unmanaged
+  ${SCRIPT_NAME} package trusted
+  ${SCRIPT_NAME} package untrusted
   ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|fonts|work]
   ${SCRIPT_NAME} package remove NAME [base|fonts|work|all]
   ${SCRIPT_NAME} package update [NAME|all]
@@ -524,6 +564,8 @@ cmd_package() {
     list) cmd_package_list "$@" ;;
     check) cmd_package_check "$@" ;;
     unmanaged) cmd_package_unmanaged "$@" ;;
+    trusted) cmd_package_trusted "$@" ;;
+    untrusted) cmd_package_untrusted "$@" ;;
     add) cmd_package_add "$@" ;;
     remove) cmd_package_remove "$@" ;;
     update) cmd_package_update "$@" ;;
