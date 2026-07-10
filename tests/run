@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+readonly TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+failed=0
+passed=0
+
+for test_file in "$TESTS_DIR"/test_*.sh; do
+  test_name="$(basename "$test_file" .sh)"
+
+  if /bin/bash "$test_file"; then
+    printf 'ok - %s\n' "$test_name"
+    ((++passed))
+  else
+    printf 'not ok - %s\n' "$test_name" >&2
+    ((++failed))
+  fi
+done
+
+printf '\n%d passed, %d failed\n' "$passed" "$failed"
+[[ "$failed" -eq 0 ]]

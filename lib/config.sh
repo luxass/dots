@@ -24,6 +24,7 @@ config_require_key() {
 config_normalize_value() {
   local key="$1"
   local value="$2"
+  local normalized
 
   case "$value" in
     *$'\n'*|*$'\r'*)
@@ -33,7 +34,8 @@ config_normalize_value() {
   esac
 
   if [[ "$key" == *.enabled ]]; then
-    case "${value,,}" in
+    normalized="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+    case "$normalized" in
       true|yes|y|1|on) printf 'true\n' ;;
       false|no|n|0|off) printf 'false\n' ;;
       *)

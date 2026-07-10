@@ -267,23 +267,6 @@ _link_dot() {
   print_success "Linked dot -> $link_path"
 }
 
-_unlink_dot() {
-  local removed=false
-  local link_path
-
-  for link_path in "/usr/local/bin/dot" "$HOME/.local/bin/dot"; do
-    if [[ -L "$link_path" ]]; then
-      rm "$link_path"
-      print_success "Removed $link_path"
-      removed=true
-    fi
-  done
-
-  if [[ "$removed" != "true" ]]; then
-    print_info "No dot link found"
-  fi
-}
-
 cmd_stow() {
   parse_verbose_args "$@" || return 1
   print_header "Stowing dotfiles"
@@ -294,20 +277,4 @@ cmd_unstow() {
   parse_verbose_args "$@" || return 1
   print_header "Unstowing dotfiles"
   _unstow_dotfiles
-}
-
-cmd_link() {
-  print_header "Linking dot CLI"
-  _link_dot
-}
-
-cmd_unlink() {
-  print_header "Unlinking dot CLI"
-  _unlink_dot
-}
-
-cmd_links() {
-  parse_verbose_args "$@" || return 1
-  print_header "Checking managed links"
-  check_managed_links
 }
