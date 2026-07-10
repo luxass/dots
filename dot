@@ -149,7 +149,7 @@ cmd_update() {
 
   print_info "Updating Homebrew"
   brew update
-  brew_bundle_install_resilient "$BASE_BUNDLE"
+  _install_packages
   _stow_dotfiles
 
 }
