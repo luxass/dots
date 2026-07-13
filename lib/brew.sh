@@ -274,7 +274,7 @@ cmd_package_check() {
   return "$failed"
 }
 
-cmd_retry_failed() {
+cmd_package_retry() {
   print_header "Retrying failed package installs"
 
   local files=("${PACKAGES_DIR}"/failed_packages_*.txt)
@@ -553,6 +553,7 @@ Usage:
   ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|fonts|work]
   ${SCRIPT_NAME} package remove NAME [base|fonts|work|all]
   ${SCRIPT_NAME} package update [NAME|all]
+  ${SCRIPT_NAME} package retry
 EOF
 }
 
@@ -569,6 +570,7 @@ cmd_package() {
     add) cmd_package_add "$@" ;;
     remove) cmd_package_remove "$@" ;;
     update) cmd_package_update "$@" ;;
+    retry) cmd_package_retry "$@" ;;
     help|-h|--help) cmd_package_help ;;
     *) print_error "Unknown package command: $subcommand"; cmd_package_help; return 1 ;;
   esac

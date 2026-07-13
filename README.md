@@ -76,15 +76,12 @@ dot init             # install packages, stow files, create local identity, link
 dot update           # pull, update Homebrew, install bundle, restow
 dot doctor           # run diagnostics and secret scan
 dot info             # show repo paths, runtime tools, and git status
-dot links            # verify every managed symlink
 dot hooks            # install repository Git hooks
 dot secret-scan      # scan repository for secrets
 dot stow             # restow home/
 dot unstow           # remove stowed symlinks
 dot git-identity     # create or update ~/.gitconfig.local
 dot config           # list or edit local-only preferences
-dot completions      # print Fish completions
-dot edit             # open the repo in $EDITOR
 ```
 
 ## Agent Reference Repositories
@@ -128,7 +125,7 @@ dot package untrusted
 dot package add NAME [brew|cask|auto] [base|fonts|work]
 dot package remove NAME [base|fonts|work|all]
 dot package update [NAME|all]
-dot retry-failed
+dot package retry
 ```
 
 Use `dot package check` for base/fonts/work bundle status. Use
@@ -323,6 +320,34 @@ dot skills list
 `vp dlx skills add --global --agent universal --copy`. The skills CLI updates
 its lock/inventory as part of installation.
 
+## CLI development
+
+`dot` intentionally uses the Bash 3.2 runtime included with macOS. Runtime code
+must not depend on newer Bash features or on Node.js, Python, Ruby, or another
+separately managed language runtime.
+
+The `dot` executable is a small bootstrap that initializes paths, loads the
+modules, and invokes the CLI. The main seams are:
+
+- `lib/paths.sh` — repository and managed-file paths.
+- `lib/cli.sh` — global argument parsing and command dispatch.
+- `lib/presentation.sh` — help output.
+- `home/.config/fish/completions/dot.fish` — tracked Fish completions.
+- `lib/tools.sh` — structured tool registry and iteration interface.
+- `lib/workflows.sh` — top-level init, update, doctor, and info workflows.
+- The remaining `lib/*.sh` files — package, runtime, link, Git, configuration,
+  and Agent Skills domain behavior.
+
+Run the dependency-free behavior tests after changing the CLI:
+
+```sh
+tests/run
+```
+
+The tests exercise the public `dot` command in isolated home and state
+directories. GitHub Actions runs the same tests and Bash syntax check on macOS.
+Also run `dot doctor` after changes that affect setup behavior.
+
 ## Troubleshooting
 
 Run diagnostics first:
@@ -337,25 +362,20 @@ Run the publish safety scan:
 dot secret-scan
 ```
 
-Check symlinks:
+Repair managed symlinks:
 
 ```sh
-dot links
 dot stow
 ```
+
+`dot doctor` verifies managed symlinks as part of its diagnostics.
 
 Check package drift:
 
 ```sh
 dot package check
 dot package unmanaged
-dot retry-failed
-```
-
-Open the repo:
-
-```sh
-dot edit
+dot package retry
 ```
 
 ## Safety

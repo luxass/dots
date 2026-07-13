@@ -46,7 +46,7 @@ dots/
 | Task | Location |
 | --- | --- |
 | Add or remove packages | `dot package ...` first, or edit `packages/bundle*` |
-| Diagnose setup | `dot doctor`, `dot info`, `dot links` |
+| Diagnose setup | `dot doctor`, `dot info` |
 | Change setup/update behavior | `dot`, then relevant `lib/*.sh` helper |
 | Change Homebrew behavior | `lib/brew.sh` |
 | Change symlink/Stow behavior | `lib/stow.sh` |
@@ -112,20 +112,18 @@ dot init             # Install packages, stow files, create local identity, link
 dot update           # Pull repo changes, update packages, restow
 dot doctor           # Run diagnostics and secret scan
 dot info             # Show repo paths, runtime tools, and git status
-dot links            # Verify managed home symlinks
 dot hooks            # Install repository Git hooks
 dot secret-scan      # Scan repository for secrets
 dot stow             # Create symlinks using GNU Stow
 dot unstow           # Remove symlinks using GNU Stow
 dot git-identity     # Create or update ~/.gitconfig.local
 dot config           # Manage local-only preferences
-dot retry-failed     # Retry failed package installations
 dot package list     # List managed packages
 dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
+dot package retry    # Retry failed package installations
 dot skills add U     # Add shared global Agent Skills from a URL/source
 dot skills list      # List installed shared global Agent Skills
-dot completions      # Print Fish completions
 ```
 
 Use `dot --verbose doctor` or `dot --verbose info` when diagnostics need more

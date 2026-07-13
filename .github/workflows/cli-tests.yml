@@ -1,0 +1,31 @@
+name: CLI tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Check Bash syntax
+        shell: /bin/bash --noprofile --norc -eo pipefail {0}
+        run: /bin/bash -n dot lib/*.sh tests/*.sh tests/run
+
+      - name: Run CLI behavior tests
+        shell: /bin/bash --noprofile --norc -eo pipefail {0}
+        run: /bin/bash tests/run
