@@ -8,9 +8,9 @@ This repository contains a reproducible macOS development setup. Files under
 `home/` mirror `$HOME`, packages live in `packages/`, and `dot` handles setup,
 maintenance, package checks, symlinks, and local-only identity configuration.
 
-The repo is intentionally small: Fish, Git, Ghostty, Homebrew packages, and
-JavaScript runtime policy. It does not try to manage Linux, Neovim, tmux, or
-other configs that are not currently wanted.
+The repo is intentionally small: Fish, Git, Ghostty, Codex, Homebrew packages,
+and JavaScript runtime policy. It does not try to manage Linux, Neovim, tmux,
+or other configs that are not currently wanted.
 
 ## Key Features
 
@@ -20,6 +20,7 @@ other configs that are not currently wanted.
 - Vite+-managed Node.js runtime and npm installation
 - Managed Vite+ global tools, including Socket Firewall (`sfw`)
 - Public-safe Git config with private identity in `~/.gitconfig.local`
+- Portable Codex preferences without auth, project trust, or generated state
 - Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for disabled scripts and release age checks
 - `agent-repos` helper for local agent reference repos, with explicit clone/subtree modes
@@ -48,6 +49,7 @@ command is not available immediately.
 │   ├── runtime.sh      # Vite+, Node.js, and global runtime tools
 │   └── stow.sh         # GNU Stow links, backups, and dot CLI linking
 ├── home/               # Files stowed into $HOME
+│   ├── .codex/         # Portable Codex preferences only
 │   ├── .config/
 │   │   ├── fish/
 │   │   ├── ghostty/

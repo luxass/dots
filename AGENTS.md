@@ -19,6 +19,7 @@ dots/
 |   |-- runtime.sh      # Vite+, Node.js, npm, and global runtime tools
 |   `-- stow.sh         # GNU Stow links, backups, dot CLI linking
 |-- home/               # Stowed into $HOME
+|   |-- .codex/         # Portable Codex preferences only
 |   |-- .config/
 |   |   |-- fish/       # Primary shell config
 |   |   |-- ghostty/    # Terminal config
@@ -53,6 +54,7 @@ dots/
 | Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/vite-plus.fish` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
+| Change Codex defaults | `home/.codex/config.toml` for portable preferences only |
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
@@ -71,6 +73,9 @@ dots/
   to hidden files through `stow --dotfiles`.
 - Keep `home/.gitconfig` public-safe. It may include `~/.gitconfig.local`, but
   must not contain name, email, signing key, or work-only identity values.
+- Keep `home/.codex/config.toml` limited to portable preferences. Do not track
+  Codex auth, trusted projects, marketplace state, notices, caches, sessions,
+  memories, generated MCP entries, or absolute machine-local paths.
 - Keep package policy public and token-free. `home/.npmrc`, pnpm config, and
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
@@ -141,6 +146,7 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
+| Codex | `home/.codex/config.toml` | Portable user defaults; no auth or local state |
 | OpenCode | `home/.config/opencode/` | Global config and local TypeScript plugins |
 
 ## NOTES
