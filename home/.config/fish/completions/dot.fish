@@ -11,6 +11,7 @@ complete -c dot -n '__fish_use_subcommand' -a hooks -d 'Install repository Git h
 complete -c dot -n '__fish_use_subcommand' -a secret-scan -d 'Scan repository for secrets'
 complete -c dot -n '__fish_use_subcommand' -a package -d 'Manage Homebrew bundle packages'
 complete -c dot -n '__fish_use_subcommand' -a skills -d 'Manage shared global Agent Skills'
+complete -c dot -n '__fish_use_subcommand' -a codex -d 'Synchronize portable Codex preferences'
 complete -c dot -n '__fish_use_subcommand' -a config -d 'Manage local-only preferences'
 complete -c dot -n '__fish_use_subcommand' -a git-identity -d 'Create or update local Git identity'
 complete -c dot -n '__fish_use_subcommand' -a stow -d 'Create symlinks using GNU Stow'
@@ -19,4 +20,5 @@ complete -c dot -n '__fish_use_subcommand' -a help -d 'Show help'
 
 complete -c dot -n '__fish_seen_subcommand_from package' -a 'list check unmanaged trusted untrusted add remove update retry help' -d 'Package command'
 complete -c dot -n '__fish_seen_subcommand_from skills' -a 'add list help' -d 'Skills command'
+complete -c dot -n '__fish_seen_subcommand_from codex' -a 'sync help' -d 'Codex command'
 complete -c dot -n '__fish_seen_subcommand_from config' -a 'list get set unset reset help' -d 'Config command'

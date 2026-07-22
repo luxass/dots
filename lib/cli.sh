@@ -13,6 +13,7 @@ dispatch_command() {
     secret-scan) cmd_secret_scan "$@" ;;
     package) cmd_package "$@" ;;
     skills) cmd_skills "$@" ;;
+    codex) cmd_codex "$@" ;;
     config) cmd_config "$@" ;;
     git-identity) cmd_git_identity "$@" ;;
     stow) cmd_stow "$@" ;;

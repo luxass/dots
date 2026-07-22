@@ -20,6 +20,7 @@ ${BOLD}COMMANDS:${RESET}
   secret-scan      Scan repository for secrets
   package          Package management commands
   skills           Manage shared global Agent Skills
+  codex            Synchronize portable Codex preferences
   config           Manage local-only preferences
   git-identity     Create or update ~/.gitconfig.local
   stow             Create symlinks using GNU Stow

@@ -42,14 +42,17 @@ command is not available immediately.
 ```text
 ~/dots/
 ├── dot                 # Main management CLI entrypoint
+├── defaults/
+│   └── codex.toml      # Portable Codex preferences merged into local state
 ├── lib/
 │   ├── brew.sh         # Homebrew bundle and package commands
+│   ├── codex.sh        # Codex preference synchronization
 │   ├── core.sh         # Shared output, prompts, and generic helpers
 │   ├── git.sh          # Git hooks, identity, and secret scanning
 │   ├── runtime.sh      # Vite+, Node.js, and global runtime tools
 │   └── stow.sh         # GNU Stow links, backups, and dot CLI linking
 ├── home/               # Files stowed into $HOME
-│   ├── .codex/         # Portable Codex preferences only
+│   ├── .codex/         # Ignore policy only; live config remains local
 │   ├── .config/
 │   │   ├── fish/
 │   │   ├── ghostty/
@@ -80,6 +83,7 @@ dot doctor           # run diagnostics and secret scan
 dot info             # show repo paths, runtime tools, and git status
 dot hooks            # install repository Git hooks
 dot secret-scan      # scan repository for secrets
+dot codex sync       # merge portable preferences into local Codex config
 dot stow             # restow home/
 dot unstow           # remove stowed symlinks
 dot git-identity     # create or update ~/.gitconfig.local
@@ -162,6 +166,24 @@ Current optional package preferences:
 packages.brew.fonts.enabled
 packages.brew.work.enabled
 ```
+
+## Codex Configuration
+
+Portable Codex preferences are tracked in `defaults/codex.toml`. The live
+`~/.codex/config.toml` remains a regular local file so Codex can safely store
+plugin, marketplace, MCP, project-trust, and onboarding state without changing
+the repository.
+
+Synchronize the tracked preferences with:
+
+```sh
+dot codex sync
+```
+
+Synchronization updates only keys declared in `defaults/codex.toml`, preserves
+all other local state, and writes the result atomically. `dot init`, `dot
+update`, and `dot stow` run the same synchronization automatically. `dot
+doctor` reports when the portable preferences are missing or out of sync.
 
 Tracked Git config intentionally excludes name, email, and signing key:
 
@@ -333,6 +355,7 @@ modules, and invokes the CLI. The main seams are:
 
 - `lib/paths.sh` — repository and managed-file paths.
 - `lib/cli.sh` — global argument parsing and command dispatch.
+- `lib/codex.sh` — portable-to-local Codex preference synchronization.
 - `lib/presentation.sh` — help output.
 - `home/.config/fish/completions/dot.fish` — tracked Fish completions.
 - `lib/tools.sh` — structured tool registry and iteration interface.

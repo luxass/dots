@@ -182,6 +182,9 @@ cmd_doctor() {
   check_managed_links || failed=1
   check_agent_skills_link || failed=1
 
+  print_verbose "Checking portable Codex preferences"
+  check_codex_config || failed=1
+
   print_verbose "Checking shell PATH entries"
   if path_contains "$HOME/.local/bin"; then
     print_success "~/.local/bin is on PATH"

@@ -223,6 +223,7 @@ _stow_dotfiles() {
   print_verbose "Running GNU Stow in restow mode for package: home"
   stow --dotfiles -R -d "$DOTFILES_DIR" -t "$HOME" home
   link_private_opencode_plugins
+  sync_codex_config || return 1
   print_success "Dotfiles stowed"
 }
 

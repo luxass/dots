@@ -30,7 +30,7 @@ assert_not_contains() {
 test_version() {
   local output
   output="$($DOT --version)"
-  assert_contains "$output" "dot version 1.2.0"
+  assert_contains "$output" "dot version 1.3.0"
 }
 
 test_help() {
@@ -39,6 +39,7 @@ test_help() {
   assert_contains "$output" "USAGE:"
   assert_contains "$output" "doctor"
   assert_contains "$output" "package"
+  assert_contains "$output" "codex"
   assert_not_contains "$output" "retry-failed"
   assert_not_contains "$output" "completions"
   assert_not_contains "$output" "unlink"
@@ -58,13 +59,13 @@ test_unknown_command_fails() {
 test_global_verbose_option_preserves_dispatch() {
   local output
   output="$($DOT --verbose --version)"
-  assert_contains "$output" "dot version 1.2.0"
+  assert_contains "$output" "dot version 1.3.0"
 }
 
 test_option_separator() {
   local output
   output="$($DOT -- --version)"
-  assert_contains "$output" "dot version 1.2.0"
+  assert_contains "$output" "dot version 1.3.0"
 }
 
 test_removed_commands_fail() {
@@ -92,7 +93,7 @@ test_cli_runs_through_symlink() {
   ln -s "$DOT" "$bin/dot"
 
   output="$("$bin/dot" --version)"
-  assert_contains "$output" "dot version 1.2.0"
+  assert_contains "$output" "dot version 1.3.0"
 }
 
 test_version

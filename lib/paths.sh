@@ -6,6 +6,7 @@ init_paths() {
   readonly FONTS_BUNDLE="${PACKAGES_DIR}/bundle.fonts"
   readonly WORK_BUNDLE="${PACKAGES_DIR}/bundle.work"
   readonly BACKUP_ROOT="${DOTFILES_DIR}/backups"
+  readonly CODEX_DEFAULTS_FILE="${DOTFILES_DIR}/defaults/codex.toml"
   readonly VP_HOME="${VP_HOME:-$HOME/.vite-plus}"
   readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
   readonly VITE_PLUS_GLOBAL_PACKAGES=("sfw")

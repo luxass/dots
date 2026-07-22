@@ -10,16 +10,19 @@ content. Personal Git identity belongs in `~/.gitconfig.local`.
 
 ```text
 dots/
-|-- dot                 # Main CLI: init/update/doctor/stow/package
+|-- dot                 # Main CLI: init/update/doctor/stow/package/codex
+|-- defaults/
+|   `-- codex.toml      # Portable Codex preferences
 |-- lib/
 |   |-- brew.sh         # Homebrew bundle install, update, retry, package ops
+|   |-- codex.sh        # Merge portable preferences into local Codex config
 |   |-- core.sh         # Shared output, prompts, command helpers
 |   |-- git.sh          # Git hooks, identity, secret scanning
 |   |-- skills.sh       # Agent Skills wrapper around the skills CLI
 |   |-- runtime.sh      # Vite+, Node.js, npm, and global runtime tools
 |   `-- stow.sh         # GNU Stow links, backups, dot CLI linking
 |-- home/               # Stowed into $HOME
-|   |-- .codex/         # Portable Codex preferences only
+|   |-- .codex/         # Ignore policy only; live config stays local
 |   |-- .config/
 |   |   |-- fish/       # Primary shell config
 |   |   |-- ghostty/    # Terminal config
@@ -54,7 +57,7 @@ dots/
 | Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/vite-plus.fish` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
-| Change Codex defaults | `home/.codex/config.toml` for portable preferences only |
+| Change Codex defaults | `defaults/codex.toml`, then `dot codex sync` |
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
@@ -73,9 +76,11 @@ dots/
   to hidden files through `stow --dotfiles`.
 - Keep `home/.gitconfig` public-safe. It may include `~/.gitconfig.local`, but
   must not contain name, email, signing key, or work-only identity values.
-- Keep `home/.codex/config.toml` limited to portable preferences. Do not track
-  Codex auth, trusted projects, marketplace state, notices, caches, sessions,
-  memories, generated MCP entries, or absolute machine-local paths.
+- Keep `defaults/codex.toml` limited to portable preferences. The live
+  `~/.codex/config.toml` is local state and must not be stowed or tracked. Do
+  not add Codex auth, trusted projects, marketplace state, notices, caches,
+  sessions, memories, generated MCP entries, or absolute machine-local paths
+  to the portable defaults.
 - Keep package policy public and token-free. `home/.npmrc`, pnpm config, and
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
@@ -119,6 +124,7 @@ dot doctor           # Run diagnostics and secret scan
 dot info             # Show repo paths, runtime tools, and git status
 dot hooks            # Install repository Git hooks
 dot secret-scan      # Scan repository for secrets
+dot codex sync       # Merge portable preferences into local Codex config
 dot stow             # Create symlinks using GNU Stow
 dot unstow           # Remove symlinks using GNU Stow
 dot git-identity     # Create or update ~/.gitconfig.local
@@ -146,7 +152,7 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
-| Codex | `home/.codex/config.toml` | Portable user defaults; no auth or local state |
+| Codex | `defaults/codex.toml` | Portable defaults merged into local config |
 | OpenCode | `home/.config/opencode/` | Global config and local TypeScript plugins |
 
 ## NOTES
@@ -155,6 +161,8 @@ detail.
 - `dot init` stows package-manager policy before installing Vite+-managed
   runtime tools, so install policy is active during setup.
 - Managed Vite+ globals currently include Socket Firewall (`sfw`).
+- `dot init`, `dot update`, and `dot stow` synchronize `defaults/codex.toml`
+  into the local Codex config while preserving Codex-owned state.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
   Restart OpenCode after editing config or plugins.
 - The private OpenCode submodule is initialized by `dot init` / `dot stow` and
