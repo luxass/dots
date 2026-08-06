@@ -1,5 +1,5 @@
 tap "anomalyco/tap", trusted: true
-tap "luxass/tap", trusted: { formula: "actioneer" }
+tap "luxass/tap", trusted: { formula: ["actioneer", "agent-repos"] }
 tap "oven-sh/bun", trusted: true
 
 brew "anomalyco/tap/opencode"
@@ -17,6 +17,7 @@ brew "herdr"
 brew "jq"
 brew "just"
 brew "luxass/tap/actioneer"
+brew "luxass/tap/agent-repos"
 brew "neovim"
 brew "oven-sh/bun/bun"
 brew "starship"
