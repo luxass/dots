@@ -64,6 +64,7 @@ dots/
 | Change OpenCode config/plugins | `home/.config/opencode/` |
 | Change private OpenCode plugins | `private/opencode/plugins/` |
 | Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
+| Change Claude Code skills link | `lib/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
 
@@ -174,3 +175,5 @@ detail.
   skills with `dot skills add <url>` so files remain under
   `home/.agents/skills/`. Use `dot skills list` to inspect installed shared
   global Agent Skills; the wrapped skills CLI updates its lock/inventory.
+- `dot stow` also links `~/.claude/skills` to `~/.agents/skills` so Claude Code
+  shares the same skills; `dot doctor` checks this link.

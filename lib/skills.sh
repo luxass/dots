@@ -72,6 +72,42 @@ ensure_agent_skills_link() {
   print_success "Linked ~/.agents/skills -> home/.agents/skills"
 }
 
+ensure_claude_skills_link() {
+  local claude_dir="$HOME/.claude"
+  local claude_skills_dir="$claude_dir/skills"
+  local link_target="$HOME_AGENTS_DIR/skills"
+
+  ensure_agent_skills_link
+  mkdir -p "$claude_dir"
+
+  if [[ -L "$claude_skills_dir" ]]; then
+    if [[ "$(realpath "$claude_skills_dir")" == "$(realpath "$link_target")" ]]; then
+      return 0
+    fi
+    rm "$claude_skills_dir"
+  elif [[ -e "$claude_skills_dir" ]]; then
+    if [[ -d "$claude_skills_dir" ]] && skills_directory_contains_only_managed_links "$claude_skills_dir" "$AGENT_SKILLS_DIR"; then
+      find "$claude_skills_dir" -mindepth 1 -maxdepth 1 -type l -delete
+      rmdir "$claude_skills_dir"
+    else
+      backup_path "$claude_skills_dir" "$BACKUP_ROOT/$(timestamp)"
+    fi
+  fi
+
+  ln -s "$link_target" "$claude_skills_dir"
+  print_success "Linked ~/.claude/skills -> ~/.agents/skills"
+}
+
+check_claude_skills_link() {
+  if [[ -L "$HOME/.claude/skills" ]] && [[ "$(realpath "$HOME/.claude/skills")" == "$(realpath "$AGENT_SKILLS_DIR")" ]]; then
+    print_success "Claude skills link"
+    return 0
+  fi
+
+  print_error "Claude skills are not linked at ~/.claude/skills"
+  return 1
+}
+
 check_agent_skills_link() {
   if [[ -L "$HOME_AGENT_SKILLS_DIR" ]] && [[ "$(realpath "$HOME_AGENT_SKILLS_DIR")" == "$(realpath "$AGENT_SKILLS_DIR")" ]]; then
     print_success "Agent skills link"

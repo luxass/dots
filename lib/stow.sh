@@ -217,6 +217,7 @@ _stow_dotfiles() {
   print_verbose "Preparing to stow files from $HOME_DIR to $HOME"
   ensure_private_opencode_submodule
   ensure_agent_skills_link
+  ensure_claude_skills_link
   prepare_opencode_plugins_target
   backup_conflicts
   print_info "Stowing files from $HOME_DIR to $HOME"
