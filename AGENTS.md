@@ -31,6 +31,7 @@ dots/
 |   |   `-- starship.toml
 |   |-- .bunfig.toml    # Bun install policy
 |   |-- .gitconfig      # Public Git settings; includes ~/.gitconfig.local
+|   |-- .local/bin/     # Personal CLI tools (git-wt-clean)
 |   |-- .npmrc          # npm policy only; no auth
 |   `-- dot-gitignore   # Stowed as ~/.gitignore via stow --dotfiles
 |-- packages/
@@ -54,6 +55,7 @@ dots/
 | Change setup/update behavior | `dot`, then relevant `lib/*.sh` helper |
 | Change Homebrew behavior | `lib/brew.sh` |
 | Change symlink/Stow behavior | `lib/stow.sh` |
+| Add a personal CLI tool | `home/.local/bin/`, then `dot stow` |
 | Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/vite-plus.fish` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
