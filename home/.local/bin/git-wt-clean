@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+#
+# git-wt-clean - clean up leftover git worktrees
+#
+# A linked worktree counts as leftover when:
+#   - its HEAD is merged into the default branch (origin/HEAD, else main/master), or
+#   - its branch upstream is gone (deleted on the remote)
+#
+# Also prunes orphaned worktree metadata (directories removed by hand).
+#
+# Usage: git-wt-clean [options]
+#   -n, --dry-run  list candidates without removing anything
+#   -y, --yes      do not ask for confirmation
+#   -f, --force    also remove worktrees with uncommitted changes
+#   -h, --help     show this help
+
+set -euo pipefail
+
+dry_run=false
+assume_yes=false
+force=false
+
+usage() {
+  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -n|--dry-run) dry_run=true ;;
+    -y|--yes)     assume_yes=true ;;
+    -f|--force)   force=true ;;
+    -h|--help)    usage; exit 0 ;;
+    *) printf 'Unknown option: %s\n\n' "$1" >&2; usage >&2; exit 1 ;;
+  esac
+  shift
+done
+
+if [[ -t 1 ]]; then
+  dim=$'\033[2m'; yellow=$'\033[33m'; red=$'\033[31m'; reset=$'\033[0m'
+else
+  dim=''; yellow=''; red=''; reset=''
+fi
+
+info()  { printf '%s\n' "$*"; }
+warn()  { printf '%s%s%s\n' "$yellow" "$*" "$reset"; }
+error() { printf '%s%s%s\n' "$red" "$*" "$reset" >&2; }
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { error "Not inside a git repository."; exit 1; }
+
+default_ref=""
+if ref="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"; then
+  default_ref="$ref"
+elif git show-ref --verify --quiet refs/heads/main; then
+  default_ref="main"
+elif git show-ref --verify --quiet refs/heads/master; then
+  default_ref="master"
+fi
+
+current_top="$(git rev-parse --show-toplevel)"
+
+candidates=()  # path \t label \t reason \t dirty
+skipped=()     # path \t label \t why
+orphaned=0
+
+path=""; head=""; branch=""; detached=false; locked=false; prunable=false
+first_seen=false
+
+flush_entry() {
+  [[ -n "$path" ]] || return 0
+  local p="$path" h="$head" b="$branch"
+  local lock=$locked prun=$prunable
+  path=""; head=""; branch=""; detached=false; locked=false; prunable=false
+
+  if ! $first_seen; then
+    first_seen=true
+    return 0
+  fi
+
+  local label
+  if [[ -n "$b" ]]; then
+    label="${b#refs/heads/}"
+  else
+    label="(detached ${h:0:7})"
+  fi
+
+  if $prun; then
+    ((++orphaned))
+    return 0
+  fi
+
+  if $lock; then
+    skipped+=("$p"$'\t'"$label"$'\t'"locked")
+    return 0
+  fi
+
+  if [[ "$p" == "$current_top" ]]; then
+    skipped+=("$p"$'\t'"$label"$'\t'"you are inside it")
+    return 0
+  fi
+
+  local reason=""
+  if [[ -n "$b" ]] && [[ "$(git for-each-ref --format='%(upstream:track)' "$b")" == "[gone]" ]]; then
+    reason="upstream gone"
+  elif [[ -n "$default_ref" ]] && git merge-base --is-ancestor "$h" "$default_ref" 2>/dev/null; then
+    reason="merged into $default_ref"
+  fi
+
+  [[ -n "$reason" ]] || return 0
+
+  local dirty=false
+  if [[ -n "$(git -C "$p" status --porcelain 2>/dev/null)" ]]; then
+    dirty=true
+  fi
+
+  if $dirty && ! $force; then
+    skipped+=("$p"$'\t'"$label"$'\t'"dirty (use --force to remove)")
+    return 0
+  fi
+
+  candidates+=("$p"$'\t'"$label"$'\t'"$reason"$'\t'"$dirty")
+}
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  case "$line" in
+    "worktree "*)
+      flush_entry
+      path="${line#worktree }"
+      ;;
+    "HEAD "*)   head="${line#HEAD }" ;;
+    "branch "*) branch="${line#branch }" ;;
+    detached)   detached=true ;;
+    locked*)    locked=true ;;
+    prunable*)  prunable=true ;;
+  esac
+done < <(git worktree list --porcelain)
+flush_entry
+
+if [[ "${#candidates[@]}" -gt 0 ]]; then
+  info "Leftover worktrees:"
+  for row in "${candidates[@]}"; do
+    IFS=$'\t' read -r p label reason dirty <<< "$row"
+    printf '  %s %s[%s]: %s%s\n' "$p" "$dim" "$label" "$reason" "$reset"
+  done
+else
+  info "No leftover worktrees."
+fi
+
+if [[ "${#skipped[@]}" -gt 0 ]]; then
+  info ""
+  info "Skipped:"
+  for row in "${skipped[@]}"; do
+    IFS=$'\t' read -r p label why <<< "$row"
+    printf '  %s %s[%s]: %s%s\n' "$p" "$dim" "$label" "$why" "$reset"
+  done
+fi
+
+if $dry_run; then
+  if [[ "$orphaned" -gt 0 ]]; then
+    info ""
+    info "Would also prune $orphaned orphaned worktree metadata entries."
+  fi
+  info ""
+  info "Dry run; nothing removed."
+  exit 0
+fi
+
+if [[ "${#candidates[@]}" -eq 0 && "$orphaned" -eq 0 ]]; then
+  exit 0
+fi
+
+if [[ "${#candidates[@]}" -gt 0 ]] && ! $assume_yes; then
+  if [[ -t 0 ]]; then
+    printf 'Remove %d worktree(s)? [y/N] ' "${#candidates[@]}"
+    read -r reply
+    case "$reply" in
+      y|Y|yes|YES) ;;
+      *) info "Aborted."; exit 0 ;;
+    esac
+  else
+    info ""
+    info "Re-run with --yes to remove without a prompt."
+    exit 0
+  fi
+fi
+
+for row in "${candidates[@]}"; do
+  IFS=$'\t' read -r p label reason dirty <<< "$row"
+  if $force && $dirty; then
+    git worktree remove --force "$p" || { warn "Failed to remove $p"; continue; }
+  else
+    git worktree remove "$p" || { warn "Failed to remove $p"; continue; }
+  fi
+  info "Removed $p"
+done
+
+if [[ "$orphaned" -gt 0 ]]; then
+  info "Pruning $orphaned orphaned worktree metadata entries:"
+  git worktree prune --verbose
+fi
