@@ -14,6 +14,7 @@ dispatch_command() {
     package) cmd_package "$@" ;;
     skills) cmd_skills "$@" ;;
     codex) cmd_codex "$@" ;;
+    cliproxyapi) cmd_cliproxyapi "$@" ;;
     config) cmd_config "$@" ;;
     git-identity) cmd_git_identity "$@" ;;
     stow) cmd_stow "$@" ;;

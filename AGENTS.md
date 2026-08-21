@@ -16,6 +16,7 @@ dots/
 |-- lib/
 |   |-- brew.sh         # Homebrew bundle install, update, retry, package ops
 |   |-- codex.sh        # Merge portable preferences into local Codex config
+|   |-- cliproxyapi.sh  # Foreground CLIProxyAPI runner with stowed config
 |   |-- core.sh         # Shared output, prompts, command helpers
 |   |-- git.sh          # Git hooks, identity, secret scanning
 |   |-- skills.sh       # Agent Skills wrapper around the skills CLI
@@ -24,6 +25,7 @@ dots/
 |-- home/               # Stowed into $HOME
 |   |-- .codex/         # Ignore policy only; live config stays local
 |   |-- .config/
+|   |   |-- cliproxyapi/ # CLIProxyAPI config; auth/ is never tracked
 |   |   |-- fish/       # Primary shell config
 |   |   |-- ghostty/    # Terminal config
 |   |   |-- opencode/   # OpenCode config, TS plugins, package lock
@@ -64,6 +66,7 @@ dots/
 | Change OpenCode config/plugins | `home/.config/opencode/` |
 | Change private OpenCode plugins | `private/opencode/plugins/` |
 | Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
+| Change CLIProxyAPI config | `home/.config/cliproxyapi/config.yaml`, `lib/cliproxyapi.sh` |
 | Change Claude Code skills link | `lib/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
@@ -126,6 +129,7 @@ dot info             # Show repo paths, runtime tools, and git status
 dot hooks            # Install repository Git hooks
 dot secret-scan      # Scan repository for secrets
 dot codex sync       # Merge portable preferences into local Codex config
+dot cliproxyapi      # Run CLIProxyAPI in the foreground with the stowed config
 dot stow             # Create symlinks using GNU Stow
 dot unstow           # Remove symlinks using GNU Stow
 dot git-identity     # Create or update ~/.gitconfig.local
@@ -155,6 +159,7 @@ detail.
 | Bun | `home/.bunfig.toml` | Install policy |
 | Codex | `defaults/codex.toml` | Portable defaults merged into local config |
 | OpenCode | `home/.config/opencode/` | Global config and local TypeScript plugins |
+| CLIProxyAPI | `home/.config/cliproxyapi/config.yaml` | `dot stow` links it to `$(brew --prefix)/etc/cliproxyapi.conf`; `auth/` holds OAuth credentials and is git-ignored |
 
 ## NOTES
 
@@ -177,3 +182,7 @@ detail.
   global Agent Skills; the wrapped skills CLI updates its lock/inventory.
 - `dot stow` also links `~/.claude/skills` to `~/.agents/skills` so Claude Code
   shares the same skills; `dot doctor` checks this link.
+- `dot stow` links `$(brew --prefix)/etc/cliproxyapi.conf` to the stowed
+  `~/.config/cliproxyapi/config.yaml` so the Homebrew service uses the tracked
+  config; `dot doctor` checks this link. Never commit
+  `home/.config/cliproxyapi/auth/` (OAuth credentials).

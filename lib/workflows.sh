@@ -182,6 +182,7 @@ cmd_doctor() {
   check_managed_links || failed=1
   check_agent_skills_link || failed=1
   check_claude_skills_link || failed=1
+  check_cliproxyapi_config_link || failed=1
 
   print_verbose "Checking portable Codex preferences"
   check_codex_config || failed=1

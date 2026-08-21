@@ -12,6 +12,7 @@ init_paths
 source "${DOTFILES_DIR}/lib/core.sh"
 source "${DOTFILES_DIR}/lib/config.sh"
 source "${DOTFILES_DIR}/lib/codex.sh"
+source "${DOTFILES_DIR}/lib/cliproxyapi.sh"
 source "${DOTFILES_DIR}/lib/brew.sh"
 source "${DOTFILES_DIR}/lib/runtime.sh"
 source "${DOTFILES_DIR}/lib/stow.sh"

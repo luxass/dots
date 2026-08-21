@@ -21,6 +21,7 @@ ${BOLD}COMMANDS:${RESET}
   package          Package management commands
   skills           Manage shared global Agent Skills
   codex            Synchronize portable Codex preferences
+  cliproxyapi      Run CLIProxyAPI in the foreground with the stowed config
   config           Manage local-only preferences
   git-identity     Create or update ~/.gitconfig.local
   stow             Create symlinks using GNU Stow
