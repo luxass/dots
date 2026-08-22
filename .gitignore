@@ -67,3 +67,6 @@ home/.codex/auth.json
 
 # CLIProxyAPI OAuth credentials; never commit
 home/.config/cliproxyapi/auth/
+
+# Vendored CLIProxyAPI web bundle: local-only, not tracked
+home/.config/cliproxyapi/static/
