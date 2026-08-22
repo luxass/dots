@@ -182,6 +182,10 @@ detail.
   skills with `dot skills add <url>` so files remain under
   `home/.agents/skills/`. Use `dot skills list` to inspect installed shared
   global Agent Skills; the wrapped skills CLI updates its lock/inventory.
+- Track vendored skill provenance by source SHA, not per-skill metadata
+  files. Record the upstream repository and commit (for example,
+  pstack skills from `cursor/plugins@4612556`) in the commit message that
+  adds or updates the skills; re-check that SHA when updating.
 - `dot stow` also links `~/.claude/skills` to `~/.agents/skills` so Claude Code
   shares the same skills; `dot doctor` checks this link.
 - `dot stow` links `$(brew --prefix)/etc/cliproxyapi.conf` to the stowed
