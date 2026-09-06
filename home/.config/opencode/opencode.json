@@ -6,10 +6,5 @@
   "permission": {
     "bash": "ask",
     "edit": "ask"
-  },
-  "provider": {
-    "atelier": {
-      "name": "Atelier"
-    }
   }
 }
