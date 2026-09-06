@@ -184,6 +184,9 @@ cmd_doctor() {
   check_claude_skills_link || failed=1
   check_cliproxyapi_config_link || failed=1
 
+  print_verbose "Checking OpenCode plugins"
+  check_opencode_plugins || failed=1
+
   print_verbose "Checking portable Codex preferences"
   check_codex_config || failed=1
 

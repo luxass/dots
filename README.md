@@ -262,11 +262,13 @@ Tracked files include:
 
 Keep `node_modules/` local-only. It is ignored by Git and by Stow through
 `home/.stow-local-ignore`, but can exist in the source tree for editor/type
-resolution. Install or refresh plugin dependencies from the managed config
-directory with Socket Firewall:
+resolution. `dot stow` and `dot update` install or refresh plugin dependencies
+with Socket Firewall (`sfw vp install` in `~/.config/opencode/`, plus
+`private/opencode/` when private plugins exist), and `dot doctor` verifies that
+`@opencode-ai/plugin` is installed. Manual refresh is still available:
 
 ```sh
-cd ~/dots/home/.config/opencode
+cd ~/.config/opencode
 sfw vp install
 ```
 
@@ -284,11 +286,13 @@ private/opencode/
 └── package-lock.json
 ```
 
-`dot init` and `dot stow` initialize the submodule when needed and symlink
-`private/opencode/plugins/*.ts` and `*.js` into `~/.config/opencode/plugins/`.
+`dot init` and `dot stow` initialize the submodule when needed, symlink
+`private/opencode/plugins/*.ts` and `*.js` into `~/.config/opencode/plugins/`,
+prune links whose private source was deleted, and install private dependencies
+when plugins exist.
 The private repo does not need to mirror `$HOME` with a `home/` directory.
 
-Install or refresh private plugin dependencies with:
+Manual refresh is still available:
 
 ```sh
 cd ~/dots/private/opencode

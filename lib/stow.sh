@@ -163,6 +163,155 @@ unlink_private_opencode_plugins() {
   done < <(find "$plugins_dir" -maxdepth 1 -type d ! -path "$plugins_dir" -print0)
 }
 
+prune_private_opencode_plugins() {
+  local plugins_dir target_dir entry link_target base
+  plugins_dir="$(private_opencode_plugins_dir)"
+  target_dir="$HOME/.config/opencode/plugins"
+
+  [[ -d "$target_dir" ]] || return 0
+
+  while IFS= read -r -d '' entry; do
+    link_target="$(readlink "$entry")"
+    case "$link_target" in
+      *private/opencode/plugins*)
+        base="$(basename "$entry")"
+        if [[ ! -d "$plugins_dir" || ! -e "$plugins_dir/$base" ]]; then
+          rm "$entry"
+          print_info "Removed stale private OpenCode plugin: $base"
+        fi
+        ;;
+    esac
+  done < <(find "$target_dir" -maxdepth 1 -type l -print0)
+}
+
+private_opencode_has_plugins() {
+  local plugins_dir entry
+  plugins_dir="$(private_opencode_plugins_dir)"
+
+  [[ -d "$plugins_dir" ]] || return 1
+
+  for entry in "$plugins_dir"/*.ts "$plugins_dir"/*.js; do
+    if [[ -e "$entry" || -L "$entry" ]]; then
+      return 0
+    fi
+  done
+
+  for entry in "$plugins_dir"/*; do
+    if [[ -d "$entry" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+opencode_install_deps_in() {
+  local dir="$1"
+
+  [[ -f "$dir/package.json" ]] || return 0
+
+  if ! command_exists vp; then
+    print_warning "vp is not available; skipping OpenCode dependencies in $dir (run 'dot stow' again after init)"
+    return 0
+  fi
+
+  print_info "Installing OpenCode plugin dependencies in $dir"
+  if command_exists sfw; then
+    if (cd "$dir" && sfw vp install); then
+      print_success "OpenCode plugin dependencies installed in $dir"
+    else
+      print_warning "Failed to install OpenCode dependencies in $dir"
+    fi
+  else
+    if (cd "$dir" && vp install); then
+      print_success "OpenCode plugin dependencies installed in $dir"
+    else
+      print_warning "Failed to install OpenCode dependencies in $dir"
+    fi
+  fi
+}
+
+ensure_opencode_plugin_deps() {
+  local home_opencode="$HOME/.config/opencode"
+  local private_dir
+  private_dir="$(private_opencode_dir)"
+
+  if [[ -f "$home_opencode/package.json" ]]; then
+    opencode_install_deps_in "$home_opencode"
+  elif [[ -f "$HOME_DIR/.config/opencode/package.json" ]]; then
+    opencode_install_deps_in "$HOME_DIR/.config/opencode"
+  fi
+
+  if private_opencode_has_plugins && [[ -f "$private_dir/package.json" ]]; then
+    opencode_install_deps_in "$private_dir"
+  else
+    print_verbose "No private OpenCode plugins; skipping private dependencies"
+  fi
+}
+
+check_opencode_plugins() {
+  local failed=0
+  local plugins_dir target_dir private_dir home_opencode
+  plugins_dir="$(private_opencode_plugins_dir)"
+  target_dir="$HOME/.config/opencode/plugins"
+  private_dir="$(private_opencode_dir)"
+  home_opencode="$HOME/.config/opencode"
+
+  if [[ -d "$plugins_dir" && -d "$target_dir" ]]; then
+    local plugin target
+    while IFS= read -r -d '' plugin; do
+      target="$target_dir/$(basename "$plugin")"
+      if ! is_repo_path "$target" "$plugin"; then
+        print_error "Private OpenCode plugin is not linked: $(basename "$plugin")"
+        failed=1
+      fi
+    done < <(find "$plugins_dir" -maxdepth 1 -type f \( -name '*.js' -o -name '*.ts' \) -print0)
+
+    while IFS= read -r -d '' plugin; do
+      target="$target_dir/$(basename "$plugin")"
+      if ! is_repo_path "$target" "$plugin"; then
+        print_error "Private OpenCode plugin is not linked: $(basename "$plugin")"
+        failed=1
+      fi
+    done < <(find "$plugins_dir" -maxdepth 1 -type d ! -path "$plugins_dir" -print0)
+  fi
+
+  if [[ -d "$target_dir" ]]; then
+    local entry link_target
+    while IFS= read -r -d '' entry; do
+      link_target="$(readlink "$entry")"
+      case "$link_target" in
+        *private/opencode/plugins*)
+          if [[ ! -e "$entry" ]]; then
+            print_error "Stale private OpenCode plugin link: $(basename "$entry") (run 'dot stow')"
+            failed=1
+          fi
+          ;;
+      esac
+    done < <(find "$target_dir" -maxdepth 1 -type l -print0)
+  fi
+
+  if [[ -f "$home_opencode/package.json" ]]; then
+    if [[ -d "$home_opencode/node_modules/@opencode-ai/plugin" ]]; then
+      print_success "OpenCode plugin dependencies"
+    else
+      print_error "OpenCode plugin dependencies missing in $home_opencode (run 'dot stow')"
+      failed=1
+    fi
+  fi
+
+  if private_opencode_has_plugins && [[ -f "$private_dir/package.json" ]]; then
+    if [[ -d "$private_dir/node_modules/@opencode-ai/plugin" ]]; then
+      print_success "Private OpenCode plugin dependencies"
+    else
+      print_error "Private OpenCode plugin dependencies missing in $private_dir (run 'dot stow')"
+      failed=1
+    fi
+  fi
+
+  return "$failed"
+}
+
 ensure_stow() {
   print_verbose "Checking GNU Stow availability"
   ensure_homebrew
@@ -266,6 +415,8 @@ _stow_dotfiles() {
   print_verbose "Running GNU Stow in restow mode for package: home"
   stow --dotfiles -R -d "$DOTFILES_DIR" -t "$HOME" home
   link_private_opencode_plugins
+  prune_private_opencode_plugins
+  ensure_opencode_plugin_deps
   ensure_cliproxyapi_config_link
   sync_codex_config || return 1
   print_success "Dotfiles stowed"
@@ -275,6 +426,7 @@ _unstow_dotfiles() {
   ensure_stow
   print_verbose "Preparing to unstow files from $HOME_DIR"
   unlink_private_opencode_plugins
+  prune_private_opencode_plugins
   print_verbose "Running GNU Stow in delete mode for package: home"
   stow --dotfiles -D -d "$DOTFILES_DIR" -t "$HOME" home
   print_success "Dotfiles unstowed"

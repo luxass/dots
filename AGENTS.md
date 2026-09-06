@@ -90,8 +90,9 @@ dots/
 - Keep package policy public and token-free. `home/.npmrc`, pnpm config, and
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
-  provider secret files. TypeScript plugin dependencies must be installed with
-  `sfw vp install` from `home/.config/opencode/`.
+  provider secret files. `dot stow` installs TypeScript plugin dependencies with
+  `sfw vp install` in `~/.config/opencode/` (and in `private/opencode/` when
+  private plugins exist); `dot doctor` verifies them.
 - `home/.config/opencode/node_modules/` may exist locally for editor/type
   resolution, but it is ignored by Git and Stow. Keep `package-lock.json`
   tracked.
