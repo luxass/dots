@@ -63,6 +63,7 @@ command is not available immediately.
 ├── packages/
 │   ├── bundle          # Base Brewfile
 │   ├── bundle.fonts    # Optional font casks
+│   ├── bundle.personal # Optional personal-only Brewfile
 │   └── bundle.work     # Optional work-only Brewfile
 ├── private/
 │   └── opencode/       # Private OpenCode plugins submodule
@@ -92,24 +93,26 @@ dot config           # list or edit local-only preferences
 ## Package Management
 
 The base package list is `packages/bundle`. Fonts live in
-`packages/bundle.fonts`, and optional work-only packages can be kept in
-`packages/bundle.work`. `dot init` prompts for optional groups only when their
-local preference is unset. Answers are saved under XDG state so future runs know
-whether fonts or work packages are enabled or intentionally skipped.
+`packages/bundle.fonts`, optional work-only packages in `packages/bundle.work`,
+and personal-only packages (installed only on machines that opt in) in
+`packages/bundle.personal`. `dot init` prompts for optional groups only when
+their local preference is unset. Answers are saved under XDG state so future
+runs know whether fonts, work, or personal packages are enabled or
+intentionally skipped.
 
 ```sh
-dot package list [base|fonts|work|all]
+dot package list [base|fonts|work|personal|all]
 dot package check
 dot package unmanaged
 dot package trusted
 dot package untrusted
-dot package add NAME [brew|cask|auto] [base|fonts|work]
-dot package remove NAME [base|fonts|work|all]
+dot package add NAME [brew|cask|auto] [base|fonts|work|personal]
+dot package remove NAME [base|fonts|work|personal|all]
 dot package update [NAME|all]
 dot package retry
 ```
 
-Use `dot package check` for base/fonts/work bundle status. Use
+Use `dot package check` for bundle status across all groups. Use
 `dot package unmanaged` separately to review installed Homebrew items that are
 not tracked by these bundles. Use `dot package trusted` and
 `dot package untrusted` to review Homebrew trust state.

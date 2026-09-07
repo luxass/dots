@@ -39,6 +39,7 @@ dots/
 |-- packages/
 |   |-- bundle          # Base Brewfile
 |   |-- bundle.fonts    # Optional font casks
+|   |-- bundle.personal # Optional personal-only Brewfile
 |   `-- bundle.work     # Optional work-only Brewfile
 |-- private/
 |   `-- opencode/       # Private OpenCode plugins submodule
@@ -156,7 +157,7 @@ detail.
 | Git | `home/.gitconfig` | Public config; private identity is local-only |
 | Ghostty | `home/.config/ghostty/config` | Terminal settings |
 | Starship | `home/.config/starship.toml` | Prompt |
-| Homebrew | `packages/bundle*` | Base, fonts, and optional work bundles |
+| Homebrew | `packages/bundle*` | Base, fonts, personal, and optional work bundles |
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |

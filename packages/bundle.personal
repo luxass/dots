@@ -1,0 +1,6 @@
+# Optional personal-only packages.
+#
+# Add entries with:
+#   dot package add NAME [brew|cask|auto] personal
+
+cask "discord"

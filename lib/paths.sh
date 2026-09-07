@@ -5,6 +5,7 @@ init_paths() {
   readonly BASE_BUNDLE="${PACKAGES_DIR}/bundle"
   readonly FONTS_BUNDLE="${PACKAGES_DIR}/bundle.fonts"
   readonly WORK_BUNDLE="${PACKAGES_DIR}/bundle.work"
+  readonly PERSONAL_BUNDLE="${PACKAGES_DIR}/bundle.personal"
   readonly BACKUP_ROOT="${DOTFILES_DIR}/backups"
   readonly CODEX_DEFAULTS_FILE="${DOTFILES_DIR}/defaults/codex.toml"
   readonly VP_HOME="${VP_HOME:-$HOME/.vite-plus}"

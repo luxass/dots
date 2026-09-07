@@ -14,6 +14,7 @@ bundle_file_for() {
     base) echo "$BASE_BUNDLE" ;;
     fonts) echo "$FONTS_BUNDLE" ;;
     work) echo "$WORK_BUNDLE" ;;
+    personal) echo "$PERSONAL_BUNDLE" ;;
     *)
       print_error "Unknown bundle: $1"
       return 1
@@ -126,6 +127,7 @@ all_bundle_files() {
   printf '%s\n' "$BASE_BUNDLE"
   printf '%s\n' "$FONTS_BUNDLE"
   printf '%s\n' "$WORK_BUNDLE"
+  printf '%s\n' "$PERSONAL_BUNDLE"
 }
 
 tracked_brews() {
@@ -181,6 +183,7 @@ _install_packages() {
 
   install_optional_bundle "$FONTS_BUNDLE" "font packages" "y" "packages.brew.fonts.enabled" || return 1
   install_optional_bundle "$WORK_BUNDLE" "work-specific packages" "n" "packages.brew.work.enabled" || return 1
+  install_optional_bundle "$PERSONAL_BUNDLE" "personal packages" "n" "packages.brew.personal.enabled" || return 1
 }
 
 install_optional_bundle() {
@@ -269,6 +272,7 @@ cmd_package_check() {
   check_bundle_group "$BASE_BUNDLE" "Base packages (required)" "true" || failed=1
   check_bundle_group "$FONTS_BUNDLE" "Font packages (optional)" "false" "packages.brew.fonts.enabled"
   check_bundle_group "$WORK_BUNDLE" "Work packages (optional)" "false" "packages.brew.work.enabled"
+  check_bundle_group "$PERSONAL_BUNDLE" "Personal packages (optional)" "false" "packages.brew.personal.enabled"
   print_homebrew_trust_state
 
   return "$failed"
@@ -322,7 +326,8 @@ cmd_package_list() {
     base) bundles=("$BASE_BUNDLE") ;;
     fonts) bundles=("$FONTS_BUNDLE") ;;
     work) bundles=("$WORK_BUNDLE") ;;
-    all) bundles=("$BASE_BUNDLE" "$FONTS_BUNDLE" "$WORK_BUNDLE") ;;
+    personal) bundles=("$PERSONAL_BUNDLE") ;;
+    all) bundles=("$BASE_BUNDLE" "$FONTS_BUNDLE" "$WORK_BUNDLE" "$PERSONAL_BUNDLE") ;;
     *) print_error "Unknown bundle: $bundle_filter"; return 1 ;;
   esac
 
@@ -368,7 +373,7 @@ cmd_package_unmanaged() {
 
   echo
   echo "These are installed Homebrew items that are not listed in:"
-  printf '  %s\n' "packages/bundle" "packages/bundle.fonts" "packages/bundle.work"
+  printf '  %s\n' "packages/bundle" "packages/bundle.fonts" "packages/bundle.work" "packages/bundle.personal"
 
   echo -e "\n${BOLD}Formulae (${formula_count})${RESET}"
   if [[ -n "$unmanaged_brews" ]]; then
@@ -489,7 +494,8 @@ cmd_package_remove() {
     base) bundles=("$BASE_BUNDLE") ;;
     fonts) bundles=("$FONTS_BUNDLE") ;;
     work) bundles=("$WORK_BUNDLE") ;;
-    all) bundles=("$BASE_BUNDLE" "$FONTS_BUNDLE" "$WORK_BUNDLE") ;;
+    personal) bundles=("$PERSONAL_BUNDLE") ;;
+    all) bundles=("$BASE_BUNDLE" "$FONTS_BUNDLE" "$WORK_BUNDLE" "$PERSONAL_BUNDLE") ;;
     *) print_error "Unknown bundle: $bundle_name"; return 1 ;;
   esac
 
@@ -545,13 +551,13 @@ cmd_package_help() {
 ${BOLD}${SCRIPT_NAME} package${RESET}
 
 Usage:
-  ${SCRIPT_NAME} package list [base|fonts|work|all]
+  ${SCRIPT_NAME} package list [base|fonts|work|personal|all]
   ${SCRIPT_NAME} package check
   ${SCRIPT_NAME} package unmanaged
   ${SCRIPT_NAME} package trusted
   ${SCRIPT_NAME} package untrusted
-  ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|fonts|work]
-  ${SCRIPT_NAME} package remove NAME [base|fonts|work|all]
+  ${SCRIPT_NAME} package add NAME [brew|cask|auto] [base|fonts|work|personal]
+  ${SCRIPT_NAME} package remove NAME [base|fonts|work|personal|all]
   ${SCRIPT_NAME} package update [NAME|all]
   ${SCRIPT_NAME} package retry
 EOF
