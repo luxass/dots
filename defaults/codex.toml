@@ -8,6 +8,4 @@ model_reasoning_summary = "concise"
 
 [features]
 default_mode_request_user_input = true
-
-[features.context_management]
-experimental_mode = true
+context_management.experimental_mode = true
