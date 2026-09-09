@@ -135,7 +135,6 @@ dots/
 ```sh
 dot init             # Install packages, stow files, create local identity, link dot
 dot update           # Pull changes, offer pnpm and Homebrew upgrades, restow
-dot migrate-vp       # Replace a legacy Vite+ runtime with pnpm
 dot doctor           # Run diagnostics and secret scan
 dot info             # Show repo paths, runtime tools, and git status
 dot hooks            # Install repository Git hooks

@@ -107,8 +107,6 @@ cmd_update() {
     fi
   fi
 
-  migrate_vite_plus_if_needed
-
   print_info "Checking for a pnpm update"
   update_pnpm_if_available
 

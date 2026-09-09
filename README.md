@@ -80,7 +80,6 @@ example `dot --verbose doctor`.
 ```sh
 dot init             # install packages, stow files, create local identity, link dot
 dot update           # pull, offer pnpm and Homebrew upgrades, install bundle, restow
-dot migrate-vp       # replace a legacy Vite+ runtime with pnpm
 dot doctor           # run diagnostics and secret scan
 dot info             # show repo paths, runtime tools, and git status
 dot hooks            # install repository Git hooks
@@ -238,12 +237,7 @@ pnpm-managed Node.js runtime, npm 12, or pnpm global tools, so package-manager
 policy is active during setup.
 
 `dot doctor` verifies that `pnpm`, `node`, `npm`, and managed global commands
-resolve from `PNPM_HOME`, confirms that Vite+ is absent, and checks the tracked
-npm, pnpm, and Bun policy files.
-
-When `dot update` finds a legacy Vite+ installation, it runs `dot migrate-vp`
-before checking for package updates. The migration installs and verifies pnpm,
-Node.js, npm, and managed global tools before it runs `vp implode`.
+resolve from `PNPM_HOME`, and checks the tracked npm, pnpm, and Bun policy files.
 
 `dot init` also installs managed pnpm globals:
 

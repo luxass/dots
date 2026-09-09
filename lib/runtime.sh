@@ -244,13 +244,6 @@ check_runtime_origins() {
     fi
   done
 
-  if [[ -e "$HOME/.vite-plus" ]] || PATH="$lookup_path" command -v vp >/dev/null 2>&1; then
-    print_error "Vite+ is still installed"
-    failed=1
-  else
-    print_success "Vite+ is not installed"
-  fi
-
   return "$failed"
 }
 

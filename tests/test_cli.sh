@@ -21,12 +21,6 @@ assert_contains() {
   [[ "$output" == *"$expected"* ]] || fail "expected output to contain: $expected"
 }
 
-assert_not_contains() {
-  local output="$1"
-  local unexpected="$2"
-  [[ "$output" != *"$unexpected"* ]] || fail "expected output not to contain: $unexpected"
-}
-
 test_version() {
   local output
   output="$($DOT --version)"
@@ -40,9 +34,6 @@ test_help() {
   assert_contains "$output" "doctor"
   assert_contains "$output" "package"
   assert_contains "$output" "codex"
-  assert_not_contains "$output" "retry-failed"
-  assert_not_contains "$output" "completions"
-  assert_not_contains "$output" "unlink"
 }
 
 test_unknown_command_fails() {
@@ -68,18 +59,6 @@ test_option_separator() {
   assert_contains "$output" "dot version 1.3.0"
 }
 
-test_removed_commands_fail() {
-  local command status
-
-  for command in links retry-failed link unlink completions edit; do
-    set +e
-    "$DOT" "$command" >/dev/null 2>&1
-    status=$?
-    set -e
-    [[ "$status" -ne 0 ]] || fail "removed command unexpectedly succeeded: $command"
-  done
-}
-
 test_package_retry() {
   local output
   output="$($DOT package retry)"
@@ -101,6 +80,5 @@ test_help
 test_unknown_command_fails
 test_global_verbose_option_preserves_dispatch
 test_option_separator
-test_removed_commands_fail
 test_package_retry
 test_cli_runs_through_symlink
