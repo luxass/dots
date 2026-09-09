@@ -1,16 +1,16 @@
 readonly TOOL_NAMES=(
   "Homebrew" "Brewfile packages" "Stow dotfiles" "Fish shell" "Rustup"
-  "Vite+" "Node.js runtime" "Vite+ globals" "Git hooks" "Git identity"
+  "pnpm" "Node.js runtime" "pnpm globals" "Git hooks" "Git identity"
   "dot CLI" "Git" "GNU Stow" "Starship" "Zoxide" "Bun" "Socket Firewall"
 )
 
 readonly TOOL_CHECKS=(
-  brew - - fish rustup vp node - - - dot git stow starship zoxide bun sfw
+  brew - - fish rustup pnpm node - - - dot git stow starship zoxide bun sfw
 )
 
 readonly TOOL_INSTALLERS=(
   ensure_homebrew _install_packages _stow_dotfiles _setup_fish_shell ensure_rustup
-  ensure_vite_plus ensure_node_runtime ensure_vite_plus_globals ensure_git_hooks
+  ensure_pnpm ensure_node_runtime ensure_pnpm_globals ensure_git_hooks
   ensure_gitconfig_local _link_dot - ensure_stow - - - -
 )
 

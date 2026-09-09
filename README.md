@@ -17,12 +17,12 @@ or other configs that are not currently wanted.
 - One-command setup through `./dot init`
 - GNU Stow symlink management from `home/` to `$HOME`
 - Resilient Homebrew bundle installation with failed package retry files
-- Vite+-managed Node.js runtime and npm installation
-- Managed Vite+ global tools, including Socket Firewall (`sfw`)
+- Standalone pnpm 12 with pnpm-managed Node.js and npm 12
+- Managed pnpm global tools, including Socket Firewall (`sfw`)
 - Public-safe Git config with private identity in `~/.gitconfig.local`
 - Portable Codex preferences without auth, project trust, or generated state
 - Tracked pre-push hook that runs secret scanning before publishing
-- npm, pnpm, and Bun install policy for disabled scripts and release age checks
+- npm, pnpm, and Bun install policy for build approvals and release age checks
 - Diagnostics for required tools, package state, managed links, and secrets
 
 ## Quick Start
@@ -48,7 +48,7 @@ command is not available immediately.
 │   ├── codex.sh        # Codex preference synchronization
 │   ├── core.sh         # Shared output, prompts, and generic helpers
 │   ├── git.sh          # Git hooks, identity, and secret scanning
-│   ├── runtime.sh      # Vite+, Node.js, and global runtime tools
+│   ├── runtime.sh      # pnpm, Node.js, npm, and global runtime tools
 │   └── stow.sh         # GNU Stow links, backups, and dot CLI linking
 ├── home/               # Files stowed into $HOME
 │   ├── .codex/         # Ignore policy only; live config remains local
@@ -59,6 +59,7 @@ command is not available immediately.
 │   │   └── pnpm/
 │   ├── .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 │   ├── .npmrc          # Public npm policy only; no auth
+│   ├── .pi/            # Lean Pi agent config (settings, keybindings, notes)
 │   └── dot-gitignore   # Stowed as ~/.gitignore via --dotfiles
 ├── packages/
 │   ├── bundle          # Base Brewfile
@@ -78,7 +79,8 @@ example `dot --verbose doctor`.
 
 ```sh
 dot init             # install packages, stow files, create local identity, link dot
-dot update           # pull, update Homebrew, install bundle, restow
+dot update           # pull, offer pnpm and Homebrew upgrades, install bundle, restow
+dot migrate-vp       # replace a legacy Vite+ runtime with pnpm
 dot doctor           # run diagnostics and secret scan
 dot info             # show repo paths, runtime tools, and git status
 dot hooks            # install repository Git hooks
@@ -191,7 +193,7 @@ Fish is the primary interactive shell. The tracked Fish config keeps a small
 
 - `home/.config/fish/config.fish` stays small.
 - `home/.config/fish/conf.d/*.fish` contains environment, paths, Homebrew,
-  Starship, Zoxide, Direnv, Vite+, Bun, and OrbStack setup.
+  Starship, Zoxide, Direnv, pnpm, Bun, and OrbStack setup.
 - `home/.config/fish/completions/` contains Fish completions.
 
 `dot init` installs Fish through Homebrew, adds it to `/etc/shells` when needed,
@@ -227,20 +229,29 @@ The repo tracks policy-only configs:
 - `home/.config/pnpm/config.yaml`
 - `home/.bunfig.toml`
 
-These disable dependency lifecycle scripts and require packages to be at least
-five days old before installation. Auth tokens must stay out of the repo.
+These require packages to be at least five days old before installation. npm
+and Bun disable lifecycle scripts. pnpm denies unreviewed builds and explicitly
+allows the OpenCode CLI postinstall. Auth tokens must stay out of the repo.
 
-`dot init` stows these configs before installing the Vite+-managed Node.js
-runtime or Vite+ global tools, so the package-manager policy is active during
-setup.
+`dot init` stows these configs before installing standalone pnpm 12, the
+pnpm-managed Node.js runtime, npm 12, or pnpm global tools, so package-manager
+policy is active during setup.
 
-`dot doctor` verifies that `vp`, `node`, `npm`, and `corepack` resolve from
-`VP_HOME` and checks the tracked npm, pnpm, and Bun policy files.
+`dot doctor` verifies that `pnpm`, `node`, `npm`, and managed global commands
+resolve from `PNPM_HOME`, confirms that Vite+ is absent, and checks the tracked
+npm, pnpm, and Bun policy files.
 
-`dot init` also installs managed Vite+ globals:
+When `dot update` finds a legacy Vite+ installation, it runs `dot migrate-vp`
+before checking for package updates. The migration installs and verifies pnpm,
+Node.js, npm, and managed global tools before it runs `vp implode`.
+
+`dot init` also installs managed pnpm globals:
 
 ```text
 sfw
+npm 12
+pi (@earendil-works/pi-coding-agent)
+opencode2 (@opencode-ai/cli@beta, temporary until merged into the opencode tap)
 ```
 
 Socket Firewall can be used by prefixing supported package-manager commands:
@@ -248,7 +259,6 @@ Socket Firewall can be used by prefixing supported package-manager commands:
 ```sh
 sfw pnpm install
 sfw npm install
-sfw vp install
 ```
 
 ## OpenCode
@@ -261,18 +271,18 @@ Tracked files include:
 - `opencode.json` for shared global OpenCode settings.
 - `plugins/notification.ts`, a small AppleScript notification plugin that fires
   when a session becomes idle.
-- `package.json` and `package-lock.json` for TypeScript plugin types.
+- `package.json` and `pnpm-lock.yaml` for TypeScript plugin types.
 
 Keep `node_modules/` local-only. It is ignored by Git and by Stow through
 `home/.stow-local-ignore`, but can exist in the source tree for editor/type
 resolution. `dot stow` and `dot update` install or refresh plugin dependencies
-with Socket Firewall (`sfw vp install` in `~/.config/opencode/`, plus
+with Socket Firewall (`sfw pnpm install` in `~/.config/opencode/`, plus
 `private/opencode/` when private plugins exist), and `dot doctor` verifies that
 `@opencode-ai/plugin` is installed. Manual refresh is still available:
 
 ```sh
 cd ~/.config/opencode
-sfw vp install
+sfw pnpm install
 ```
 
 Restart OpenCode after changing `opencode.json` or plugin files; running
@@ -286,7 +296,7 @@ private/opencode/
 ├── plugins/
 │   └── private-plugin.ts
 ├── package.json
-└── package-lock.json
+└── pnpm-lock.yaml
 ```
 
 `dot init` and `dot stow` initialize the submodule when needed, symlink
@@ -299,8 +309,22 @@ Manual refresh is still available:
 
 ```sh
 cd ~/dots/private/opencode
-sfw vp install
+sfw pnpm install
 ```
+
+## Pi
+
+Pi (`@earendil-works/pi-coding-agent`, binary `pi`) is installed as a managed
+pnpm global alongside OpenCode, so both agents are available. It is configured
+lean: no custom extensions.
+
+- The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/paths.sh` and
+  installed with Socket Firewall (`sfw pnpm add -g`).
+- Global Pi config is tracked under `home/.pi/agent/` and stowed to `~/.pi/`.
+  Tracked files are `settings.json`, `keybindings.json`, and `AGENTS.md` only.
+- Auth, trust, sessions, logs, caches, and packages stay local through
+  `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
+  and are not duplicated here.
 
 ## Agent Skills
 
@@ -312,7 +336,7 @@ The repo tracks shared global Agent Skills in `home/.agents/`:
 - `.skill-lock.json` records shared skills CLI state.
 
 External skills are managed through `dot skills`, which wraps the open `skills`
-CLI with `vp dlx` so the CLI does not need to be installed globally.
+CLI with `pnpm dlx` so the CLI does not need to be installed globally.
 Run `dot stow` first so `~/.agents/skills` points at this repo and installed
 skill files stay visible to Git under `home/.agents/skills`.
 
@@ -323,7 +347,7 @@ dot skills list
 ```
 
 `dot skills add` installs to the shared global Agent Skills directory with
-`vp dlx skills add --global --agent universal --copy`. The skills CLI updates
+`pnpm dlx skills add --global --agent universal --copy`. The skills CLI updates
 its lock/inventory as part of installation.
 
 ## CLI development

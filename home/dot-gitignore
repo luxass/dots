@@ -3,3 +3,13 @@
 **/.idea/**
 .ideas
 **/.claude/settings.local.json
+
+# Pi local state and credentials
+**/.pi/agent/auth.json
+**/.pi/agent/trust.json
+**/.pi/agent/sessions/**
+**/.pi/agent/logs/**
+**/.pi/agent/cache/**
+**/.pi/agent/packages/**
+**/.pi/agent/node_modules/**
+**/.pi/agent/package-lock.json

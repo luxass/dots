@@ -1,4 +1,11 @@
-ignoreScripts: true
 minimumReleaseAge: 7200
 minimumReleaseAgeStrict: true
+minimumReleaseAgeExclude:
+  - '@opencode-ai/cli'
+  - '@opencode-ai/cli-*'
 dangerouslyAllowAllBuilds: false
+globalShims:
+  node: auto
+  deno: auto
+  bun: auto
+  npm: auto

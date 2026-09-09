@@ -1,5 +1,5 @@
 {
-  "packageManager": "npm@11.16.0",
+  "packageManager": "pnpm@12.3.4",
   "devDependencies": {
     "@opencode-ai/plugin": "1.4.3"
   }

@@ -225,6 +225,51 @@ install_optional_bundle() {
   brew_bundle_install_resilient "$bundle"
 }
 
+upgrade_homebrew_if_available() {
+  local outdated_formulae outdated_casks formula_count cask_count total_count
+
+  if ! outdated_formulae="$(brew outdated --formula --quiet)"; then
+    print_error "Failed to check outdated Homebrew formulae"
+    return 1
+  fi
+  if ! outdated_casks="$(brew outdated --cask --quiet)"; then
+    print_error "Failed to check outdated Homebrew casks"
+    return 1
+  fi
+
+  formula_count="$(awk 'NF { count++ } END { print count + 0 }' <<< "$outdated_formulae")"
+  cask_count="$(awk 'NF { count++ } END { print count + 0 }' <<< "$outdated_casks")"
+  total_count=$((formula_count + cask_count))
+
+  if [[ "$total_count" -eq 0 ]]; then
+    print_success "Homebrew packages are current"
+    return 0
+  fi
+
+  print_info "$total_count Homebrew updates are available"
+  if [[ -n "$outdated_formulae" ]]; then
+    echo -e "\n${BOLD}Formulae (${formula_count})${RESET}"
+    sed 's/^/  /' <<< "$outdated_formulae"
+  fi
+  if [[ -n "$outdated_casks" ]]; then
+    echo -e "\n${BOLD}Casks (${cask_count})${RESET}"
+    sed 's/^/  /' <<< "$outdated_casks"
+  fi
+  echo
+
+  if ! confirm "Upgrade these Homebrew packages?" "n"; then
+    print_info "Skipping Homebrew upgrades"
+    return 0
+  fi
+
+  if [[ -n "$outdated_formulae" ]]; then
+    brew upgrade --formula --yes
+  fi
+  if [[ -n "$outdated_casks" ]]; then
+    brew upgrade --cask --yes
+  fi
+}
+
 check_bundle_group() {
   local bundle="$1"
   local label="$2"

@@ -29,6 +29,7 @@ home/.config/fish/fish_variables
 # CLI-managed fish completions regenerate on every CLI update; never track
 home/.config/fish/completions/copilot.fish
 home/.config/fish/completions/grok.fish
+home/.config/fish/completions/pi.fish
 home/.config/zed/conversations/
 home/.config/zed/embeddings/
 home/.config/zed/.tmp*

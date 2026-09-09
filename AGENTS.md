@@ -20,7 +20,7 @@ dots/
 |   |-- core.sh         # Shared output, prompts, command helpers
 |   |-- git.sh          # Git hooks, identity, secret scanning
 |   |-- skills.sh       # Agent Skills wrapper around the skills CLI
-|   |-- runtime.sh      # Vite+, Node.js, npm, and global runtime tools
+|   |-- runtime.sh      # pnpm, Node.js, npm, and global runtime tools
 |   `-- stow.sh         # GNU Stow links, backups, dot CLI linking
 |-- home/               # Stowed into $HOME
 |   |-- .codex/         # Ignore policy only; live config stays local
@@ -35,6 +35,7 @@ dots/
 |   |-- .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 |   |-- .local/bin/     # Personal CLI tools (git-wt-clean)
 |   |-- .npmrc          # npm policy only; no auth
+|   |-- .pi/            # Lean Pi agent config (settings, keybindings, notes)
 |   `-- dot-gitignore   # Stowed as ~/.gitignore via stow --dotfiles
 |-- packages/
 |   |-- bundle          # Base Brewfile
@@ -59,7 +60,7 @@ dots/
 | Change Homebrew behavior | `lib/brew.sh` |
 | Change symlink/Stow behavior | `lib/stow.sh` |
 | Add a personal CLI tool | `home/.local/bin/`, then `dot stow` |
-| Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/vite-plus.fish` |
+| Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/pnpm.fish` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
 | Change Codex defaults | `defaults/codex.toml`, then `dot codex sync` |
@@ -68,6 +69,7 @@ dots/
 | Change terminal | `home/.config/ghostty/config` |
 | Change OpenCode config/plugins | `home/.config/opencode/` |
 | Change private OpenCode plugins | `private/opencode/plugins/` |
+| Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
 | Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
 | Change CLIProxyAPI config | `home/.config/cliproxyapi/config.yaml`, `lib/cliproxyapi.sh` |
 | Change Claude Code skills link | `lib/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
@@ -92,11 +94,15 @@ dots/
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
   provider secret files. `dot stow` installs TypeScript plugin dependencies with
-  `sfw vp install` in `~/.config/opencode/` (and in `private/opencode/` when
+  `sfw pnpm install` in `~/.config/opencode/` (and in `private/opencode/` when
   private plugins exist); `dot doctor` verifies them.
 - `home/.config/opencode/node_modules/` may exist locally for editor/type
-  resolution, but it is ignored by Git and Stow. Keep `package-lock.json`
+  resolution, but it is ignored by Git and Stow. Keep `pnpm-lock.yaml`
   tracked.
+- Keep Pi config public-safe. Track settings, keybindings, and notes under
+  `home/.pi/agent/` only; auth, trust, sessions, logs, caches, and packages
+  stay local through `home/dot-gitignore`. The `pi` binary itself is a managed
+  pnpm global (`PNPM_GLOBAL_PACKAGES` in `lib/paths.sh`).
 - Private OpenCode plugins live in the private submodule at
   `private/opencode/`. It uses a flat `plugins/` layout and `dot stow` links
   plugin files into `~/.config/opencode/plugins/`; do not add a mirrored
@@ -120,14 +126,16 @@ dots/
   user explicitly asks for them.
 - Creating nested git repositories or unmanaged dependency installs inside
   stowed config directories.
-- Running package-manager installs without Socket Firewall. Use `sfw vp install`,
-  `sfw npm install`, or another `sfw ...` wrapper as appropriate.
+- Running package-manager installs without Socket Firewall. Use `sfw pnpm install`,
+  `sfw npm install`, or another `sfw ...` wrapper as appropriate. The standalone
+  pnpm and Socket Firewall bootstrap steps are the exceptions.
 
 ## COMMANDS
 
 ```sh
 dot init             # Install packages, stow files, create local identity, link dot
-dot update           # Pull repo changes, update packages, restow
+dot update           # Pull changes, offer pnpm and Homebrew upgrades, restow
+dot migrate-vp       # Replace a legacy Vite+ runtime with pnpm
 dot doctor           # Run diagnostics and secret scan
 dot info             # Show repo paths, runtime tools, and git status
 dot hooks            # Install repository Git hooks
@@ -168,15 +176,17 @@ detail.
 ## NOTES
 
 - The tracked pre-push hook runs `dot secret-scan`.
-- `dot init` stows package-manager policy before installing Vite+-managed
-  runtime tools, so install policy is active during setup.
-- Managed Vite+ globals currently include Socket Firewall (`sfw`).
+- `dot init` stows package-manager policy before installing standalone pnpm and
+  pnpm-managed runtime tools, so install policy is active during setup.
+- Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12, Pi
+  (`pi`), and temporary OpenCode v2 (`opencode2` via `@opencode-ai/cli@beta`
+  until merged into the opencode tap).
 - `dot init`, `dot update`, and `dot stow` synchronize `defaults/codex.toml`
   into the local Codex config while preserving Codex-owned state.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
   Restart OpenCode after editing config or plugins.
 - The private OpenCode submodule is initialized by `dot init` / `dot stow` and
-  should install dependencies with `sfw vp install` from `private/opencode/`.
+  should install dependencies with `sfw pnpm install` from `private/opencode/`.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.

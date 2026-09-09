@@ -124,12 +124,12 @@ cmd_skills_list() {
     return 1
   fi
 
-  if ! command_exists vp; then
-    print_error "Vite+ (vp) is required to run the skills CLI"
+  if ! command_exists pnpm; then
+    print_error "pnpm is required to run the skills CLI"
     return 1
   fi
 
-  vp dlx "$SKILLS_CLI_PACKAGE" list --global --agent universal
+  sfw pnpm dlx "$SKILLS_CLI_PACKAGE" list --global --agent universal
 }
 
 cmd_skills_add() {
@@ -195,8 +195,8 @@ cmd_skills_add() {
     esac
   done
 
-  if ! command_exists vp; then
-    print_error "Vite+ (vp) is required to run the skills CLI"
+  if ! command_exists pnpm; then
+    print_error "pnpm is required to run the skills CLI"
     return 1
   fi
 
@@ -204,7 +204,7 @@ cmd_skills_add() {
     ensure_agent_skills_link
   fi
 
-  vp dlx "$SKILLS_CLI_PACKAGE" add "$source" --global --agent universal --copy "${extra_args[@]}"
+  sfw pnpm dlx "$SKILLS_CLI_PACKAGE" add "$source" --global --agent universal --copy "${extra_args[@]}"
 }
 
 cmd_skills_help() {
@@ -216,7 +216,7 @@ ${BOLD}USAGE:${RESET}
   ${SCRIPT_NAME} skills list
 
 ${BOLD}COMMANDS:${RESET}
-  add URL [OPTIONS]  Install shared global skills with 'vp dlx skills add --global --agent universal --copy'
+  add URL [OPTIONS]  Install shared global skills with 'pnpm dlx skills add --global --agent universal --copy'
   list               List installed shared global skills with the skills CLI
   help               Show this help
 

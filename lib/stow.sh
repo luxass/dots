@@ -210,20 +210,20 @@ opencode_install_deps_in() {
 
   [[ -f "$dir/package.json" ]] || return 0
 
-  if ! command_exists vp; then
-    print_warning "vp is not available; skipping OpenCode dependencies in $dir (run 'dot stow' again after init)"
+  if ! command_exists pnpm; then
+    print_warning "pnpm is not available; skipping OpenCode dependencies in $dir (run 'dot stow' again after init)"
     return 0
   fi
 
   print_info "Installing OpenCode plugin dependencies in $dir"
   if command_exists sfw; then
-    if (cd "$dir" && sfw vp install); then
+    if (cd "$dir" && sfw pnpm install); then
       print_success "OpenCode plugin dependencies installed in $dir"
     else
       print_warning "Failed to install OpenCode dependencies in $dir"
     fi
   else
-    if (cd "$dir" && vp install); then
+    if (cd "$dir" && pnpm install); then
       print_success "OpenCode plugin dependencies installed in $dir"
     else
       print_warning "Failed to install OpenCode dependencies in $dir"

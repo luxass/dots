@@ -13,7 +13,8 @@ ${BOLD}GLOBAL OPTIONS:${RESET}
 
 ${BOLD}COMMANDS:${RESET}
   init             Initialize Homebrew packages, Stow links, and dot CLI
-  update           Pull repo changes, update packages, and restow
+  update           Pull changes, offer package upgrades, and restow
+  migrate-vp       Replace a legacy Vite+ runtime with pnpm
   doctor           Run diagnostics
   info             Show repository paths, runtime tools, and git status
   hooks            Install repository Git hooks

@@ -107,8 +107,14 @@ cmd_update() {
     fi
   fi
 
+  migrate_vite_plus_if_needed
+
+  print_info "Checking for a pnpm update"
+  update_pnpm_if_available
+
   print_info "Updating Homebrew"
   brew update
+  upgrade_homebrew_if_available
   _install_packages
   _stow_dotfiles
 
@@ -126,8 +132,8 @@ cmd_info() {
   print_header "Runtime"
   printf "Homebrew:           "
   command_exists brew && command -v brew || echo "missing"
-  printf "Vite+:              "
-  command_exists vp && command -v vp || echo "missing"
+  printf "pnpm:               "
+  command_exists pnpm && pnpm --version || echo "missing"
   printf "Node.js:            "
   command_exists node && node --version || echo "missing"
   printf "npm:                "
@@ -197,7 +203,7 @@ cmd_doctor() {
     print_warning "~/.local/bin is not on PATH"
   fi
 
-  print_verbose "Checking Vite+-managed runtime origins"
+  print_verbose "Checking pnpm-managed runtime origins"
   check_runtime_origins || failed=1
 
   print_verbose "Checking package-manager policy files"

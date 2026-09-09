@@ -10,5 +10,4 @@ set -gx NODE_REPL_HISTORY_SIZE 32768
 set -gx NODE_REPL_MODE sloppy
 
 # Managed runtime locations
-set -gx VP_HOME "$HOME/.vite-plus"
 set -gx GOPATH "$HOME/go"
