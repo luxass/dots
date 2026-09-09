@@ -148,8 +148,8 @@ ensure_pnpm_globals() {
     print_info "Installing pnpm global: $package"
     if [[ "$package" == "sfw" ]]; then
       pnpm add -g "$package"
-    elif [[ "$package" == "@opencode-ai/cli@beta" ]]; then
-      sfw pnpm add -g --allow-build=@opencode-ai/cli "$package"
+    elif [[ "$package" == "@opencode/cli@beta" ]]; then
+      sfw pnpm add -g --allow-build=@opencode/cli "$package"
     else
       sfw pnpm add -g "$package"
     fi
@@ -200,69 +200,6 @@ update_pnpm_if_available() {
     print_error "pnpm update completed, but version $current_version is active"
     return 1
   fi
-}
-
-vite_plus_executable() {
-  local vite_plus_home="${VP_HOME:-$HOME/.vite-plus}"
-  local vp_path
-
-  if [[ -x "$vite_plus_home/bin/vp" ]]; then
-    printf '%s\n' "$vite_plus_home/bin/vp"
-    return 0
-  fi
-
-  vp_path="$(command -v vp 2>/dev/null || true)"
-  if [[ -n "$vp_path" ]]; then
-    printf '%s\n' "$vp_path"
-    return 0
-  fi
-
-  return 1
-}
-
-vite_plus_is_installed() {
-  [[ -e "${VP_HOME:-$HOME/.vite-plus}" ]] || vite_plus_executable >/dev/null
-}
-
-cmd_migrate_vp() {
-  if [[ "$#" -gt 0 ]]; then
-    print_error "Usage: ${SCRIPT_NAME} migrate-vp"
-    return 1
-  fi
-
-  print_header "Migrating Vite+ to pnpm"
-
-  local had_vite_plus=false
-  local vp_path=""
-  if vite_plus_is_installed; then
-    had_vite_plus=true
-    vp_path="$(vite_plus_executable 2>/dev/null || true)"
-  fi
-
-  ensure_pnpm_globals
-
-  if [[ "$had_vite_plus" == "true" ]]; then
-    if [[ -z "$vp_path" || ! -x "$vp_path" ]]; then
-      print_error "Vite+ files exist, but its vp executable is missing"
-      return 1
-    fi
-
-    print_info "Removing Vite+ after pnpm migration"
-    "$vp_path" implode -y
-    hash -r 2>/dev/null || true
-  else
-    print_success "Vite+ is already absent"
-  fi
-
-  check_runtime_origins
-  print_success "pnpm migration is complete"
-}
-
-migrate_vite_plus_if_needed() {
-  vite_plus_is_installed || return 0
-
-  print_warning "Legacy Vite+ installation detected"
-  cmd_migrate_vp
 }
 
 runtime_lookup_path() {
@@ -343,7 +280,8 @@ check_package_manager_policy() {
   check_file_contains "${HOME_DIR}/.npmrc" '^min-release-age=5$' "npm release-age policy" || failed=1
   check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^minimumReleaseAge: 7200$' "pnpm release-age policy" || failed=1
   check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^minimumReleaseAgeStrict: true$' "pnpm strict release-age policy" || failed=1
-  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" "^  - '@opencode-ai/cli-\\*'$" "pnpm OpenCode release-age exception" || failed=1
+  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" "^  - '@opencode/cli-\\*'$" "pnpm OpenCode CLI release-age exception" || failed=1
+  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" "^  - '@opencode/\\*'$" "pnpm OpenCode plugin release-age exception" || failed=1
   check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^dangerouslyAllowAllBuilds: false$' "pnpm build approval policy" || failed=1
   check_file_contains "${HOME_DIR}/.bunfig.toml" '^ignoreScripts = true$' "Bun ignoreScripts policy" || failed=1
   check_file_contains "${HOME_DIR}/.bunfig.toml" '^minimumReleaseAge = 432000$' "Bun release-age policy" || failed=1

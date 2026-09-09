@@ -179,7 +179,7 @@ detail.
 - `dot init` stows package-manager policy before installing standalone pnpm and
   pnpm-managed runtime tools, so install policy is active during setup.
 - Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12, Pi
-  (`pi`), and temporary OpenCode v2 (`opencode2` via `@opencode-ai/cli@beta`
+  (`pi`), and temporary OpenCode v2 (`opencode2` via `@opencode/cli@beta`
   until merged into the opencode tap).
 - `dot init`, `dot update`, and `dot stow` synchronize `defaults/codex.toml`
   into the local Codex config while preserving Codex-owned state.

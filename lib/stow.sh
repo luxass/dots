@@ -292,7 +292,7 @@ check_opencode_plugins() {
   fi
 
   if [[ -f "$home_opencode/package.json" ]]; then
-    if [[ -d "$home_opencode/node_modules/@opencode-ai/plugin" ]]; then
+    if [[ -d "$home_opencode/node_modules/@opencode/plugin" ]]; then
       print_success "OpenCode plugin dependencies"
     else
       print_error "OpenCode plugin dependencies missing in $home_opencode (run 'dot stow')"
@@ -301,7 +301,7 @@ check_opencode_plugins() {
   fi
 
   if private_opencode_has_plugins && [[ -f "$private_dir/package.json" ]]; then
-    if [[ -d "$private_dir/node_modules/@opencode-ai/plugin" ]]; then
+    if [[ -d "$private_dir/node_modules/@opencode/plugin" ]]; then
       print_success "Private OpenCode plugin dependencies"
     else
       print_error "Private OpenCode plugin dependencies missing in $private_dir (run 'dot stow')"

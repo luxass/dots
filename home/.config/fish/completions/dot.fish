@@ -5,7 +5,6 @@ complete -c dot -l version -d 'Show version'
 
 complete -c dot -n '__fish_use_subcommand' -a init -d 'Initialize and install dotfiles'
 complete -c dot -n '__fish_use_subcommand' -a update -d 'Update dotfiles and packages'
-complete -c dot -n '__fish_use_subcommand' -a migrate-vp -d 'Replace a legacy Vite+ runtime with pnpm'
 complete -c dot -n '__fish_use_subcommand' -a doctor -d 'Run diagnostics'
 complete -c dot -n '__fish_use_subcommand' -a info -d 'Show repository and runtime info'
 complete -c dot -n '__fish_use_subcommand' -a hooks -d 'Install repository Git hooks'

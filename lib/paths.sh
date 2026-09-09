@@ -13,13 +13,13 @@ init_paths() {
   readonly PNPM_UPDATE_TAG="${PNPM_UPDATE_TAG:-latest-12}"
   readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
   readonly NPM_RUNTIME_VERSION="${NPM_RUNTIME_VERSION:-12}"
-  # Temporary: opencode2 via pnpm global until merged into the OpenCode tap.
-  # Uses @beta tag: v2 builds ride beta, latest lags behind.
+  # Temporary: opencode2 via pnpm global until merged into the opencode tap.
+  # Uses @beta tag: v2 builds ride beta; @opencode/* is the post-rename scope.
   readonly PNPM_GLOBAL_PACKAGES=(
     "sfw:sfw"
     "npm@${NPM_RUNTIME_VERSION}:npm"
     "@earendil-works/pi-coding-agent:pi"
-    "@opencode-ai/cli@beta:opencode2"
+    "@opencode/cli@beta:opencode2"
   )
 
   CURRENT_STEP=0

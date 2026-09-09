@@ -7,7 +7,6 @@ dispatch_command() {
     -h|--help|help) cmd_help ;;
     init) cmd_init "$@" ;;
     update) cmd_update "$@" ;;
-    migrate-vp) cmd_migrate_vp "$@" ;;
     doctor) cmd_doctor "$@" ;;
     info) cmd_info "$@" ;;
     hooks) cmd_hooks "$@" ;;

@@ -251,7 +251,7 @@ Node.js, npm, and managed global tools before it runs `vp implode`.
 sfw
 npm 12
 pi (@earendil-works/pi-coding-agent)
-opencode2 (@opencode-ai/cli@beta, temporary until merged into the opencode tap)
+opencode2 (@opencode/cli@beta, temporary until merged into the opencode tap)
 ```
 
 Socket Firewall can be used by prefixing supported package-manager commands:
@@ -278,7 +278,7 @@ Keep `node_modules/` local-only. It is ignored by Git and by Stow through
 resolution. `dot stow` and `dot update` install or refresh plugin dependencies
 with Socket Firewall (`sfw pnpm install` in `~/.config/opencode/`, plus
 `private/opencode/` when private plugins exist), and `dot doctor` verifies that
-`@opencode-ai/plugin` is installed. Manual refresh is still available:
+`@opencode/plugin` is installed. Manual refresh is still available:
 
 ```sh
 cd ~/.config/opencode
