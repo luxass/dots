@@ -1,9 +1,7 @@
 ---
 name: tdd
-description: Fix a reproducible bug with a focused failing-before, passing-after regression check. Use when the user requests TDD or a regression test.
+description: "Use only when the user explicitly asks for TDD, a failing test, or a regression test, OR when the bug has an obvious cheap local test target. Skip when the test path is unclear, expensive, integration-heavy, or not requested."
 disable-model-invocation: true
-metadata:
-  maintenance: local
 ---
 
 # TDD Bug Fix

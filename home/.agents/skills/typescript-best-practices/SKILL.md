@@ -1,30 +1,28 @@
 ---
 name: typescript-best-practices
-description: Guide TypeScript implementation and review when choosing types, API contracts, or validation boundaries.
-metadata:
-  maintenance: local
+description: TypeScript best practices. Use when reading or editing any .ts or .tsx file.
 ---
 
 # TypeScript best practices
 
-Follow the repository's conventions and lint rules. Change type design to solve
-a demonstrated problem, not merely because another representation is possible.
+Apply the **type-system-discipline** principle skill first; this skill grounds it in TypeScript syntax.
 
-- Use discriminated unions when variants otherwise permit contradictory states.
-- Use branded primitives when mixing domain values is a realistic risk. Reuse the
-  project's branding convention.
-- Keep the simplest type that represents the contract honestly. Model empty or
-  missing results explicitly instead of hiding them behind `!` or assertions.
-- Treat unvalidated input as `unknown`; parse it at the relevant trust boundary.
-  Reuse an established schema or parser. Avoid redundant validation inside code
-  that already has a trustworthy domain type.
-- Prefer inference, narrowing, and `satisfies` to assertions. An assertion must
-  have a concrete justification; it does not validate data at runtime.
-- Check exhaustiveness when missing a union variant would be a bug. Type guards
-  must actually establish the condition they claim.
-- Derive types from the owning schema or contract when that avoids duplication.
-  Use a separate domain type when it intentionally hides transport details.
-- Use named options when they clarify confusing arguments. Keep simple positional
-  APIs and existing public contracts when they serve callers well.
+| Rule | Summary |
+|------|---------|
+| Discriminated unions | Model variants with a `kind` literal discriminant so impossible states can't be represented. No optional-field bags. |
+| Branded types | Brand primitives with `& { readonly __brand: "X" }` so they can't be mixed up. Validate once at creation. |
+| Constructive modeling | Build the shape so the illegal value can't be constructed. `[T, ...T[]]` for non-empty, `[T, T][]` for even length, `start` plus `duration` for a range. Not a runtime guard, not a wish for refinement types. |
+| Simplest total type | Keep `T[]` while every operation on it stays total. Strengthen to `NonEmpty<T>` only where the loose type forces `!`, a cast, or a "should never happen" throw. |
+| `unknown` over `any` | External data is `unknown`. `any` disables type checking everywhere it touches. |
+| No `as` casts | Every `as` is a runtime crash waiting. Cast only after validation. |
+| Narrowing hierarchy | Discriminant switch > `in` operator > `typeof`/`instanceof` > user-defined type guard > `as`. |
+| Type guards | Must verify the claim. A lying guard is worse than `as` because the bug hides behind a name that says it's safe. Name them `isX` or `hasX`. |
+| Exhaustiveness | Inline `const _exhaustive: never = x;` in default arms so the compiler errors when a new variant is added. |
+| `satisfies` over `as` | Validates the value without widening literal types. |
+| Boundary validation | Parse where data crosses in, into a named domain type. `Record<string, unknown>` (however spelled) stops at that parse. Trust types inside. See the **boundary-discipline** principle skill. |
+| Schema-derived types | Reach for `Pick`/`Omit`/`Parameters`/`ReturnType`/`Awaited`/`typeof` before declaring a new interface. |
+| Object args | Pass objects, not positional, so argument order is self-documenting. Skip on hot paths (per-frame render, tokenizers, parsers). |
+| Real tests | Don't mock what you can run. Prefer the framework's real test primitives with leak/disposable checks, and verify UI in a running build. Mock only what you can't run locally. |
+| Structured telemetry | Prefer structured logger diagnostics with enough context to debug from an id. No `console.log` in shipped code. |
 
-Consult [patterns](references/patterns.md) for examples of these choices.
+Examples: `references/patterns.md`.

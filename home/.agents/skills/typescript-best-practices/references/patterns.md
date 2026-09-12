@@ -1,115 +1,292 @@
 # TypeScript patterns
 
-Use these examples when they solve the type-design problem at hand. Match the
-project's existing conventions and validation tools.
+Code examples for each rule in `SKILL.md`. The underlying principles are language-agnostic; see the **type-system-discipline** and **boundary-discipline** principle skills.
 
-## Variants
+## Branded types
 
-A discriminated union prevents combinations that the domain does not allow:
+Brand primitives so they can't be mixed up. Validate once at creation; downstream code trusts the type.
 
 ```ts
-type LoadState<T> =
-  | { kind: "loading" }
-  | { kind: "ready"; value: T }
-  | { kind: "error"; message: string };
+type AgentId = string & { readonly __brand: "AgentId" };
 
-function describeState(state: LoadState<string>): string {
-  switch (state.kind) {
-    case "loading":
-      return "Loading";
-    case "ready":
-      return state.value;
-    case "error":
-      return state.message;
+function parseAgentId(input: string): AgentId {
+  if (!isUUID(input)) throw new Error(`Invalid agent id: ${input}`);
+  return input as AgentId;
+}
+
+function focusAgent(id: AgentId): void {
+  /* input is trusted */
+}
+```
+
+Match the `readonly __brand: 'X'` shape; don't invent a new convention.
+
+## Discriminated unions
+
+If a bug forces the question "wait, can this combination actually happen?", the type is too loose. Model variants with a literal discriminant: every variant shares the field name and each variant's value is unique, so impossible combos can't be represented.
+
+```ts
+// Don't. Boolean + optionals lets contradictory states exist.
+type DiffState = { loading: boolean; diff?: GitDiff; error?: string };
+
+// Do. Only valid states exist.
+type DiffState =
+  | { kind: "loading" }
+  | { kind: "ready"; diff: GitDiff }
+  | { kind: "error"; error: string };
+```
+
+Pick one discriminant name (`kind`, `type`, `tag`) and stick to it.
+
+## Constructive modeling
+
+Build the type from parts that are all legal instead of restricting a loose type with runtime checks. Adding is easier than subtracting.
+
+Non-empty, via a variadic tuple:
+
+```ts
+type NonEmpty<T> = [T, ...T[]];
+
+// Don't: T[] plus a length check every caller must repeat
+function pickWinner(entries: string[]): string {
+  if (entries.length === 0) throw new Error("no entries");
+  return entries[Math.floor(Math.random() * entries.length)];
+}
+
+// Do: an empty value of the type can't exist
+function pickWinner(entries: NonEmpty<string>): string {
+  return entries[Math.floor(Math.random() * entries.length)];
+}
+```
+
+Where a plain `T[]` arrives, narrow once with a guard. The fact then travels in the type:
+
+```ts
+const isNonEmpty = <T>(arr: T[]): arr is NonEmpty<T> => arr.length > 0;
+```
+
+Even length, as pairs. TypeScript has no refinement types (no `arr.length % 2 === 0` at the type level); you don't need one:
+
+```ts
+type Pairs<T> = [T, T][];
+```
+
+A time range, as start plus duration:
+
+```ts
+// Don't: a comment holds the invariant
+type TimeRange = { start: Date; end: Date }; // start <= end
+
+// Do: a negative range can't be written; derive end when needed
+type TimeRange = { start: Date; durationMs: number };
+```
+
+Keep `durationMs` a plain number. Brand it (per Branded types) only if a raw number could be passed where a duration is expected, not by reflex. A `Pairs<T>` is an even-length list under the interpretation you give it, the same way `{ start, durationMs }` is a range. Pick the representation that makes the bad state unconstructable, then expose the reading you need on top (`pairs.flat()`, a `rangeEnd()` helper).
+
+## Simplest total type
+
+Don't strengthen everything. Keep `T[]` when every operation on it is total:
+
+```ts
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0); // [] is 0, fine
+```
+
+Strengthen when the loose type forces a lie at a use site. The tells are `!`, `arr[0] as T`, and a "should never happen" throw:
+
+```ts
+// Don't: partiality smuggled past the compiler
+function newestSession(sessions: Session[]): Session {
+  return sessions.at(0)!;
+}
+
+// Do: strengthen the input; the assertion disappears
+function newestSession(sessions: NonEmpty<Session>): Session {
+  return sessions[0];
+}
+```
+
+Weakening the result to `Session | undefined` is the other total signature. Either way the empty case lands at the call site, the one place that knows what empty means.
+
+## `unknown` over `any`
+
+`any` disables type checking for everything it touches. External data is always `unknown`. Narrow before use.
+
+```ts
+// Don't
+function handle(input: any) {
+  return input.foo.bar;
+}
+
+// Do
+function handle(input: unknown) {
+  if (typeof input === "object" && input !== null && "foo" in input) {
+    // narrowed; compiler verifies access
+  }
+}
+```
+
+External sources include RPC payloads, `JSON.parse`, `postMessage`, IPC, file contents, environment variables, database results.
+
+## No `as` casts
+
+Every `as` is a potential runtime crash. Cast only after the type system has verified the claim.
+
+```ts
+// Don't
+const user = data as User;
+
+// Do. Earn the cast at the boundary.
+function parseUser(data: unknown): User {
+  if (typeof data !== "object" || data === null) {
+    throw new Error("expected object");
+  }
+  if (!("id" in data) || typeof (data as Record<string, unknown>).id !== "string") {
+    throw new Error("expected id");
+  }
+  // ... validate all fields
+  return data as User; // OK, earned cast after full validation
+}
+```
+
+When refactoring an `as` out of existing code, identify why TypeScript can't infer:
+
+- Missing discriminant: add one, switch to a discriminated union.
+- Overly wide source type (e.g. `Record<string, unknown>`): narrow it.
+- Untyped boundary: add a parse function or schema.
+- Genuinely inexpressible: use a branded type or `satisfies`.
+
+## Narrowing hierarchy
+
+From best to last-resort:
+
+1. **Discriminated union switch / if.** Compiler narrows automatically.
+2. **`in` operator.** `"key" in obj` narrows to variants containing that key.
+3. **`typeof` / `instanceof`.** For primitives and class instances.
+4. **User-defined type guard.** When the above aren't enough.
+5. **`as` cast.** Only after validation.
+
+```ts
+function area(s: Shape): number {
+  if ("radius" in s) return Math.PI * s.radius ** 2; // narrowed to circle
+  return s.width * s.height; // narrowed to rect
+}
+```
+
+## Type guards
+
+A guard must actually verify the claim. A lying guard is worse than `as` because the bug hides behind a name that says it's safe.
+
+```ts
+function isCircle(s: Shape): s is Shape & { kind: "circle" } {
+  return s.kind === "circle";
+}
+```
+
+Prefer discriminant narrowing when possible. The guard adds a layer the reader has to follow.
+
+## Exhaustiveness
+
+In default arms, assign the discriminant to a `never`-typed local. The compiler errors if a new variant is added without handling.
+
+```ts
+// Value-returning switch
+function area(s: Shape): number {
+  switch (s.kind) {
+    case "circle":
+      return Math.PI * s.radius ** 2;
+    case "rect":
+      return s.width * s.height;
     default: {
-      const exhaustive: never = state;
-      return exhaustive;
+      const _exhaustive: never = s;
+      return _exhaustive;
+    }
+  }
+}
+
+// Void switch
+function handle(s: Shape): void {
+  switch (s.kind) {
+    case "circle":
+      drawCircle(s);
+      break;
+    case "rect":
+      drawRect(s);
+      break;
+    default: {
+      const _exhaustive: never = s;
+      void _exhaustive;
     }
   }
 }
 ```
 
-Use an existing discriminant name when the project already has one.
+Return-style in value-returning switches; void-style in statement switches.
 
-## Empty inputs
+## `satisfies` over `as`
 
-Choose the contract the caller needs. A possibly empty collection can return a
-possibly missing value; a required element can be expressed in the input type.
+`satisfies` validates without widening literal types.
 
 ```ts
-function first<T>(items: readonly T[]): T | undefined {
-  return items[0];
+// Don't. Widens, loses literal types.
+const config = { theme: "dark", cols: 3 } as Config;
+
+// Do. Validates AND preserves literal types.
+const config = { theme: "dark", cols: 3 } satisfies Config;
+// config.theme is "dark" (literal), not string
+```
+
+## Boundary validation
+
+Validate once where data crosses in; trust types inside. See the **boundary-discipline** principle skill.
+
+- **Wire formats** (proto, JSON-RPC): parse with `ignoreUnknownFields` so forward-compatible changes don't break old clients.
+- **Persisted JSON:** versioned blob with a try/catch around the parse.
+- **Don't re-validate** deep in call chains.
+
+## Schema-derived types
+
+When a `.proto`, OpenAPI spec, GraphQL schema, or database migration already defines a shape, derive from the generated types instead of duplicating them.
+
+```ts
+// Don't. Duplicate shape, drifts when the schema changes.
+type CheckSummary = {
+  totalCount: number;
+  checks: { name: string; status: string }[];
+};
+function renderChecks(s: CheckSummary) {
+  /* ... */
 }
 
-type NonEmpty<T> = readonly [T, ...T[]];
-
-function firstRequired<T>(items: NonEmpty<T>): T {
-  return items[0];
-}
-
-function isNonEmpty<T>(items: readonly T[]): items is NonEmpty<T> {
-  return items.length > 0;
+// Do. Derive from the generated schema type.
+import type { ChecksMessage } from "<generated module>";
+function renderChecks(s: Pick<ChecksMessage, "totalCount" | "checks">) {
+  /* ... */
 }
 ```
 
-A non-empty tuple makes its first element available. Arbitrary numeric indexing
-can still produce `undefined`, so it does not prove every computed index is valid.
+Reach for `Pick`, `Omit`, `Parameters`, `ReturnType`, `Awaited`, `typeof` before writing a new interface.
 
-## Boundary parsing and assertions
-
-Construct the validated value when practical. An assertion does not perform a
-runtime check.
+## Object args
 
 ```ts
-type User = { id: string };
+// Don't. Swap two args, still compiles.
+openFile(uri, {
+  startLineNumber: 10,
+  startColumn: 1,
+  endLineNumber: 10,
+  endColumn: 1,
+});
 
-function parseUser(input: unknown): User {
-  if (
-    typeof input !== "object" ||
-    input === null ||
-    !("id" in input) ||
-    typeof input.id !== "string"
-  ) {
-    throw new Error("Expected a user with a string id");
-  }
-  return { id: input.id };
-}
+// Do. Order-independent, self-documenting.
+openFile({
+  uri,
+  selection: {
+    startLineNumber: 10,
+    startColumn: 1,
+    endLineNumber: 10,
+    endColumn: 1,
+  },
+});
 ```
 
-For larger contracts, use the project's schema or parser. Decide whether to
-reject or ignore extra fields based on the protocol and compatibility needs.
-
-A representation can simplify an invariant without enforcing it. For example,
-`{ start: Date; durationMs: number }` still permits negative durations and invalid
-dates. Validate those values when the contract requires it.
-
-## Branded values
-
-Brand a primitive when values with different meanings could otherwise be mixed.
-Reuse the project's convention. A constructor or parser must establish any runtime
-constraints; adding a brand alone does not validate the value.
-
-## Checking a declaration
-
-Use `satisfies` to check compatibility while retaining the expression's inferred
-type. Literal inference depends on the expression and contextual type; use
-`as const` when readonly literal values are intended.
-
-```ts
-type DisplayConfig = { theme: "dark" | "light"; columns: number };
-
-const displayConfig = {
-  theme: "dark",
-  columns: 3,
-} satisfies DisplayConfig;
-```
-
-## Ownership and arguments
-
-Derive a type from its schema or owner when that avoids duplicate contracts.
-Keep a separate domain type when it deliberately separates transport and business
-logic.
-
-Named options help when several positional arguments are easy to confuse.
-A short positional API can be clearer when the arguments have distinct roles.
-Respect public compatibility and the repository's lint policy.
+Skip on hot paths: per-frame render, tokenizers, parsers, anything in a tight loop where the allocation cost matters.

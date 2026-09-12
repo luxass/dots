@@ -1,35 +1,35 @@
-# Design rationale
+# Rationale template
 
-Use the sections that help explain the decision. A small design may fit in a few
-paragraphs; create a separate document only when the task calls for one.
+The prose that ships alongside the type sketch. One page. Sentence-case headings, no boilerplate. Replace the italic notes with actual content.
 
-## Problem and constraints
+## Problem
 
-State the requested behavior and the existing contracts the design must honor.
+*One paragraph. What we're trying to do, and what about the existing system or constraints makes the shape non-obvious. If [Phase A](../SKILL.md#phase-a-ground-the-problem) surfaced constraints the design must honor (existing types to interop with, callers we can't break, invariants that crossed our boundary), name them here so the reader sees the same constraints you saw.*
 
-## Caller example
+## Usage (caller's view)
 
-Show realistic usage that makes the interface easy to assess. Keep the proposed
-types and signatures consistent with the example.
+*Write this first, before the type sketch. Show the README or quickstart the consumer reads, plus two or three realistic call sites in their own code. What they import, what they call, what comes back. The type sketch in [Shape](#shape) is derived from this. The two must agree; when they diverge, reconcile the sketch to the usage, not the reverse. The caller's experience is the spec. The types serve it.*
 
-## Design
+## Shape
 
-Describe ownership, data flow, important invariants, and failure handling.
-Explain which decisions the interface hides from callers.
+*The recommended architecture. Data structures first; then how data flows through the signatures. Name the load-bearing decisions. State which invariants are encoded in types, where validation lives, and what the system deliberately does not do. Judge interface depth explicitly. State what complexity the public surface hides, what remains exposed to callers, and why the interface is no larger than needed. Cite the principle behind each decision (e.g., `per boundary-discipline`); don't restate it.*
 
-## Alternatives and tradeoffs
+## Synthesis decision
 
-Compare alternatives that could plausibly satisfy the requirements. Explain why
-the chosen approach fits the constraints and what costs it accepts. If independent
-designs were explored, record which ideas informed the result.
+*Filled in by [arena](../../arena/SKILL.md). Records which candidate became the base and why, what was adapted from each of the others, and what was rejected and why.*
 
-## Open decisions
+## Tradeoffs accepted
 
-Name unresolved choices that materially affect the outcome. Distinguish decisions
-the user needs to make from implementation details the agent can resolve.
+*One bullet per tradeoff the chosen shape makes. Form: "we accept X in exchange for Y." Name anything a future reader might mistake for an oversight, including things that look like premature optimization or premature simplification.*
 
-## Completion
+## Alternatives considered
 
-For a design-only task, state what the proposal establishes and what remains
-unresolved. For implementation work, state the behavior to deliver and the
-verification needed to establish it.
+*Required. Name at least one concrete alternative shape, with one line on why it lost. Judge each alternative on interface depth, not implementation simplicity alone. Name the complexity it exposes to callers and the complexity it hides. Two or three alternatives belong here when the design space had real contenders. One is fine when the constraints forced the answer, with the conclusion phrased as "this was the only viable shape because..." Avoid listing flavors of the same shape. This section covers design alternatives the chosen shape considered and rejected, not other runner candidates.*
+
+## Open questions and risks
+
+*Things you noticed during the sketch that the human needs to weigh in on, and risks worth flagging before implementation starts. Phrase as questions, not assertions, so the human's answer is the resolution rather than a comment.*
+
+## Next implementation step
+
+*The first thing to build against the sketch. One sentence. What you'd start writing immediately after synthesis (or after Phase D sign-off, if a checkpoint was opted into).*
