@@ -6,7 +6,7 @@ Code doesn't carry its own motivation. You can read what code does; you can't re
 
 ## Confidence Tiers
 
-Use these tiers to match the wording of a claim to its evidence. Separate sections are useful when the answer contains several levels of confidence; they are not required for every answer.
+Every claim in the final output must sit in one of these tiers. The tier determines which output section the claim goes in and how it's phrased.
 
 ### 1. Direct
 
@@ -136,9 +136,9 @@ When you hit a gap, name it concretely:
 
 ## Calibration Check Before Finalizing
 
-Before delivering the answer, review its claims and ask:
+Before delivering the output, the synthesizer should review every claim in "What We Found" and "What We Can Reasonably Infer" and ask:
 
 1. Does this claim have a citation? If not, either add one or move it to "Inferred" / "Hypotheses".
 2. Is the phrasing calibrated to the tier? (A Direct claim can use "because"; an Inferred claim cannot.)
 3. Am I treating the code itself as evidence for its own intent? If so, that's not evidence. Remove or reclassify.
-4. Have material gaps been stated? Name unanswered questions and relevant unavailable sources when they limit the answer.
+4. Does the output include a "What We Don't Know" section? If no gaps are mentioned, that's suspicious. Either the evidence was unusually complete or something is being swept under the rug.
