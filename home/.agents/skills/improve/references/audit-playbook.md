@@ -107,22 +107,24 @@ Direction findings use the standard format with two adaptations: **Impact** is p
 
 ## Finding format
 
-Every finding, from every category and every subagent, comes back in this shape:
+Use this format for a structured audit report. For a short review, convey the same
+essential evidence and judgment without forcing every field into a separate bullet.
 
 ```markdown
 ### [CATEGORY-NN] Short imperative title
 
-- **Evidence**: `path/file.ts:123` — one-sentence description of what's there. (Repeat per location; 2–5 strongest locations, note "and ~N similar sites" if widespread.)
+- **Evidence**: `path/file.ts:123` — what the code does and the condition that makes it a problem. Include enough locations to support the claim, not a fixed quota.
 - **Impact**: What goes wrong / what's being paid because of this. Concrete: "every order-list render issues 1+N queries", not "suboptimal".
 - **Effort**: S (hours) / M (a day-ish) / L (multi-day) — for the *fix*, including tests.
 - **Risk**: What the fix could break; LOW/MED/HIGH plus one line why.
-- **Confidence**: HIGH (read the code, certain) / MED (strong signal, needs verification) / LOW (smell, needs investigation). LOW-confidence findings may be reported but get an "investigate" plan, not a "fix" plan.
+- **Confidence**: Explain what supports the finding and what remains unverified. Reading code alone does not establish certainty. Treat a suspected problem as an investigation, not a confirmed fix.
 - **Fix sketch**: 1–3 sentences. Not the plan — just enough to judge effort honestly.
 ```
 
 ## Prioritization rubric
 
-Order findings by **leverage = impact ÷ effort, discounted by confidence and fix-risk**. Tiebreakers:
+Prioritize practical impact against effort, confidence, and fix risk. This is a
+qualitative judgment, not a numeric score. Tiebreakers:
 
 1. Anything that unblocks other findings (verification baseline, characterization tests) floats up.
 2. Security findings with HIGH confidence float above equivalent-leverage non-security findings.

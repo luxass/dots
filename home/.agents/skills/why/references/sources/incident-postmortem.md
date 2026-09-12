@@ -1,6 +1,6 @@
 # Incident & Postmortem Context
 
-Not a separate source, a **cross-cutting angle**. Incidents often motivate defensive code ("we added this check after the X outage"), so if the target looks defensive (null checks, retry logic, timeout handling, rate limiting, feature flags), specifically hunt for incident history across every available source:
+Incidents can explain defensive code ("we added this check after the X outage"). When that history could answer the question, follow incident leads through relevant available sources. These are possible search paths:
 
 - **Notion**: search for postmortems mentioning the target file, feature, or error string
 - **Linear**: look for tickets labeled `incident`, `sev-*`, `postmortem-action-item`, `reliability`

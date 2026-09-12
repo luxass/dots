@@ -1,6 +1,7 @@
 # Design red flags
 
-Screen every candidate before synthesis. A red flag is a reason to revise or reject the shape.
+Use these questions when reviewing a design's boundaries. A red flag calls for
+examining the tradeoff, not automatically rejecting the design.
 
 ## Shallow module
 
@@ -18,7 +19,10 @@ Look for these signs:
 
 Information leakage makes multiple modules depend on the same internal decision. A representation, policy, or protocol detail appears in more than one place, so changing it requires coordinated edits.
 
-Public re-exports of transport or wire types are leakage. Parse external data into domain types behind the interface. Keep storage schemas, framework objects, and protocol details private.
+Exposing transport or storage details can couple callers to decisions the module
+should own. Translate them behind the interface when the domain needs independence.
+Reusing a wire type is appropriate when the interface intentionally exposes that
+protocol; do not add duplicate domain types without a concrete reason.
 
 ## Temporal decomposition
 
