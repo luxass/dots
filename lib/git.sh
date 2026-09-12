@@ -1,10 +1,12 @@
 secret_scan() {
   local token_pattern='(_auth''Token|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=)'
 
+  # Skip the private submodule working tree: it is a separate repo (dots only
+  # tracks the gitlink), so dots pushes must not be gated on its contents.
   if command_exists rg; then
-    rg -n --hidden --glob '!.git/**' --glob '!backups/**' --glob '!packages/failed_packages_*.txt' "$token_pattern" "$DOTFILES_DIR"
+    rg -n --hidden --glob '!.git/**' --glob '!private/**' --glob '!backups/**' --glob '!packages/failed_packages_*.txt' "$token_pattern" "$DOTFILES_DIR"
   else
-    grep -RInE "$token_pattern" "$DOTFILES_DIR" --exclude-dir=.git --exclude-dir=backups
+    grep -RInE "$token_pattern" "$DOTFILES_DIR" --exclude-dir=.git --exclude-dir=private --exclude-dir=backups
   fi
 }
 
