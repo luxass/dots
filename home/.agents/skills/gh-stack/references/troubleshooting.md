@@ -66,16 +66,20 @@ Two resolution paths:
   gh stack checkout <stack-number>  # or a PR number
   ```
 
-- **Keep the local version.** Remove the grouping on GitHub, then recreate it from local state.
+- **Keep the local version.** Record the trunk and ordered branch names from
+  `gh stack view --json` first. Removing the grouping also removes local tracking,
+  so recreate that tracking before submitting.
 
   ```bash
   gh stack unstack                  # removes the grouping; PRs and branches survive
+  gh stack init --base <recorded-trunk> <recorded-branches-bottom-to-top...>
   gh stack submit --auto
   ```
 
 Neither path deletes pull requests or branches.
 Remote unstacking leaves PRs that are merging (auto-merge enabled) or are queued (in a merge queue)
-stacked. If needed, clear that state before retrying.
+stacked. If needed, explain that limitation and obtain authorization to cancel queue
+or auto-merge state before retrying.
 
 ## Restructuring a stack
 
