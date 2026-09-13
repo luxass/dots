@@ -1,13 +1,13 @@
 ---
 name: gh-stack
 description: >
-  Manages stacked PRs and splits multi-part work into reviewable branches with gh-stack.
-  Use for stack creation, viewing, edits, push, submit, sync, rebase, merge, or checkout;
-  when asked to split or isolate work for review; whenever a user mentions a stack,
-  branch layers, dependent PRs, or gh stack; or when a stack is checked out.
+  Manage stacked Git branches and dependent PRs with gh-stack. Use for requested
+  stack creation, inspection, push, submit, sync, rebase, merge, or checkout; splitting
+  work into reviewable branches; or changes to an existing stack's branches.
 metadata:
   author: github
   version: "0.1.0"
+  maintenance: local
 ---
 
 # gh-stack
@@ -28,6 +28,9 @@ Foundational work belongs at the bottom, code that depends on it above. For how 
 layers, read `references/stack-design.md`.
 
 ## Setup
+
+Check the installed extension and existing repository configuration first. Run only
+the setup commands needed for the requested work; do not overwrite a configured remote.
 
 ```bash
 gh extension install github/gh-stack
@@ -62,12 +65,17 @@ Agent harnesses differ, so always pass the flags below instead of relying on tha
 
 ## Branch placement
 
-- **Starting multi-part work:** create the stack before writing files. Do not implement every
-  concern on trunk and split it later. Put one dependent concern in each layer, bottom to top.
+- **Starting a requested stack:** choose the dependency order before implementation when
+  practical. Adopt and split existing work when that is the starting point. Multi-part
+  work alone is not a reason to create branches or PRs.
 - **Editing an existing stack:** check out the layer that owns the change before editing. Never
   commit a lower layer's concern on the current top branch. Run `gh stack view --json`; if
   ownership is unclear, inspect `git log --all -- <path>`. Then check out the owner, edit, commit,
   rebase upstack, and return to top.
+
+The examples below show available operations, not automatic permission to run the
+whole sequence. Commit, push, publish, merge, or prune only within the user's request.
+Preserve unrelated working changes before switching branches or rewriting history.
 
 ```bash
 gh stack down                   # or: gh stack checkout api
@@ -104,17 +112,20 @@ diverged, `sync` prints both chains, makes no changes, and exits 0 with `Sync ab
 
 ## Merging
 
-Scope the merge with an argument:
+Resolve the target kind and exact PR set before running a merge:
 
 ```bash
-gh stack merge 42 --yes          # PR #42 plus every unmerged PR below it
-gh stack merge 7 --yes           # every unmerged PR in stack #7
-gh stack merge 42 --yes --squash # or --merge, --rebase, --merge-method <method>
+gh stack merge <resolved-number> --yes --squash
+# Other methods: --merge, --rebase, --merge-method <method>
 ```
 
-Pass a PR number to merge that PR and every unmerged PR below it, or a stack number to merge every
-unmerged PR in that stack. The operation is all-or-nothing: if any PR in that set cannot merge,
-none do.
+A bare number resolves as a **stack number first**, then a PR number. A resolved stack
+number merges every unmerged PR in that stack; a resolved PR number merges that PR and
+every unmerged PR below it. Do not assume `42` means PR #42. If a number collision
+prevents selecting the requested subset, check the installed command's supported
+selectors or report the limitation; do not merge a larger set.
+
+The operation is all-or-nothing: if any PR in that set cannot merge, none do.
 
 Without a method flag the last-used method is reused. If the base branch uses a merge queue, the
 stack is queued instead and the queue picks the method, ignoring any flag you passed with a
@@ -122,8 +133,11 @@ warning; queued PRs may land in separate groups.
 
 ## Reading state
 
-`gh stack view --json` writes JSON to **stdout**. Status messages go to **stderr** — do not parse
-them, branch on exit codes instead.
+`gh stack view --json` writes JSON to **stdout**. Status messages go to **stderr**.
+Use exit codes for error handling, but not as proof that the requested change happened:
+`sync` can abort on divergence with exit 0. Inspect its diagnostic and compare
+`view --json` with the expected branch order, heads, and PR state. PR state refresh
+is best-effort, so verify on GitHub when remote completion matters.
 
 ```
 trunk           string
@@ -140,7 +154,7 @@ an ancestor of the branch.
 
 | Code | Meaning | Recovery |
 |---|---|---|
-| 0 | Success | — |
+| 0 | No command error; may include an aborted sync | Verify the expected state |
 | 1 | Generic error | Read stderr |
 | 2 | Not in a stack | `gh stack init`, or `gh stack checkout <target>` |
 | 3 | Rebase conflict | Follow the Exit 3 recovery below |

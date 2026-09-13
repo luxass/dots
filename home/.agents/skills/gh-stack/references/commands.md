@@ -154,8 +154,10 @@ Removes the stack **grouping** only. It never deletes pull requests or branches.
 
 ## merge
 
-- Scope with an argument: pass a PR number to merge that PR and every unmerged PR below it in the
-  stack, or pass a stack number to merge every unmerged PR in that stack.
+- A bare number resolves as a **stack number first**, then a PR number. Verify its kind
+  and exact merge set before using `--yes`. A resolved PR number merges that PR and
+  every unmerged PR below it; a stack number merges every unmerged PR in that stack.
+  Do not use a colliding number to request a smaller PR subset.
 - **All-or-nothing.** If any PR in that exact merge set cannot be merged, none are, and the reason
   is reported.
 - The method comes from `--squash`, `--rebase`, `--merge`, or `--merge-method <method>`. Without
