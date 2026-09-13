@@ -1,13 +1,23 @@
 secret_scan() {
   local token_pattern='(_auth''Token|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=)'
+  # Placeholder values in docs and examples (env var refs, YOUR_* tokens)
+  # are not secrets. Filter them so vendored skill docs do not trip the scan.
+  local placeholder_pattern='\$[{A-Za-z_]|YOUR_[A-Z_]+|[Ee]xample|xxxx|XXXX|<[^<>]*>'
 
+  local matches
   # Skip the private submodule working tree: it is a separate repo (dots only
   # tracks the gitlink), so dots pushes must not be gated on its contents.
   if command_exists rg; then
-    rg -n --hidden --glob '!.git/**' --glob '!private/**' --glob '!backups/**' --glob '!packages/failed_packages_*.txt' "$token_pattern" "$DOTFILES_DIR"
+    matches="$(rg -n --hidden --glob '!.git/**' --glob '!private/**' --glob '!backups/**' --glob '!packages/failed_packages_*.txt' "$token_pattern" "$DOTFILES_DIR" | grep -vE "$placeholder_pattern" || true)"
   else
-    grep -RInE "$token_pattern" "$DOTFILES_DIR" --exclude-dir=.git --exclude-dir=private --exclude-dir=backups
+    matches="$(grep -RInE "$token_pattern" "$DOTFILES_DIR" --exclude-dir=.git --exclude-dir=private --exclude-dir=backups | grep -vE "$placeholder_pattern" || true)"
   fi
+
+  if [[ -n "$matches" ]]; then
+    printf '%s\n' "$matches"
+    return 0
+  fi
+  return 1
 }
 
 ensure_git_hooks() {
