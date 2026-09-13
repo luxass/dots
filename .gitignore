@@ -44,28 +44,34 @@ home/.config/herdr/session.json
 home/.config/herdr/session-history.json
 home/.config/herdr/release-notes.json
 
-# Pi runtime, generated state, and secrets
+# Pi agent runtime/state (blanket-ignore like dmmulroy/.dotfiles, allow-list customization only)
 home/.pi/node_modules/
 home/.pi/package-lock.json
-home/.pi/agent/auth.json
-home/.pi/agent/trust.json
-home/.pi/agent/bin/
-home/.pi/agent/cache/
-home/.pi/agent/logs/
-home/.pi/agent/*.log
-home/.pi/agent/node_modules/
-home/.pi/agent/packages/
-home/.pi/agent/sessions/
+home/.pi/agent/*
+home/.pi/todos/*
+home/.pi/.pi/todos/*
+.pi/todos/*
+
+# Pi MCP adapter runtime/secrets
 home/.pi/agent/mcp-oauth/
-home/.pi/agent/npm/
 home/.pi/agent/mcp-cache.json
 home/.pi/agent/mcp-npx-cache.json
 home/.pi/agent/mcp-auth.json
-home/.pi/todos/
+home/.pi/agent/models-store.json
 home/.local/share/pi/mcp-auth.json
 
-# Pi extension dependencies
+# Pi extensions node_modules
 home/.pi/agent/extensions/**/node_modules/
+
+!home/.pi/agent/tsconfig.json
+!home/.pi/agent/package.json
+!home/.pi/agent/cloak.json
+!home/.pi/agent/themes/
+!home/.pi/agent/themes/*.json
+!home/.pi/agent/extensions/
+!home/.pi/agent/extensions/**
+!home/.pi/agent/mcp.json
+!home/.pi/agent/APPEND_SYSTEM.md
 
 home/.codex/auth.json
 
