@@ -313,8 +313,9 @@ pnpm global alongside OpenCode, so both agents are available.
 
 - The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/paths.sh` and
   installed with Socket Firewall (`sfw pnpm add -g`).
-- Global Pi extensions live under `home/.pi/agent/extensions/` and are stowed to
-  `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
+- Public Pi extensions live under `home/.pi/agent/extensions/` and are stowed
+  to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
+- Private Pi plugins live in the `private/pi` submodule.
 - Auth, trust, sessions, logs, caches, and packages stay local through
   `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
   and are not duplicated here.
