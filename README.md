@@ -309,13 +309,12 @@ sfw pnpm install
 ## Pi
 
 Pi (`@earendil-works/pi-coding-agent`, binary `pi`) is installed as a managed
-pnpm global alongside OpenCode, so both agents are available. It is configured
-lean: no custom extensions.
+pnpm global alongside OpenCode, so both agents are available.
 
 - The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/paths.sh` and
   installed with Socket Firewall (`sfw pnpm add -g`).
-- Global Pi config is tracked under `home/.pi/agent/` and stowed to `~/.pi/`.
-  Tracked files are `settings.json`, `keybindings.json`, and `AGENTS.md` only.
+- Global Pi extensions live under `home/.pi/agent/extensions/` and are stowed to
+  `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
 - Auth, trust, sessions, logs, caches, and packages stay local through
   `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
   and are not duplicated here.

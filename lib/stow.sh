@@ -44,7 +44,8 @@ prepare_opencode_plugins_target() {
 find_managed_sources() {
   find "$HOME_DIR" \
     \( \
-      -path "$HOME_DIR/.config/opencode/node_modules" \
+      -path "$HOME_DIR/.config/opencode/node_modules" -o \
+      -path "$HOME_DIR/.pi/node_modules" \
     \) -prune -o \
     \( -type f -o -type l \) \
     ! -name .stow-local-ignore \
@@ -90,6 +91,59 @@ backup_conflicts() {
   else
     print_success "Conflicts backed up to $backup_dir"
   fi
+}
+
+ensure_private_pi_package() {
+  local private_dir="$DOTFILES_DIR/private/pi"
+
+  command_exists pi || return 0
+  [[ -d "$private_dir/extensions" ]] || return 0
+
+  if pi list 2>/dev/null | grep -q "private/pi"; then
+    print_verbose "Private Pi package is installed"
+    return 0
+  fi
+
+  print_info "Installing private Pi package"
+  if pi install "$private_dir" >/dev/null 2>&1; then
+    print_success "Private Pi package installed"
+  else
+    print_warning "Failed to install private Pi package (run 'pi install $private_dir')"
+  fi
+}
+
+ensure_whisper_model() {
+  local model="$HOME/.cache/whisper/ggml-small.bin"
+
+  if [[ -f "$model" ]]; then
+    print_verbose "Whisper model is available"
+    return 0
+  fi
+
+  print_info "Downloading whisper small model (~500MB)"
+  mkdir -p "$(dirname "$model")"
+  if curl -sSL -o "$model" https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin; then
+    print_success "Whisper model downloaded"
+  else
+    print_warning "Failed to download whisper model"
+    rm -f "$model"
+  fi
+}
+
+ensure_private_pi_submodule() {
+  local private_dir="$DOTFILES_DIR/private/pi"
+
+  if [[ ! -f "$DOTFILES_DIR/.gitmodules" ]] || ! git -C "$DOTFILES_DIR" config -f .gitmodules --get submodule.private/pi.path >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ -d "$private_dir/.git" || -f "$private_dir/.git" ]]; then
+    print_verbose "Private Pi submodule is available"
+    return 0
+  fi
+
+  print_info "Initializing private Pi submodule"
+  git -C "$DOTFILES_DIR" submodule update --init --recursive private/pi
 }
 
 ensure_private_opencode_submodule() {
@@ -207,27 +261,53 @@ private_opencode_has_plugins() {
 
 opencode_install_deps_in() {
   local dir="$1"
+  local label="${2:-OpenCode}"
+  local extra_args="${3:-}"
 
   [[ -f "$dir/package.json" ]] || return 0
 
   if ! command_exists pnpm; then
-    print_warning "pnpm is not available; skipping OpenCode dependencies in $dir (run 'dot stow' again after init)"
+    print_warning "pnpm is not available; skipping $label dependencies in $dir (run 'dot stow' again after init)"
     return 0
   fi
 
-  print_info "Installing OpenCode plugin dependencies in $dir"
+  print_info "Installing $label plugin dependencies in $dir"
   if command_exists sfw; then
-    if (cd "$dir" && sfw pnpm install); then
-      print_success "OpenCode plugin dependencies installed in $dir"
+    # shellcheck disable=SC2086
+    if (cd "$dir" && sfw pnpm install $extra_args); then
+      print_success "$label plugin dependencies installed in $dir"
     else
-      print_warning "Failed to install OpenCode dependencies in $dir"
+      print_warning "Failed to install $label dependencies in $dir"
     fi
   else
-    if (cd "$dir" && pnpm install); then
-      print_success "OpenCode plugin dependencies installed in $dir"
+    # shellcheck disable=SC2086
+    if (cd "$dir" && pnpm install $extra_args); then
+      print_success "$label plugin dependencies installed in $dir"
     else
-      print_warning "Failed to install OpenCode dependencies in $dir"
+      print_warning "Failed to install $label dependencies in $dir"
     fi
+  fi
+}
+
+ensure_pi_extension_deps() {
+  local home_pi="$HOME/.pi"
+
+  # Transitive postinstalls flagged by the default-deny build policy.
+  # Approve them explicitly (recorded in pnpm-workspace.yaml) like the
+  # global --allow-build precedent in lib/runtime.sh.
+  if command_exists pnpm; then
+    local dir
+    for dir in "$home_pi" "$HOME_DIR/.pi"; do
+      if [[ -f "$dir/package.json" ]]; then
+        (cd "$dir" && pnpm approve-builds @google/genai protobufjs >/dev/null 2>&1) || true
+      fi
+    done
+  fi
+
+  if [[ -f "$home_pi/package.json" ]]; then
+    opencode_install_deps_in "$home_pi" "Pi"
+  elif [[ -f "$HOME_DIR/.pi/package.json" ]]; then
+    opencode_install_deps_in "$HOME_DIR/.pi" "Pi"
   fi
 }
 
@@ -305,6 +385,31 @@ check_opencode_plugins() {
       print_success "Private OpenCode plugin dependencies"
     else
       print_error "Private OpenCode plugin dependencies missing in $private_dir (run 'dot stow')"
+      failed=1
+    fi
+  fi
+
+  return "$failed"
+}
+
+check_pi_extension_deps() {
+  local failed=0
+  local home_pi="$HOME/.pi"
+
+  if [[ -f "$home_pi/package.json" ]]; then
+    if [[ -d "$home_pi/node_modules/@earendil-works/pi-coding-agent" ]]; then
+      print_success "Pi extension dependencies"
+    else
+      print_error "Pi extension dependencies missing in $home_pi (run 'dot stow')"
+      failed=1
+    fi
+  fi
+
+  if command_exists pi; then
+    if pi list 2>/dev/null | grep -qE "luxass/pi-private|private/pi"; then
+      print_success "Private Pi extensions installed"
+    else
+      print_error "Private Pi extensions missing (run 'pi install git:github.com/luxass/pi-private')"
       failed=1
     fi
   fi
@@ -407,6 +512,7 @@ _stow_dotfiles() {
   ensure_stow
   print_verbose "Preparing to stow files from $HOME_DIR to $HOME"
   ensure_private_opencode_submodule
+  ensure_private_pi_submodule
   ensure_agent_skills_link
   ensure_claude_skills_link
   prepare_opencode_plugins_target
@@ -417,6 +523,9 @@ _stow_dotfiles() {
   link_private_opencode_plugins
   prune_private_opencode_plugins
   ensure_opencode_plugin_deps
+  ensure_pi_extension_deps
+  ensure_private_pi_package
+  ensure_whisper_model
   ensure_cliproxyapi_config_link
   sync_codex_config || return 1
   print_success "Dotfiles stowed"

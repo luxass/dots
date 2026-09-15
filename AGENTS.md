@@ -99,14 +99,24 @@ dots/
 - `home/.config/opencode/node_modules/` may exist locally for editor/type
   resolution, but it is ignored by Git and Stow. Keep `pnpm-lock.yaml`
   tracked.
-- Keep Pi config public-safe. Track settings, keybindings, and notes under
-  `home/.pi/agent/` only; auth, trust, sessions, logs, caches, and packages
-  stay local through `home/dot-gitignore`. The `pi` binary itself is a managed
+- Keep Pi config public-safe. `home/.pi/agent/` state is blanket-ignored
+  with an allow-list for customization (`themes/`,
+  `extensions/`, `mcp.json`, `cloak.json`, `APPEND_SYSTEM.md`, packaging);
+  auth, trust, sessions, logs, caches, settings, and keybindings stay local.
+  `home/.pi/package.json` provides extension dependencies (editor completion,
+  types) via `sfw pnpm install` in `~/.pi` during `dot stow`;
+  `dot doctor` verifies them. `home/.pi/node_modules/` is ignored by Git and
+  Stow; keep `pnpm-lock.yaml` tracked. The `pi` binary itself is a managed
   pnpm global (`PNPM_GLOBAL_PACKAGES` in `lib/paths.sh`).
 - Private OpenCode plugins live in the private submodule at
   `private/opencode/`. It uses a flat `plugins/` layout and `dot stow` links
   plugin files into `~/.config/opencode/plugins/`; do not add a mirrored
   `home/.config/opencode/` tree there unless explicitly requested.
+- Private Pi extensions live in the `private/pi` submodule and load
+  through Pi's native local-path package (`pi install` pointed in-tree,
+  recorded in local `settings.json`); edits take effect immediately with
+  no copy step. Never track them outside the submodule. `dot stow`
+  installs the package and fetches the whisper model when missing.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.

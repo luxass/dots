@@ -191,6 +191,9 @@ cmd_doctor() {
   print_verbose "Checking OpenCode plugins"
   check_opencode_plugins || failed=1
 
+  print_verbose "Checking Pi extensions"
+  check_pi_extension_deps || failed=1
+
   print_verbose "Checking portable Codex preferences"
   check_codex_config || failed=1
 

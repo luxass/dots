@@ -82,11 +82,11 @@ prompt_new_tab_name = true
 show_agent_labels_on_pane_borders = false
 
 [ui.toast]
-delivery = "off"
+delivery = "herdr"
 delay_seconds = 1
 
 [ui.sound]
-enabled = false
+enabled = true
 
 [remote]
 manage_ssh_config = true
@@ -94,8 +94,9 @@ manage_ssh_config = true
 [experimental]
 allow_nested = false
 kitty_graphics = true
-# Keep pane history off because persisted terminal output may include secrets.
-pane_history = false
+# Pane history persists terminal output to session-history.json, which can
+# include secrets. That file is local-only (gitignored), so keep this on.
+pane_history = true
 
 [advanced]
 # 50 MiB scrollback, matching the larger-history intent from the reference config.
