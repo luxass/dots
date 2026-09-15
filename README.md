@@ -47,9 +47,11 @@ command is not available immediately.
 │   ├── brew.sh         # Homebrew bundle and package commands
 │   ├── codex.sh        # Codex preference synchronization
 │   ├── core.sh         # Shared output, prompts, and generic helpers
+│   ├── filesystem.sh   # Shared path and backup helpers
 │   ├── git.sh          # Git hooks, identity, and secret scanning
 │   ├── runtime.sh      # pnpm, Node.js, npm, and global runtime tools
-│   └── stow.sh         # GNU Stow links, backups, and dot CLI linking
+│   ├── stow.sh         # Stow command entry points and orchestration
+│   └── stow/           # Stow core and Pi, OpenCode, voice, and link integrations
 ├── home/               # Files stowed into $HOME
 │   ├── .codex/         # Ignore policy only; live config remains local
 │   ├── .config/
@@ -363,15 +365,7 @@ modules, and invokes the CLI. The main seams are:
 - The remaining `lib/*.sh` files — package, runtime, link, Git, configuration,
   and Agent Skills domain behavior.
 
-Run the dependency-free behavior tests after changing the CLI:
-
-```sh
-tests/run
-```
-
-The tests exercise the public `dot` command in isolated home and state
-directories. GitHub Actions runs the same tests and Bash syntax check on macOS.
-Also run `dot doctor` after changes that affect setup behavior.
+Run `dot doctor` after changes that affect setup behavior.
 
 ## Troubleshooting
 

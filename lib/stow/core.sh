@@ -1,0 +1,138 @@
+stow_target_rel() {
+  local rel="$1"
+
+  case "$rel" in
+    dot-*) printf '.%s\n' "${rel#dot-}" ;;
+    */dot-*) printf '%s/.%s\n' "${rel%/dot-*}" "${rel##*/dot-}" ;;
+    *) printf '%s\n' "$rel" ;;
+  esac
+}
+
+managed_target_for() {
+  local source="$1"
+  local rel
+  rel="$(stow_target_rel "${source#$HOME_DIR/}")"
+  printf '%s/%s\n' "$HOME" "$rel"
+}
+
+find_managed_sources() {
+  find "$HOME_DIR" \
+    \( \
+      -path "$HOME_DIR/.config/opencode/node_modules" -o \
+      -path "$HOME_DIR/.pi/node_modules" \
+    \) -prune -o \
+    \( -type f -o -type l \) \
+    ! -name .stow-local-ignore \
+    ! -name auth.json \
+    ! -name trust.json \
+    ! -name mcp-cache.json \
+    ! -name mcp-npx-cache.json \
+    ! -name mcp-auth.json \
+    -print0
+}
+
+backup_conflicts() {
+  local backup_dir="$BACKUP_ROOT/$(timestamp)"
+  local made_backup=0
+
+  print_verbose "Checking for files that would conflict with managed links"
+  mkdir -p "$BACKUP_ROOT"
+
+  while IFS= read -r -d '' source; do
+    local target
+    target="$(managed_target_for "$source")"
+
+    if [[ -e "$target" || -L "$target" ]] && ! is_repo_path "$target" "$source"; then
+      backup_path "$target" "$backup_dir"
+      made_backup=1
+    fi
+  done < <(find_managed_sources)
+
+  if [[ "$made_backup" -eq 0 ]]; then
+    rmdir "$backup_dir" 2>/dev/null || true
+    print_verbose "No link conflicts found"
+  else
+    print_success "Conflicts backed up to $backup_dir"
+  fi
+}
+
+ensure_stow() {
+  print_verbose "Checking GNU Stow availability"
+  ensure_homebrew
+
+  if command_exists stow; then
+    print_verbose "GNU Stow is available"
+    return 0
+  fi
+
+  print_info "Installing GNU Stow..."
+  brew install stow
+}
+
+check_managed_links() {
+  local verbose="${1:-${DOT_VERBOSE:-false}}"
+  local failed=0
+  local total=0
+  local failed_count=0
+
+  if [[ "$verbose" == "true" ]]; then
+    print_info "Scanning managed sources in $HOME_DIR"
+    print_info "Pruning generated runtime directories from the managed-link scan"
+  fi
+
+  while IFS= read -r -d '' source; do
+    local target
+    ((++total))
+    target="$(managed_target_for "$source")"
+
+    if ! is_repo_path "$target" "$source"; then
+      if [[ -e "$target" || -L "$target" ]]; then
+        print_error "Bad link: ${target#$HOME/}"
+      else
+        print_error "Missing link: ${target#$HOME/}"
+      fi
+      failed=1
+      ((++failed_count))
+    fi
+  done < <(find_managed_sources)
+
+  if [[ "$failed" -eq 0 ]]; then
+    print_success "Managed links are healthy ($total checked)"
+  else
+    print_error "Managed links failed ($failed_count of $total checked)"
+  fi
+
+  return "$failed"
+}
+
+_link_dot() {
+  local target_dir="/usr/local/bin"
+  local link_path="$target_dir/dot"
+
+  if [[ ! -w "$target_dir" ]]; then
+    print_info "Need sudo access to create symlink in $target_dir"
+    target_dir="$HOME/.local/bin"
+    link_path="$target_dir/dot"
+    mkdir -p "$target_dir"
+
+    if [[ -L "$target_dir" ]]; then
+      local resolved_target_dir
+      resolved_target_dir="$(realpath "$target_dir")"
+
+      if [[ "$resolved_target_dir" == "$DOTFILES_DIR/"* ]]; then
+        print_warning "$target_dir is managed by Stow; not writing dot into the repo"
+        print_info "Fish adds $DOTFILES_DIR to PATH, so 'dot' is available after shell restart"
+        return 0
+      fi
+    fi
+
+    print_info "Using $target_dir instead"
+  fi
+
+  if [[ -L "$link_path" ]]; then
+    rm "$link_path"
+  fi
+
+  ln -s "$DOTFILES_DIR/dot" "$link_path"
+  print_success "Linked dot -> $link_path"
+}

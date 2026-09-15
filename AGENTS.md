@@ -16,12 +16,14 @@ dots/
 |-- lib/
 |   |-- brew.sh         # Homebrew bundle install, update, retry, package ops
 |   |-- codex.sh        # Merge portable preferences into local Codex config
-|   |-- cliproxyapi.sh  # Foreground CLIProxyAPI runner with stowed config
+|   |-- cliproxyapi.sh  # CLIProxyAPI runner and Homebrew config link
 |   |-- core.sh         # Shared output, prompts, command helpers
+|   |-- filesystem.sh   # Shared path and backup helpers
 |   |-- git.sh          # Git hooks, identity, secret scanning
 |   |-- skills.sh       # Agent Skills wrapper around the skills CLI
 |   |-- runtime.sh      # pnpm, Node.js, npm, and global runtime tools
-|   `-- stow.sh         # GNU Stow links, backups, dot CLI linking
+|   |-- stow.sh         # Stow command entry points and orchestration
+|   `-- stow/           # Stow core and Pi, OpenCode, voice, and link integrations
 |-- home/               # Stowed into $HOME
 |   |-- .codex/         # Ignore policy only; live config stays local
 |   |-- .config/
@@ -58,7 +60,7 @@ dots/
 | Diagnose setup | `dot doctor`, `dot info` |
 | Change setup/update behavior | `dot`, then relevant `lib/*.sh` helper |
 | Change Homebrew behavior | `lib/brew.sh` |
-| Change symlink/Stow behavior | `lib/stow.sh` |
+| Change symlink/Stow behavior | `lib/stow.sh`, `lib/stow/`, `lib/filesystem.sh` |
 | Add a personal CLI tool | `home/.local/bin/`, then `dot stow` |
 | Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/pnpm.fish` |
 | Change Git defaults | `home/.gitconfig` for public config only |
@@ -70,7 +72,7 @@ dots/
 | Change OpenCode config/plugins | `home/.config/opencode/` |
 | Change private OpenCode plugins | `private/opencode/plugins/` |
 | Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
-| Change Agent Skills | `lib/skills.sh`, `home/.agents/` |
+| Change Agent Skills | `lib/skills.sh`, `lib/stow/agent-links.sh`, `home/.agents/` |
 | Change CLIProxyAPI config | `home/.config/cliproxyapi/config.yaml`, `lib/cliproxyapi.sh` |
 | Change Claude Code skills link | `lib/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
 | Install hooks | `dot hooks` |
