@@ -32,6 +32,7 @@ brew "zizmor"
 brew "zoxide"
 
 cask "1password-cli"
+cask "tinycast"
 cask "1password"
 cask "bettershot"
 cask "chatgpt"
