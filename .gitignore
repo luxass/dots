@@ -38,6 +38,8 @@ home/.config/raycast/
 home/.config/opencode/node_modules/
 
 # Herdr runtime/state
+# Plugin install lock is machine-generated; never track
+home/.config/herdr/.plugins.lock
 home/.config/herdr/*.log
 home/.config/herdr/*.sock
 home/.config/herdr/session.json
