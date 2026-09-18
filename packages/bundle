@@ -1,3 +1,4 @@
+tap "abue-ammar/tinycast", trusted: true
 tap "anomalyco/tap", trusted: true
 tap "hashicorp/tap", trusted: { formula: ["terraform"] }
 tap "luxass/tap", trusted: { formula: ["actioneer", "agent-repos"] }
@@ -39,7 +40,7 @@ cask "codex"
 cask "ghostty"
 cask "google-chrome"
 cask "orbstack"
-cask "raycast"
+cask "tinycast"
 cask "slack"
 cask "spotify"
 cask "visual-studio-code"
