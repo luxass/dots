@@ -247,7 +247,7 @@ resolve from `PNPM_HOME`, and checks the tracked npm, pnpm, and Bun policy files
 sfw
 npm 12
 pi (@earendil-works/pi-coding-agent)
-opencode2 (@opencode/cli@beta, temporary until merged into the opencode tap)
+opencode (@opencode/cli, v2 providing both `opencode` and `opencode2` bins)
 ```
 
 Socket Firewall can be used by prefixing supported package-manager commands:

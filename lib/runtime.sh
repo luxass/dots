@@ -148,7 +148,7 @@ ensure_pnpm_globals() {
     print_info "Installing pnpm global: $package"
     if [[ "$package" == "sfw" ]]; then
       pnpm add -g "$package"
-    elif [[ "$package" == "@opencode/cli@beta" ]]; then
+    elif [[ "$package" == "@opencode/cli" ]]; then
       sfw pnpm add -g --allow-build=@opencode/cli "$package"
     else
       sfw pnpm add -g "$package"
@@ -230,7 +230,7 @@ check_runtime_origins() {
 
   lookup_path="$(runtime_lookup_path)"
 
-  for command_name in pnpm node npm npx sfw pi opencode2; do
+  for command_name in pnpm node npm npx sfw pi opencode; do
     command_path="$(PATH="$lookup_path" command -v "$command_name" 2>/dev/null || true)"
 
     if [[ -z "$command_path" ]]; then
@@ -273,7 +273,6 @@ check_package_manager_policy() {
   check_file_contains "${HOME_DIR}/.npmrc" '^min-release-age=5$' "npm release-age policy" || failed=1
   check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^minimumReleaseAge: 7200$' "pnpm release-age policy" || failed=1
   check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^minimumReleaseAgeStrict: true$' "pnpm strict release-age policy" || failed=1
-  check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" "^  - '@opencode/cli-\\*'$" "pnpm OpenCode CLI release-age exception" || failed=1
   check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" "^  - '@opencode/\\*'$" "pnpm OpenCode plugin release-age exception" || failed=1
   check_file_contains "${HOME_DIR}/.config/pnpm/config.yaml" '^dangerouslyAllowAllBuilds: false$' "pnpm build approval policy" || failed=1
   check_file_contains "${HOME_DIR}/.bunfig.toml" '^ignoreScripts = true$' "Bun ignoreScripts policy" || failed=1
