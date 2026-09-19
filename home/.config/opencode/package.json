@@ -1,6 +1,6 @@
 {
   "packageManager": "pnpm@12.3.4",
   "devDependencies": {
-    "@opencode/plugin": "beta"
+    "@opencode/plugin": "2.0.8"
   }
 }
