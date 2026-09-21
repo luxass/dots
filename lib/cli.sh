@@ -16,6 +16,7 @@ dispatch_command() {
     codex) cmd_codex "$@" ;;
     cliproxyapi) cmd_cliproxyapi "$@" ;;
     config) cmd_config "$@" ;;
+    submodule|submodules) cmd_submodule "$@" ;;
     git-identity) cmd_git_identity "$@" ;;
     stow) cmd_stow "$@" ;;
     unstow) cmd_unstow "$@" ;;

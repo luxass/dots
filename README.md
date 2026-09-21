@@ -50,6 +50,7 @@ command is not available immediately.
 │   ├── filesystem.sh   # Shared path and backup helpers
 │   ├── git.sh          # Git hooks, identity, and secret scanning
 │   ├── runtime.sh      # pnpm, Node.js, npm, and global runtime tools
+│   ├── submodules.sh   # Private submodule update and status commands
 │   ├── stow.sh         # Stow command entry points and orchestration
 │   └── stow/           # Stow core and Pi, OpenCode, voice, and link integrations
 ├── home/               # Files stowed into $HOME
@@ -91,6 +92,8 @@ dot stow             # restow home/
 dot unstow           # remove stowed symlinks
 dot git-identity     # create or update ~/.gitconfig.local
 dot config           # list or edit local-only preferences
+dot submodule status # show private submodule revisions
+dot submodule update # fetch latest private submodule branches
 ```
 
 ## Package Management
@@ -285,7 +288,9 @@ Restart OpenCode after changing `opencode.json` or plugin files; running
 sessions keep the config and plugin code loaded from startup.
 
 Private OpenCode plugins live in the private Git submodule at
-`private/opencode/`. That repo intentionally uses a flat plugin layout:
+`private/opencode/`. The parent repository pins the submodule to a commit, while
+`dot submodule update` can advance it to the configured `main` branch. That repo
+intentionally uses a flat plugin layout:
 
 ```text
 private/opencode/
@@ -317,7 +322,8 @@ pnpm global alongside OpenCode, so both agents are available.
   installed with Socket Firewall (`sfw pnpm add -g`).
 - Public Pi extensions live under `home/.pi/agent/extensions/` and are stowed
   to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
-- Private Pi plugins live in the `private/pi` submodule.
+- Private Pi plugins live in the `private/pi` submodule. Its parent gitlink is
+  updated with `dot submodule update`.
 - Auth, trust, sessions, logs, caches, and packages stay local through
   `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
   and are not duplicated here.

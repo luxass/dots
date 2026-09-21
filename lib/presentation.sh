@@ -23,6 +23,7 @@ ${BOLD}COMMANDS:${RESET}
   codex            Synchronize portable Codex preferences
   cliproxyapi      Run CLIProxyAPI in the foreground with the stowed config
   config           Manage local-only preferences
+  submodule        Update or inspect private Git submodules
   git-identity     Create or update ~/.gitconfig.local
   stow             Create symlinks using GNU Stow
   unstow           Remove symlinks using GNU Stow

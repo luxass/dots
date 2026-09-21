@@ -26,10 +26,10 @@ ensure_private_pi_submodule() {
 
   if [[ -d "$private_dir/.git" || -f "$private_dir/.git" ]]; then
     print_verbose "Private Pi submodule is available"
-    return 0
+  else
+    print_info "Initializing private Pi submodule"
   fi
 
-  print_info "Initializing private Pi submodule"
   git -C "$DOTFILES_DIR" submodule update --init --recursive private/pi
 }
 

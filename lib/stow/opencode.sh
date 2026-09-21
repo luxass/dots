@@ -19,10 +19,10 @@ ensure_private_opencode_submodule() {
 
   if [[ -d "$private_dir/.git" || -f "$private_dir/.git" ]]; then
     print_verbose "Private OpenCode submodule is available"
-    return 0
+  else
+    print_info "Initializing private OpenCode submodule"
   fi
 
-  print_info "Initializing private OpenCode submodule"
   git -C "$DOTFILES_DIR" submodule update --init --recursive private/opencode
 }
 

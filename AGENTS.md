@@ -118,7 +118,8 @@ dots/
   through Pi's native local-path package (`pi install` pointed in-tree,
   recorded in local `settings.json`); edits take effect immediately with
   no copy step. Never track them outside the submodule. `dot stow`
-  installs the package and fetches the whisper model when missing.
+  aligns the checkout to the parent gitlink, installs the package, and fetches
+  the whisper model when missing. Use `dot submodule update` to advance it.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.
@@ -157,6 +158,8 @@ dot stow             # Create symlinks using GNU Stow
 dot unstow           # Remove symlinks using GNU Stow
 dot git-identity     # Create or update ~/.gitconfig.local
 dot config           # Manage local-only preferences
+dot submodule status # Show private submodule revisions
+dot submodule update # Fetch latest private submodule branches
 dot package list     # List managed packages
 dot package check    # Check installed Homebrew package state
 dot package add X    # Add and install a package
@@ -196,8 +199,10 @@ detail.
   into the local Codex config while preserving Codex-owned state.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
   Restart OpenCode after editing config or plugins.
-- The private OpenCode submodule is initialized by `dot init` / `dot stow` and
-  should install dependencies with `sfw pnpm install` from `private/opencode/`.
+- The private OpenCode submodule is initialized and aligned to the parent
+  gitlink by `dot init` / `dot stow`. Run `dot submodule update` to fetch its
+  configured `main` branch, then commit the gitlink changes in the parent.
+  Dependencies should install with `sfw pnpm install` from `private/opencode/`.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.
