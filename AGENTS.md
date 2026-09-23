@@ -194,8 +194,8 @@ detail.
   pnpm-managed runtime tools, so install policy is active during setup.
 - Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12, and
   Pi (`pi`). OpenCode v2 (`opencode`) is installed through the
-  `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` offers Pi updates
-  and handles OpenCode updates through Homebrew.
+  `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` runs Pi's native
+  self-updater and handles OpenCode updates through Homebrew.
 - `dot init`, `dot update`, and `dot stow` synchronize `defaults/codex.toml`
   into the local Codex config while preserving Codex-owned state.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.

@@ -217,27 +217,14 @@ remove_legacy_pnpm_opencode() {
 }
 
 update_pi_if_available() {
-  local package="@earendil-works/pi-coding-agent"
-  local outdated
-
   if ! command_exists pi; then
-    print_warning "Pi is missing; skipping its update check"
-    return 0
-  fi
-  outdated="$(pnpm outdated -g "$package" 2>/dev/null || true)"
-  if [[ -z "$outdated" ]]; then
-    print_success "Pi is current"
+    print_warning "Pi is missing; skipping its update"
     return 0
   fi
 
-  printf '%s\n' "$outdated"
-  if ! confirm "Update Pi?" "n"; then
-    print_info "Skipping Pi update"
-    return 0
-  fi
-
-  if sfw pnpm update -g "$package"; then
-    print_success "Pi updated"
+  # Let Pi choose its installer; sfw filters its update traffic, and Pi disables pnpm's age gate.
+  if sfw pi update --self; then
+    print_success "Pi update check complete"
   else
     print_error "Failed to update Pi"
     return 1

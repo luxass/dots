@@ -255,9 +255,10 @@ pi (@earendil-works/pi-coding-agent)
 ```
 
 OpenCode v2 is installed from `anomalyco/tap/opencode-v2` through
-`packages/bundle`. `dot update` checks for Pi updates and offers to update them,
-then handles Homebrew upgrades through the usual package prompt. If the old
-pnpm-managed OpenCode package is found, setup or update removes it.
+`packages/bundle`. `dot update` runs Pi's native self-updater, which detects
+how Pi was installed and updates it directly. Homebrew upgrades use the usual
+package prompt. Setup or update removes the old pnpm-managed OpenCode package
+if it finds one.
 
 Socket Firewall can be used by prefixing supported package-manager commands:
 
@@ -322,8 +323,8 @@ sfw pnpm install
 ## Pi
 
 Pi (`@earendil-works/pi-coding-agent`, binary `pi`) is installed as a managed
-pnpm global. `dot update` checks whether a newer release is available and asks
-before updating it with Socket Firewall.
+pnpm global. `dot update` runs `pi update --self`, which detects the install
+method and updates Pi through its native self-updater.
 
 - The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/paths.sh` and
   installed with Socket Firewall (`sfw pnpm add -g`).
