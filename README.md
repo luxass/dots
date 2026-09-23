@@ -323,8 +323,9 @@ sfw pnpm install
 ## Pi
 
 Pi (`@earendil-works/pi-coding-agent`, binary `pi`) is installed as a managed
-pnpm global. `dot update` runs `pi update --self`, which detects the install
-method and updates Pi through its native self-updater.
+pnpm global. `dot update` runs Pi's native self-updater, with a one-command
+pnpm release-age override so Pi can install its latest release. Other pnpm
+installs keep the five-day age rule.
 
 - The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/paths.sh` and
   installed with Socket Firewall (`sfw pnpm add -g`).

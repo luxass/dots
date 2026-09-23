@@ -222,8 +222,9 @@ update_pi_if_available() {
     return 0
   fi
 
-  # Let Pi choose its installer; sfw filters its update traffic, and Pi disables pnpm's age gate.
-  if sfw pi update --self; then
+  # Pi's camelCase pnpm flag doesn't override pnpm 12's policy. Set the
+  # supported env override for this update only; other installs keep the age gate.
+  if PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 sfw pi update --self; then
     print_success "Pi update check complete"
   else
     print_error "Failed to update Pi"
