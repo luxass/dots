@@ -257,8 +257,10 @@ pi (@earendil-works/pi-coding-agent)
 OpenCode v2 is installed from `anomalyco/tap/opencode-v2` through
 `packages/bundle`. `dot update` runs Pi's native self-updater, which detects
 how Pi was installed and updates it directly. Homebrew upgrades use the usual
-package prompt. Setup or update removes the old pnpm-managed OpenCode package
-if it finds one.
+package prompt. Before installing the base Brewfile, setup or update removes
+any installed formula or cask listed in `BREW_PACKAGE_REPLACEMENTS` in
+`lib/paths.sh`. This migrates the old `opencode` formula to `opencode-v2`.
+Setup or update also removes the old pnpm-managed OpenCode package if found.
 
 Socket Firewall can be used by prefixing supported package-manager commands:
 

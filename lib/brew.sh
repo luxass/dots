@@ -177,8 +177,25 @@ sort_bundle() {
   rm "$tmp"
 }
 
+uninstall_replaced_brew_packages() {
+  local mapping old_package replacement
+  for mapping in "${BREW_PACKAGE_REPLACEMENTS[@]}"; do
+    old_package="${mapping%%:*}"
+    replacement="${mapping#*:}"
+
+    if brew list --formula "$old_package" >/dev/null 2>&1; then
+      print_info "Removing Homebrew formula $old_package before installing $replacement"
+      brew uninstall --formula "$old_package" || return 1
+    elif brew list --cask "$old_package" >/dev/null 2>&1; then
+      print_info "Removing Homebrew cask $old_package before installing $replacement"
+      brew uninstall --cask "$old_package" || return 1
+    fi
+  done
+}
+
 _install_packages() {
   ensure_homebrew
+  uninstall_replaced_brew_packages
   brew_bundle_install_resilient "$BASE_BUNDLE"
 
   install_optional_bundle "$FONTS_BUNDLE" "font packages" "y" "packages.brew.fonts.enabled" || return 1
