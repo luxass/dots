@@ -16,12 +16,11 @@ init_paths() {
   readonly PNPM_UPDATE_TAG="${PNPM_UPDATE_TAG:-latest-12}"
   readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
   readonly NPM_RUNTIME_VERSION="${NPM_RUNTIME_VERSION:-12}"
-  # Managed pnpm globals (OpenCode v2 via npm until the Homebrew formula lands).
+  # Managed pnpm globals. OpenCode is installed through Homebrew.
   readonly PNPM_GLOBAL_PACKAGES=(
     "sfw:sfw"
     "npm@${NPM_RUNTIME_VERSION}:npm"
     "@earendil-works/pi-coding-agent:pi"
-    "@opencode/cli:opencode"
   )
 
   CURRENT_STEP=0

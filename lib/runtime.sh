@@ -148,8 +148,6 @@ ensure_pnpm_globals() {
     print_info "Installing pnpm global: $package"
     if [[ "$package" == "sfw" ]]; then
       pnpm add -g "$package"
-    elif [[ "$package" == "@opencode/cli" ]]; then
-      sfw pnpm add -g --allow-build=@opencode/cli "$package"
     else
       sfw pnpm add -g "$package"
     fi
@@ -202,6 +200,50 @@ update_pnpm_if_available() {
   fi
 }
 
+remove_legacy_pnpm_opencode() {
+  local command_path
+  command_path="$(command -v opencode 2>/dev/null || true)"
+  if ! command_path_in_pnpm_home "$command_path"; then
+    return 0
+  fi
+
+  print_info "Removing legacy pnpm OpenCode installation"
+  if sfw pnpm remove -g @opencode/cli; then
+    hash -r 2>/dev/null || true
+    print_success "Removed pnpm-managed OpenCode"
+  else
+    print_warning "Could not remove pnpm-managed OpenCode; remove it with 'sfw pnpm remove -g @opencode/cli'"
+  fi
+}
+
+update_pi_if_available() {
+  local package="@earendil-works/pi-coding-agent"
+  local outdated
+
+  if ! command_exists pi; then
+    print_warning "Pi is missing; skipping its update check"
+    return 0
+  fi
+  outdated="$(pnpm outdated -g "$package" 2>/dev/null || true)"
+  if [[ -z "$outdated" ]]; then
+    print_success "Pi is current"
+    return 0
+  fi
+
+  printf '%s\n' "$outdated"
+  if ! confirm "Update Pi?" "n"; then
+    print_info "Skipping Pi update"
+    return 0
+  fi
+
+  if sfw pnpm update -g "$package"; then
+    print_success "Pi updated"
+  else
+    print_error "Failed to update Pi"
+    return 1
+  fi
+}
+
 runtime_lookup_path() {
   local old_ifs="$IFS"
   local path_part
@@ -230,7 +272,7 @@ check_runtime_origins() {
 
   lookup_path="$(runtime_lookup_path)"
 
-  for command_name in pnpm node npm npx sfw pi opencode; do
+  for command_name in pnpm node npm npx sfw pi; do
     command_path="$(PATH="$lookup_path" command -v "$command_name" 2>/dev/null || true)"
 
     if [[ -z "$command_path" ]]; then
@@ -243,6 +285,17 @@ check_runtime_origins() {
       failed=1
     fi
   done
+
+  command_path="$(PATH="$lookup_path" command -v opencode 2>/dev/null || true)"
+  if [[ -z "$command_path" ]]; then
+    print_error "opencode is missing"
+    failed=1
+  elif brew list --formula opencode-v2 >/dev/null 2>&1; then
+    print_success "opencode is installed through Homebrew"
+  else
+    print_error "opencode is not installed through Homebrew: $command_path"
+    failed=1
+  fi
 
   return "$failed"
 }

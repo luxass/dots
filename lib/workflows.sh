@@ -109,6 +109,8 @@ cmd_update() {
 
   print_info "Checking for a pnpm update"
   update_pnpm_if_available
+  print_info "Checking for a Pi update"
+  update_pi_if_available
 
   print_info "Updating Homebrew"
   brew update

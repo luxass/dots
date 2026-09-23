@@ -184,6 +184,7 @@ _install_packages() {
   install_optional_bundle "$FONTS_BUNDLE" "font packages" "y" "packages.brew.fonts.enabled" || return 1
   install_optional_bundle "$WORK_BUNDLE" "work-specific packages" "n" "packages.brew.work.enabled" || return 1
   install_optional_bundle "$PERSONAL_BUNDLE" "personal packages" "n" "packages.brew.personal.enabled" || return 1
+  remove_legacy_pnpm_opencode
 }
 
 install_optional_bundle() {
