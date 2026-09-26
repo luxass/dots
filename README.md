@@ -17,6 +17,7 @@ or other configs that are not currently wanted.
 - One-command setup through `./dot init`
 - GNU Stow symlink management from `home/` to `$HOME`
 - Resilient Homebrew bundle installation with failed package retry files
+- Homebrew-installed mise with Fish activation for project and language runtimes
 - Standalone pnpm 12 with pnpm-managed Node.js and npm 12
 - Managed pnpm global tools, including Socket Firewall (`sfw`)
 - Public-safe Git config with private identity in `~/.gitconfig.local`
@@ -237,6 +238,13 @@ These require packages to be at least five days old before installation. npm
 and Bun disable lifecycle scripts. pnpm denies unreviewed builds and keeps the
 release-age exception for OpenCode plugin packages. Auth tokens must stay out of
 the repo.
+
+`mise` is installed from the base Homebrew bundle and activated automatically
+in Fish by `home/.config/fish/conf.d/mise.fish`. Use `mise use` in a project to
+select a runtime and record its version in `.mise.toml`; no global runtime
+versions are pinned by this repo. Node.js remains managed by pnpm in the current
+setup, so do not select a competing Node.js version with mise unless you intend
+to migrate that ownership.
 
 `dot init` stows these configs before installing standalone pnpm 12, the
 pnpm-managed Node.js runtime, npm 12, or pnpm global tools, so package-manager

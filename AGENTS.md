@@ -62,7 +62,7 @@ dots/
 | Change Homebrew behavior | `lib/brew.sh` |
 | Change symlink/Stow behavior | `lib/stow.sh`, `lib/stow/`, `lib/filesystem.sh` |
 | Add a personal CLI tool | `home/.local/bin/`, then `dot stow` |
-| Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/pnpm.fish` |
+| Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
 | Change Codex defaults | `defaults/codex.toml`, then `dot codex sync` |
@@ -190,6 +190,10 @@ detail.
 ## NOTES
 
 - The tracked pre-push hook runs `dot secret-scan`.
+- mise is installed from the base Homebrew bundle and activated in Fish through
+  `home/.config/fish/conf.d/mise.fish`. Do not pin global runtime versions in
+  the repo; project runtime selections belong in each project's `.mise.toml`.
+  Node.js currently remains managed by pnpm unless explicitly migrated.
 - `dot init` stows package-manager policy before installing standalone pnpm and
   pnpm-managed runtime tools, so install policy is active during setup.
 - Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12, and
