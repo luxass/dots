@@ -14,6 +14,7 @@ _stow_dotfiles() {
   prune_private_opencode_plugins
   ensure_opencode_plugin_deps
   ensure_pi_extension_deps
+  ensure_pi_quiet_startup || return 1
   ensure_private_pi_package
   ensure_whisper_model
   ensure_cliproxyapi_config_link

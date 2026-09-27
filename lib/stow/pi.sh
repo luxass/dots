@@ -33,6 +33,22 @@ ensure_private_pi_submodule() {
   git -C "$DOTFILES_DIR" submodule update --init --recursive private/pi
 }
 
+ensure_pi_quiet_startup() {
+  local settings="$HOME/.pi/agent/settings.json"
+  command_exists node || return 0
+
+  PI_SETTINGS_FILE="$settings" node <<'NODE'
+const fs = require('node:fs');
+const path = process.env.PI_SETTINGS_FILE;
+const settings = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : {};
+if (settings.quietStartup === undefined) {
+  settings.quietStartup = true;
+  fs.mkdirSync(require('node:path').dirname(path), { recursive: true });
+  fs.writeFileSync(path, JSON.stringify(settings, null, 2) + '\n', { mode: 0o600 });
+}
+NODE
+}
+
 ensure_pi_extension_deps() {
   local home_pi="$HOME/.pi"
 
