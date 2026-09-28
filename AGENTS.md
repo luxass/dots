@@ -103,8 +103,16 @@ dots/
   tracked.
 - Keep Pi config public-safe. `home/.pi/agent/` state is blanket-ignored
   with an allow-list for customization (`themes/`,
-  `extensions/`, `mcp.json`, `cloak.json`, `APPEND_SYSTEM.md`, packaging);
-  auth, trust, sessions, logs, caches, settings, and keybindings stay local.
+  `extensions/`, `mcp.json`, `cloak.json`, `settings.json`,
+  `APPEND_SYSTEM.md`, packaging); auth, trust, sessions, logs, caches, and
+  keybindings stay local. `settings.json` is tracked and holds preferences
+  only. Pi writes to it unprompted, so expect churn from
+  `lastChangelogVersion` on upgrade and from any `/settings` edit. Never put
+  an `httpProxy` URL with a password in it: `dot secret-scan` now rejects
+  credentials embedded in a URL, but a proxy belongs in the environment.
+  Local dev checkouts of Pi packages are absolute-ish paths that do not
+  resolve elsewhere; re-add them with `pi install` per machine rather than
+  committing them.
   `home/.pi/package.json` provides extension dependencies (editor completion,
   types) via `sfw pnpm install` in `~/.pi` during `dot stow`;
   `dot doctor` verifies them. `home/.pi/node_modules/` is ignored by Git and
@@ -116,7 +124,7 @@ dots/
   `home/.config/opencode/` tree there unless explicitly requested.
 - Private Pi extensions live in the `private/pi` submodule and load
   through Pi's native local-path package (`pi install` pointed in-tree,
-  recorded in local `settings.json`); edits take effect immediately with
+  recorded in `settings.json`); edits take effect immediately with
   no copy step. Never track them outside the submodule. `dot stow`
   aligns the checkout to the parent gitlink, installs the package, and fetches
   the whisper model when missing. Use `dot submodule update` to advance it.

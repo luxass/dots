@@ -1,5 +1,5 @@
 secret_scan() {
-  local token_pattern='(_auth''Token|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=)'
+  local token_pattern='(_auth''Token|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=|://[^/[:space:]"'"'"']*:[^/[:space:]"'"'"']*@)'
   # Placeholder values in docs and examples (env var refs, YOUR_* tokens)
   # are not secrets. Filter them so vendored skill docs and extension code
   # referencing standard env var names do not trip the scan.

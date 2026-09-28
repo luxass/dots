@@ -1,0 +1,11 @@
+{
+  "packages": [
+    "../../dots/private/pi",
+    "npm:pi-subagents"
+  ],
+  "lastChangelogVersion": "0.87.1",
+  "theme": "dark",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-6-sol",
+  "quietStartup": true
+}
