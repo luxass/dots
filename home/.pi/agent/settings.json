@@ -1,7 +1,9 @@
 {
   "packages": [
     "../../dots/private/pi",
-    "npm:pi-subagents"
+    "npm:pi-subagents",
+    "npm:@luxass/pi-voice",
+    "npm:@luxass/pi-whimsical"
   ],
   "lastChangelogVersion": "0.87.1",
   "theme": "dark",
