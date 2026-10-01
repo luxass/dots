@@ -83,7 +83,7 @@ example `dot --verbose doctor`.
 
 ```sh
 dot init             # install packages, stow files, create local identity, link dot
-dot update           # pull, offer pnpm and Homebrew upgrades, install bundle, restow
+dot update           # pull, update Pi, offer pnpm/Homebrew/Pi extension upgrades, restow
 dot doctor           # run diagnostics and secret scan
 dot info             # show repo paths, runtime tools, and git status
 dot hooks            # install repository Git hooks
@@ -333,9 +333,10 @@ sfw pnpm install
 ## Pi
 
 Pi (`@earendil-works/pi-coding-agent`, binary `pi`) is installed as a managed
-pnpm global. `dot update` runs Pi's native self-updater, with a one-command
-pnpm release-age override so Pi can install its latest release. Other pnpm
-installs keep the five-day age rule.
+pnpm global. `dot update` runs Pi's native self-updater, then offers to update
+installed Pi extension packages after restowing. Both Pi update commands use a
+one-command pnpm release-age override; other pnpm installs keep the five-day
+age rule.
 
 - The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/paths.sh` and
   installed with Socket Firewall (`sfw pnpm add -g`).

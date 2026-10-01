@@ -5,7 +5,7 @@
     "npm:@luxass/pi-voice",
     "npm:@luxass/pi-whimsical"
   ],
-  "lastChangelogVersion": "0.99.1",
+  "lastChangelogVersion": "0.99.2",
   "theme": "dark",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6-sol",

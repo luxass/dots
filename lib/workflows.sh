@@ -118,6 +118,8 @@ cmd_update() {
   _install_packages
   _stow_dotfiles
 
+  print_info "Checking for Pi extension updates"
+  update_pi_extensions_if_requested
 }
 
 cmd_info() {

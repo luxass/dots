@@ -232,6 +232,26 @@ update_pi_if_available() {
   fi
 }
 
+update_pi_extensions_if_requested() {
+  if ! command_exists pi; then
+    print_warning "Pi is missing; skipping extension updates"
+    return 0
+  fi
+
+  if ! confirm "Update installed Pi extension packages?" "n"; then
+    print_info "Skipping Pi extension updates"
+    return 0
+  fi
+
+  # Match the Pi self-update override without changing the policy for other installs.
+  if PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 sfw pi update --extensions; then
+    print_success "Pi extension update complete"
+  else
+    print_error "Failed to update Pi extensions"
+    return 1
+  fi
+}
+
 runtime_lookup_path() {
   local old_ifs="$IFS"
   local path_part
