@@ -1,35 +1,15 @@
 #!/usr/bin/env bash
+# dot - dotfiles management CLI. Runs on the macOS system Bash (3.2).
 set -euo pipefail
 
-readonly SCRIPT_NAME="dot"
-readonly VERSION="1.3.0"
-SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
-readonly SCRIPT_PATH
-DOTFILES_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+readonly DOT_VERSION="2.0.0"
+DOTFILES_DIR="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")" && pwd)"
+readonly DOTFILES_DIR
 
-source "${DOTFILES_DIR}/lib/paths.sh"
-init_paths
-source "${DOTFILES_DIR}/lib/core.sh"
-source "${DOTFILES_DIR}/lib/filesystem.sh"
-source "${DOTFILES_DIR}/lib/config.sh"
-source "${DOTFILES_DIR}/lib/submodules.sh"
-source "${DOTFILES_DIR}/lib/codex.sh"
-source "${DOTFILES_DIR}/lib/cliproxyapi.sh"
-source "${DOTFILES_DIR}/lib/brew.sh"
-source "${DOTFILES_DIR}/lib/runtime.sh"
-source "${DOTFILES_DIR}/lib/stow/core.sh"
-source "${DOTFILES_DIR}/lib/stow/dependencies.sh"
-source "${DOTFILES_DIR}/lib/stow/opencode.sh"
-source "${DOTFILES_DIR}/lib/stow/pi.sh"
-source "${DOTFILES_DIR}/lib/stow/voice.sh"
-source "${DOTFILES_DIR}/lib/stow/agent-links.sh"
-source "${DOTFILES_DIR}/lib/stow.sh"
-source "${DOTFILES_DIR}/lib/git.sh"
-source "${DOTFILES_DIR}/lib/skills.sh"
-source "${DOTFILES_DIR}/lib/tools.sh"
-validate_tool_registry
-source "${DOTFILES_DIR}/lib/workflows.sh"
-source "${DOTFILES_DIR}/lib/presentation.sh"
-source "${DOTFILES_DIR}/lib/cli.sh"
+for lib in "$DOTFILES_DIR"/lib/core/*.sh "$DOTFILES_DIR"/lib/features/*.sh "$DOTFILES_DIR"/lib/commands/*.sh; do
+  # shellcheck source=/dev/null
+  source "$lib"
+done
+unset lib
 
 main "$@"
