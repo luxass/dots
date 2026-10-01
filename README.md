@@ -8,7 +8,7 @@ This repository contains a reproducible macOS development setup. Files under
 `home/` mirror `$HOME`, packages live in `packages/`, and `dot` handles setup,
 maintenance, package checks, symlinks, and local-only identity configuration.
 
-The repo is intentionally small: Fish, Git, Ghostty, Codex, Homebrew packages,
+The repo is intentionally small: Fish, Git, Ghostty, Homebrew packages,
 and JavaScript runtime policy. It does not try to manage Linux, Neovim, tmux,
 or other configs that are not currently wanted.
 
@@ -16,15 +16,15 @@ or other configs that are not currently wanted.
 
 - One-command setup through `./dot init`
 - GNU Stow symlink management from `home/` to `$HOME`
-- Resilient Homebrew bundle installation with failed package retry files
+- Homebrew bundles with optional per-machine groups (fonts, work, personal)
 - Homebrew-installed mise with Fish activation for project and language runtimes
 - Standalone pnpm 12 with pnpm-managed Node.js and npm 12
 - Managed pnpm global tools, including Socket Firewall (`sfw`)
 - Public-safe Git config with private identity in `~/.gitconfig.local`
-- Portable Codex preferences without auth, project trust, or generated state
 - Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for build approvals and release age checks
 - Diagnostics for required tools, package state, managed links, and secrets
+- shellcheck and shfmt linting for the `dot` CLI itself
 
 ## Quick Start
 
@@ -41,21 +41,13 @@ command is not available immediately.
 
 ```text
 ~/dots/
-├── dot                 # Main management CLI entrypoint
-├── defaults/
-│   └── codex.toml      # Portable Codex preferences merged into local state
+├── dot                 # CLI entrypoint: loads lib/ and runs main
 ├── lib/
-│   ├── brew.sh         # Homebrew bundle and package commands
-│   ├── codex.sh        # Codex preference synchronization
-│   ├── core.sh         # Shared output, prompts, and generic helpers
-│   ├── filesystem.sh   # Shared path and backup helpers
-│   ├── git.sh          # Git hooks, identity, and secret scanning
-│   ├── runtime.sh      # pnpm, Node.js, npm, and global runtime tools
-│   ├── submodules.sh   # Private submodule update and status commands
-│   ├── stow.sh         # Stow command entry points and orchestration
-│   └── stow/           # Stow core and Pi, OpenCode, voice, and link integrations
+│   ├── core/           # Output, prompts, paths, preferences, links, dispatch
+│   ├── features/       # One file per managed thing, with setup and check hooks
+│   └── commands/       # The CLI surface: cmd_* functions
 ├── home/               # Files stowed into $HOME
-│   ├── .codex/         # Ignore policy only; live config remains local
+│   ├── .codex/         # Ignore policy only; Codex config stays local
 │   ├── .config/
 │   │   ├── fish/
 │   │   ├── ghostty/
@@ -71,30 +63,35 @@ command is not available immediately.
 │   ├── bundle.personal # Optional personal-only Brewfile
 │   └── bundle.work     # Optional work-only Brewfile
 ├── private/
-│   └── opencode/       # Private OpenCode plugins submodule
+│   ├── opencode/       # Private OpenCode plugins submodule
+│   └── pi/             # Private Pi extensions submodule
 ├── AGENTS.md           # Notes for AI/code agents
 └── README.md
 ```
 
 ## Commands
 
-Global `-v` / `--verbose` prints progress and decision-point diagnostics, for
-example `dot --verbose doctor`.
+Global options: `-v` / `--verbose` prints extra diagnostics, and `-y` /
+`--yes` answers yes to confirmations. Without a terminal, prompts use their
+default answer.
 
 ```sh
-dot init             # install packages, stow files, create local identity, link dot
-dot update           # pull, update Pi, offer pnpm/Homebrew/Pi extension upgrades, restow
-dot doctor           # run diagnostics and secret scan
-dot info             # show repo paths, runtime tools, and git status
-dot hooks            # install repository Git hooks
-dot secret-scan      # scan repository for secrets
-dot codex sync       # merge portable preferences into local Codex config
-dot stow             # restow home/
+dot init             # install packages, link dotfiles, set up runtimes, hooks, identity
+dot update           # pull, update Pi, offer pnpm/Homebrew/Pi extension upgrades, relink
+dot stow             # link home/ and install plugin dependencies
 dot unstow           # remove stowed symlinks
-dot git-identity     # create or update ~/.gitconfig.local
-dot config           # list or edit local-only preferences
+dot doctor           # check every feature, including a secret scan
+dot info             # show paths, runtime versions, and git status
+dot secret-scan      # scan tracked and unignored files for secrets
+dot lint             # run shellcheck and shfmt on dot itself
+dot package ...      # Homebrew packages (see below)
+dot skills ...       # shared Agent Skills
+dot config ...       # local-only preferences
 dot submodule status # show private submodule revisions
-dot submodule update # fetch latest private submodule branches
+dot submodule update # move private submodules to their branches
+dot hooks            # point Git at .githooks
+dot git-identity     # create or update ~/.gitconfig.local
+dot cliproxyapi      # run CLIProxyAPI in the foreground
 ```
 
 ## Package Management
@@ -108,24 +105,20 @@ runs know whether fonts, work, or personal packages are enabled or
 intentionally skipped.
 
 ```sh
-dot package list [base|fonts|work|personal|all]
-dot package check
-dot package unmanaged
-dot package trusted
-dot package untrusted
-dot package add NAME [brew|cask|auto] [base|fonts|work|personal]
-dot package remove NAME [base|fonts|work|personal|all]
-dot package update [NAME|all]
-dot package retry
+dot package list [GROUP]                   # every package and whether it is installed
+dot package check                          # only what is missing
+dot package add NAME [--cask|--formula] [--group GROUP]
+dot package remove NAME [--group GROUP]
+dot package unmanaged                      # installed but not in any bundle
+dot package update [NAME]
 ```
 
-Use `dot package check` for bundle status across all groups. Use
-`dot package unmanaged` separately to review installed Homebrew items that are
-not tracked by these bundles. Use `dot package trusted` and
-`dot package untrusted` to review Homebrew trust state.
-
-Failed package installs are written to `packages/failed_packages_<timestamp>.txt`
-and ignored by Git.
+`add` detects whether NAME is a formula or a cask (pass `--cask` or
+`--formula` when it is both), writes the entry with `brew bundle add`, keeps the
+Brewfile sorted under its header comment, and installs it when the group is
+enabled on this machine. `remove` uses `brew bundle remove` and then offers to
+uninstall. `brew bundle install` keeps going past a failed package and reports
+it at the end; run `dot package check` afterwards to see what is missing.
 
 ## Local-Only Configuration
 
@@ -135,7 +128,7 @@ Machine-local dot preferences are stored outside the repo at:
 ${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences
 ```
 
-Keys use lowercase/digit segments separated by dots. Manage them with:
+The file uses git-config format. Manage it with:
 
 ```sh
 dot config list
@@ -143,32 +136,20 @@ dot config get packages.brew.fonts.enabled
 dot config set packages.brew.fonts.enabled true
 dot config unset packages.brew.fonts.enabled
 dot config reset
+dot config help   # lists every known key
 ```
 
-Current optional package preferences:
+Known keys:
 
 ```text
 packages.brew.fonts.enabled
 packages.brew.work.enabled
+packages.brew.personal.enabled
 ```
 
-## Codex Configuration
+Unset keys are asked about once, interactively, when `dot` needs them.
 
-Portable Codex preferences are tracked in `defaults/codex.toml`. The live
-`~/.codex/config.toml` remains a regular local file so Codex can safely store
-plugin, marketplace, MCP, project-trust, and onboarding state without changing
-the repository.
-
-Synchronize the tracked preferences with:
-
-```sh
-dot codex sync
-```
-
-Synchronization updates only keys declared in `defaults/codex.toml`, preserves
-all other local state, and writes the result atomically. `dot init`, `dot
-update`, and `dot stow` run the same synchronization automatically. `dot
-doctor` reports when the portable preferences are missing or out of sync.
+## Git Identity
 
 Tracked Git config intentionally excludes name, email, and signing key:
 
@@ -217,6 +198,7 @@ The tracked `pre-push` hook runs:
 
 ```sh
 dot secret-scan
+dot lint
 ```
 
 Run this manually with:
@@ -267,7 +249,7 @@ OpenCode v2 is installed from `anomalyco/tap/opencode-v2` through
 how Pi was installed and updates it directly. Homebrew upgrades use the usual
 package prompt. Before installing the base Brewfile, setup or update removes
 any installed formula or cask listed in `BREW_PACKAGE_REPLACEMENTS` in
-`lib/paths.sh`. This migrates the old `opencode` formula to `opencode-v2`.
+`lib/core/migrations.sh`. This migrates the old `opencode` formula to `opencode-v2`.
 Setup or update also removes the old pnpm-managed OpenCode package if found.
 
 Socket Firewall can be used by prefixing supported package-manager commands:
@@ -318,7 +300,8 @@ private/opencode/
 ```
 
 `dot init` and `dot stow` initialize the submodule when needed, symlink
-`private/opencode/plugins/*.ts` and `*.js` into `~/.config/opencode/plugins/`,
+`private/opencode/plugins/*.ts`, `*.js`, and plugin directories into
+`~/.config/opencode/plugins/`,
 prune links whose private source was deleted, and install private dependencies
 when plugins exist.
 The private repo does not need to mirror `$HOME` with a `home/` directory.
@@ -338,7 +321,7 @@ installed Pi extension packages after restowing. Both Pi update commands use a
 one-command pnpm release-age override; other pnpm installs keep the five-day
 age rule.
 
-- The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/paths.sh` and
+- The binary is managed through `PNPM_GLOBAL_PACKAGES` in `lib/core/paths.sh` and
   installed with Socket Firewall (`sfw pnpm add -g`).
 - Public Pi extensions live under `home/.pi/agent/extensions/` and are stowed
   to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
@@ -374,24 +357,29 @@ its lock/inventory as part of installation.
 
 ## CLI development
 
-`dot` intentionally uses the Bash 3.2 runtime included with macOS. Runtime code
-must not depend on newer Bash features or on Node.js, Python, Ruby, or another
-separately managed language runtime.
+`dot` runs on the Bash 3.2 included with macOS. Runtime code must not depend on
+newer Bash features or on Node.js, Python, Ruby, or another separately managed
+language runtime.
 
-The `dot` executable is a small bootstrap that initializes paths, loads the
-modules, and invokes the CLI. The main seams are:
+The `dot` executable sources every file in `lib/core/`, `lib/features/`, and
+`lib/commands/`, then calls `main`:
 
-- `lib/paths.sh` — repository and managed-file paths.
-- `lib/cli.sh` — global argument parsing and command dispatch.
-- `lib/codex.sh` — portable-to-local Codex preference synchronization.
-- `lib/presentation.sh` — help output.
-- `home/.config/fish/completions/dot.fish` — tracked Fish completions.
-- `lib/tools.sh` — structured tool registry and iteration interface.
-- `lib/workflows.sh` — top-level init, update, doctor, and info workflows.
-- The remaining `lib/*.sh` files — package, runtime, link, Git, configuration,
-  and Agent Skills domain behavior.
+- `lib/core/` holds shared plumbing: output, prompts, paths and versions
+  (`paths.sh`), preferences, link helpers, one-time migrations, and dispatch.
+- `lib/features/<name>.sh` owns one managed thing (Homebrew, Stow, pnpm, Pi,
+  OpenCode, and so on). A feature defines any of the hooks `<name>_prestow`,
+  `<name>_poststow`, `<name>_deps`, `<name>_unstow`, and `<name>_check`, and is
+  listed in `FEATURES` in `lib/core/paths.sh`. Removing a feature means deleting
+  its file and its `FEATURES` entry.
+- `lib/commands/` defines the CLI. `dot foo-bar` runs `cmd_foo_bar`.
 
-Run `dot doctor` after changes that affect setup behavior.
+Conventions: functions return their status explicitly (`|| return 1`) instead of
+relying on `set -e`, warnings and errors go to stderr, and colors are off for
+non-terminal output or when `NO_COLOR` is set. Style comes from `.editorconfig`
+and `.shellcheckrc`; `dot lint` must pass. shellcheck and shfmt are pinned in
+the repo's `.mise.toml` rather than the Brewfile, and `dot lint` runs them with
+`mise exec`. Run `mise trust` in the repo once per machine. Run `dot doctor` after changes that
+affect setup behavior.
 
 ## Troubleshooting
 
@@ -420,8 +408,10 @@ Check package drift:
 ```sh
 dot package check
 dot package unmanaged
-dot package retry
 ```
+
+`dot stow` moves anything in the way of a managed link to
+`${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/`.
 
 ## Safety
 
