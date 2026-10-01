@@ -146,6 +146,10 @@ dots/
   aligns the checkout to the parent gitlink and installs the package. Use
   `dot submodule update` to advance the submodule. The Pi voice extension
   fetches its own Whisper model.
+- Fish plugins are listed in `home/.config/fish/fish_plugins` and installed by
+  Fisher into `fisher_path` (`~/.local/share/fisher`, set in
+  `conf.d/fisher.fish`), never into `home/.config/fish/`. Add plugins to
+  `fish_plugins` and run `dot stow`; do not commit plugin files.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.

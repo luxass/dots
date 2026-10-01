@@ -181,6 +181,12 @@ Fish is the primary interactive shell. The tracked Fish config keeps a small
 - `home/.config/fish/conf.d/*.fish` contains environment, paths, Homebrew,
   Starship, Zoxide, Direnv, pnpm, Bun, and OrbStack setup.
 - `home/.config/fish/completions/` contains Fish completions.
+- `home/.config/fish/fish_plugins` lists Fisher plugins (currently
+  `jhillyerd/plugin-git`, which adds oh-my-zsh style git abbreviations such as
+  `gst` and `gco`). `conf.d/fisher.fish` installs them to
+  `~/.local/share/fisher` instead of the folded `~/.config/fish`, so plugin
+  files never land in the repo. `dot init` and `dot stow` install missing
+  plugins, `dot update` updates them, and `dot doctor` checks them.
 
 `dot init` installs Fish through Homebrew, adds it to `/etc/shells` when needed,
 and sets it as the login shell with `chsh`. Restart the terminal after the

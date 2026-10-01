@@ -80,6 +80,7 @@ cmd_update() {
 
   print_section "Dotfiles"
   stow_apply || failed=1
+  fish_update_plugins || failed=1
   install_deps || failed=1
   pi_update_extensions || failed=1
 
