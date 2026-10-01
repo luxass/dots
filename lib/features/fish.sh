@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Fish as the login shell, with plugins from the tracked fish_plugins file.
+# Fish as the login shell.
 
 fish_setup() {
   local fish login_shell
@@ -21,10 +21,5 @@ fish_setup() {
     print_info "Setting Fish as the login shell"
     chsh -s "$fish" || return 1
     print_success "Fish is the login shell; restart the terminal to use it"
-  fi
-
-  if command_exists fisher && [[ -f "$HOME/.config/fish/fish_plugins" ]]; then
-    print_info "Installing Fish plugins from fish_plugins"
-    fish -c 'fisher update' || return 1
   fi
 }
