@@ -10,22 +10,13 @@ content. Personal Git identity belongs in `~/.gitconfig.local`.
 
 ```text
 dots/
-|-- dot                 # Main CLI: init/update/doctor/stow/package/codex
-|-- defaults/
-|   `-- codex.toml      # Portable Codex preferences
+|-- dot                 # CLI entrypoint: sources lib/ and runs main
 |-- lib/
-|   |-- brew.sh         # Homebrew bundle install, update, retry, package ops
-|   |-- codex.sh        # Merge portable preferences into local Codex config
-|   |-- cliproxyapi.sh  # CLIProxyAPI runner and Homebrew config link
-|   |-- core.sh         # Shared output, prompts, command helpers
-|   |-- filesystem.sh   # Shared path and backup helpers
-|   |-- git.sh          # Git hooks, identity, secret scanning
-|   |-- skills.sh       # Agent Skills wrapper around the skills CLI
-|   |-- runtime.sh      # pnpm, Node.js, npm, and global runtime tools
-|   |-- stow.sh         # Stow command entry points and orchestration
-|   `-- stow/           # Stow core and Pi, OpenCode, voice, and link integrations
+|   |-- core/           # Output, prompts, paths/versions, prefs, links, dispatch, migrations
+|   |-- features/       # One file per managed thing, exposing hooks (see CLI DESIGN)
+|   `-- commands/       # CLI surface: `dot foo-bar` runs cmd_foo_bar
 |-- home/               # Stowed into $HOME
-|   |-- .codex/         # Ignore policy only; live config stays local
+|   |-- .codex/         # Ignore policy only; Codex config stays local and unmanaged
 |   |-- .config/
 |   |   |-- cliproxyapi/ # CLIProxyAPI config; auth/ is never tracked
 |   |   |-- fish/       # Primary shell config
@@ -45,9 +36,12 @@ dots/
 |   |-- bundle.personal # Optional personal-only Brewfile
 |   `-- bundle.work     # Optional work-only Brewfile
 |-- private/
-|   `-- opencode/       # Private OpenCode plugins submodule
-|-- backups/            # Local Stow conflict backups; do not rely on contents
-|-- .githooks/          # Tracked repository hooks
+|   |-- opencode/       # Private OpenCode plugins submodule (voice, ...)
+|   `-- pi/             # Private Pi extensions submodule
+|-- .githooks/          # Tracked repository hooks (pre-push: secret-scan, lint)
+|-- .editorconfig       # Shell style, also read by shfmt
+|-- .mise.toml          # Pinned lint tools for this repo (shellcheck, shfmt)
+|-- .shellcheckrc       # shellcheck settings for dot
 |-- AGENTS.md           # Agent instructions
 `-- README.md           # User-facing setup and command docs
 ```
@@ -56,27 +50,50 @@ dots/
 
 | Task | Location |
 | --- | --- |
-| Add or remove packages | `dot package ...` first, or edit `packages/bundle*` |
+| Add or remove packages | `dot package add/remove ...` first, or edit `packages/bundle*` |
 | Diagnose setup | `dot doctor`, `dot info` |
-| Change setup/update behavior | `dot`, then relevant `lib/*.sh` helper |
-| Change Homebrew behavior | `lib/brew.sh` |
-| Change symlink/Stow behavior | `lib/stow.sh`, `lib/stow/`, `lib/filesystem.sh` |
+| Change setup/update flow | `lib/commands/setup.sh` |
+| Change what a managed thing does | `lib/features/<name>.sh` |
+| Add a managed thing | new `lib/features/<name>.sh` + `FEATURES` in `lib/core/paths.sh` |
+| Add a command | `cmd_<name>` in `lib/commands/`, plus `cmd_help` and `dot.fish` completions |
+| Change paths or managed versions | `lib/core/paths.sh` |
+| Change Homebrew behavior | `lib/features/homebrew.sh`, `lib/commands/package.sh` |
+| Change symlink/Stow behavior | `lib/features/stow.sh`, `lib/core/fs.sh` |
 | Add a personal CLI tool | `home/.local/bin/`, then `dot stow` |
-| Change runtime tools | `lib/runtime.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/` |
+| Change runtime tools | `lib/features/pnpm.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/` |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
-| Change Codex defaults | `defaults/codex.toml`, then `dot codex sync` |
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
-| Change OpenCode config/plugins | `home/.config/opencode/` |
+| Change OpenCode config/plugins | `home/.config/opencode/`, `lib/features/opencode.sh` |
 | Change private OpenCode plugins | `private/opencode/plugins/` |
 | Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
-| Change Agent Skills | `lib/skills.sh`, `lib/stow/agent-links.sh`, `home/.agents/` |
-| Change CLIProxyAPI config | `home/.config/cliproxyapi/config.yaml`, `lib/cliproxyapi.sh` |
-| Change Claude Code skills link | `lib/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
+| Change Agent Skills | `lib/features/skills.sh`, `lib/commands/tools.sh`, `home/.agents/` |
+| Change CLIProxyAPI config | `home/.config/cliproxyapi/config.yaml`, `lib/features/cliproxyapi.sh` |
+| Change Claude Code skills link | `lib/features/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
+| Remove a one-time migration | `lib/core/migrations.sh` |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
+| Lint the CLI | `dot lint` |
+
+## CLI DESIGN
+
+- Runs on macOS system Bash 3.2: no associative arrays, `mapfile`, `${x,,}`,
+  `[[ -v ]]`, or globstar, and guard empty-array expansion under `set -u`.
+- Features hook into the flow by defining `<name>_prestow`, `<name>_poststow`,
+  `<name>_deps`, `<name>_unstow`, or `<name>_check`. `run_hook` calls them in
+  `FEATURES` order; `dot doctor` prints one section per `_check`.
+- Return status explicitly (`|| return 1`). Do not rely on `set -e` inside
+  functions: it is disabled in functions called from `if`, `&&`, or `||`.
+- Use `x=$((x + 1))`, never `((x++))`, which fails under `set -e` at zero.
+- Use `print_*` helpers (warnings/errors go to stderr) and `pretty_path` for
+  displayed paths; use `ensure_link`/`check_link` for managed symlinks and
+  `backup_path` before replacing anything.
+- `dot lint` (shellcheck + shfmt with `.editorconfig`) must pass. The tools
+  are pinned in the repo's `.mise.toml`, not the Brewfile, and `dot lint` runs
+  them with `mise exec` from the repo so hooks and other directories work.
+  Each machine needs `mise trust` in the repo once.
 
 ## CONVENTIONS
 
@@ -87,11 +104,9 @@ dots/
   to hidden files through `stow --dotfiles`.
 - Keep `home/.gitconfig` public-safe. It may include `~/.gitconfig.local`, but
   must not contain name, email, signing key, or work-only identity values.
-- Keep `defaults/codex.toml` limited to portable preferences. The live
-  `~/.codex/config.toml` is local state and must not be stowed or tracked. Do
-  not add Codex auth, trusted projects, marketplace state, notices, caches,
-  sessions, memories, generated MCP entries, or absolute machine-local paths
-  to the portable defaults.
+- Codex is installed as a Homebrew cask, but its config is not managed. The
+  live `~/.codex/config.toml` is local state and must not be stowed or
+  tracked; `home/.codex/` only holds an ignore policy.
 - Keep package policy public and token-free. `home/.npmrc`, pnpm config, and
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
@@ -117,17 +132,24 @@ dots/
   types) via `sfw pnpm install` in `~/.pi` during `dot stow`;
   `dot doctor` verifies them. `home/.pi/node_modules/` is ignored by Git and
   Stow; keep `pnpm-lock.yaml` tracked. The `pi` binary itself is a managed
-  pnpm global (`PNPM_GLOBAL_PACKAGES` in `lib/paths.sh`).
+  pnpm global (`PNPM_GLOBAL_PACKAGES` in `lib/core/paths.sh`).
 - Private OpenCode plugins live in the private submodule at
   `private/opencode/`. It uses a flat `plugins/` layout and `dot stow` links
-  plugin files into `~/.config/opencode/plugins/`; do not add a mirrored
-  `home/.config/opencode/` tree there unless explicitly requested.
+  each plugin file or directory into `~/.config/opencode/plugins/` and removes
+  stale links; do not add a mirrored `home/.config/opencode/` tree there unless
+  explicitly requested. The voice plugin lives there and fetches its own
+  Whisper model; dot does not download it.
 - Private Pi extensions live in the `private/pi` submodule and load
   through Pi's native local-path package (`pi install` pointed in-tree,
   recorded in `settings.json`); edits take effect immediately with
   no copy step. Never track them outside the submodule. `dot stow`
-  aligns the checkout to the parent gitlink, installs the package, and fetches
-  the whisper model when missing. Use `dot submodule update` to advance it.
+  aligns the checkout to the parent gitlink and installs the package. Use
+  `dot submodule update` to advance the submodule. The Pi voice extension
+  fetches its own Whisper model.
+- Fish plugins are listed in `home/.config/fish/fish_plugins` and installed by
+  Fisher into `fisher_path` (`~/.local/share/fisher`, set in
+  `conf.d/fisher.fish`), never into `home/.config/fish/`. Add plugins to
+  `fish_plugins` and run `dot stow`; do not commit plugin files.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.
@@ -154,30 +176,30 @@ dots/
 ## COMMANDS
 
 ```sh
-dot init             # Install packages, stow files, create local identity, link dot
-dot update           # Pull changes, offer pnpm and Homebrew upgrades, restow
+dot init             # Install packages, link dotfiles, set up runtimes, hooks, identity
+dot update           # Pull changes, offer pnpm/Homebrew/Pi upgrades, relink
+dot stow             # Link home/ with GNU Stow and install plugin dependencies
+dot unstow           # Remove symlinks using GNU Stow
 dot doctor           # Run diagnostics and secret scan
 dot info             # Show repo paths, runtime tools, and git status
+dot secret-scan      # Scan tracked and unignored files for secrets
+dot lint             # shellcheck + shfmt (pinned in .mise.toml) over dot, lib/, .githooks/
 dot hooks            # Install repository Git hooks
-dot secret-scan      # Scan repository for secrets
-dot codex sync       # Merge portable preferences into local Codex config
-dot cliproxyapi      # Run CLIProxyAPI in the foreground with the stowed config
-dot stow             # Create symlinks using GNU Stow
-dot unstow           # Remove symlinks using GNU Stow
 dot git-identity     # Create or update ~/.gitconfig.local
-dot config           # Manage local-only preferences
+dot config           # Manage local-only preferences (git-config format)
 dot submodule status # Show private submodule revisions
 dot submodule update # Fetch latest private submodule branches
-dot package list     # List managed packages
-dot package check    # Check installed Homebrew package state
-dot package add X    # Add and install a package
-dot package retry    # Retry failed package installations
+dot package list     # List managed packages per group
+dot package check    # Show missing packages
+dot package add X    # Track and install a package (--cask, --group GROUP)
+dot package unmanaged # Installed packages no bundle tracks
 dot skills add U     # Add shared global Agent Skills from a URL/source
 dot skills list      # List installed shared global Agent Skills
+dot cliproxyapi      # Run CLIProxyAPI in the foreground with the stowed config
 ```
 
-Use `dot --verbose doctor` or `dot --verbose info` when diagnostics need more
-detail.
+Use `dot --verbose doctor` when diagnostics need more detail. `-y`/`--yes`
+answers yes to confirmations.
 
 ## KEY CONFIGS
 
@@ -191,13 +213,15 @@ detail.
 | npm | `home/.npmrc` | Install policy, no auth |
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
-| Codex | `defaults/codex.toml` | Portable defaults merged into local config |
 | OpenCode | `home/.config/opencode/` | Global config and local TypeScript plugins |
 | CLIProxyAPI | `home/.config/cliproxyapi/config.yaml` | `dot stow` links it to `$(brew --prefix)/etc/cliproxyapi.conf`; `auth/` holds OAuth credentials and is git-ignored |
 
 ## NOTES
 
-- The tracked pre-push hook runs `dot secret-scan`.
+- The tracked pre-push hook runs `dot secret-scan` and `dot lint`.
+- `dot stow` backs up anything blocking a managed link to
+  `${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/`. The old
+  repo-local `backups/` directory is no longer written.
 - mise is installed from the base Homebrew bundle and activated in Fish through
   `home/.config/fish/conf.d/mise.fish`. Do not pin global runtime versions in
   the repo; project runtime selections belong in each project's `.mise.toml`.
@@ -208,8 +232,6 @@ detail.
   Pi (`pi`). OpenCode v2 (`opencode`) is installed through the
   `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` runs Pi's native
   self-updater and handles OpenCode updates through Homebrew.
-- `dot init`, `dot update`, and `dot stow` synchronize `defaults/codex.toml`
-  into the local Codex config while preserving Codex-owned state.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
   Restart OpenCode after editing config or plugins.
 - The private OpenCode submodule is initialized and aligned to the parent

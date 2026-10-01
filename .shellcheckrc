@@ -1,0 +1,7 @@
+# dot's lib/ files are sourced into one shell by ./dot, so globals are defined
+# in one file and used in another. shellcheck checks files one at a time.
+shell=bash
+external-sources=true
+# SC2034: variable appears unused (used by another sourced file)
+# SC2154: variable is referenced but not assigned (assigned in another file)
+disable=SC2034,SC2154
