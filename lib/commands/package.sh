@@ -26,17 +26,18 @@ PACKAGE_LOADED=false
 # Read installed formulae and casks once per run.
 package_load_installed() {
   [[ "$PACKAGE_LOADED" == true ]] && return 0
-  PACKAGE_FORMULAE="$(brew list --formula -1 2>/dev/null || true)"
+  PACKAGE_FORMULAE="$(brew list --formula --full-name -1 2>/dev/null || true)"
   PACKAGE_CASKS="$(brew list --cask -1 2>/dev/null || true)"
   PACKAGE_LOADED=true
 }
 
-# package_installed TYPE NAME: formulae match by short name (tap/name -> name).
+# package_installed TYPE NAME: exact match. Formulae are listed by full name,
+# so a tracked tap/x/foo is not satisfied by an unrelated core foo.
 package_installed() {
   if [[ "$1" == cask ]]; then
     grep -qxF "$2" <<<"$PACKAGE_CASKS"
   else
-    grep -qxF "${2##*/}" <<<"$PACKAGE_FORMULAE"
+    grep -qxF "$2" <<<"$PACKAGE_FORMULAE"
   fi
 }
 
@@ -256,11 +257,11 @@ package_remove() {
   fi
 
   package_load_installed
-  if package_installed "$type" "$entry" && confirm "Uninstall $name from this machine?" n; then
+  if package_installed "$type" "$entry" && confirm "Uninstall $entry from this machine?" n; then
     if [[ "$type" == cask ]]; then
-      brew uninstall --cask "$name"
+      brew uninstall --cask "$entry"
     else
-      brew uninstall "$name"
+      brew uninstall "$entry"
     fi
   fi
 }

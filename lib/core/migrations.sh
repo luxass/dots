@@ -2,17 +2,24 @@
 # One-time cleanups for older setups. Delete an entry once every machine has run it.
 
 # Preferences used to be key=value lines; they are now git-config format.
+# A legacy file has assignments but no [section] headers.
 migrate_legacy_prefs() {
-  local tmp line
+  local tmp line key
 
-  if [[ ! -f "$PREFS_FILE" ]] || ! grep -Eq '^[a-z0-9.]+=' "$PREFS_FILE"; then
+  if [[ ! -f "$PREFS_FILE" ]] || grep -q '^[[:space:]]*\[' "$PREFS_FILE" || ! grep -q '=' "$PREFS_FILE"; then
     return 0
   fi
 
   tmp="$(mktemp "$PREFS_FILE.XXXXXX")" || return 1
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ "$line" == *=* && "$line" != \#* ]] || continue
-    if ! git config --file "$tmp" "${line%%=*}" "${line#*=}"; then
+    key="${line%%=*}"
+    # Git needs a section and a variable name that starts with a letter.
+    if [[ ! "$key" =~ ^[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z0-9-]*$ ]]; then
+      print_warning "Dropping preference '$key': not a valid key"
+      continue
+    fi
+    if ! git config --file "$tmp" "$key" "${line#*=}"; then
       rm -f "$tmp"
       return 1
     fi

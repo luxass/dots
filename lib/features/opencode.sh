@@ -38,7 +38,7 @@ opencode_poststow() {
 
   submodule_sync private/opencode || return 1
   while IFS= read -r link; do
-    [[ -e "$link" ]] || rm "$link"
+    [[ -e "$link" ]] || rm "$link" || failed=1
   done < <(opencode_private_links)
   while IFS= read -r plugin; do
     ensure_link "$OPENCODE_PLUGINS/${plugin##*/}" "$plugin" || failed=1
