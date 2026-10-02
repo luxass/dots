@@ -83,3 +83,7 @@ home/.config/cliproxyapi/auth/
 
 # Vendored CLIProxyAPI web bundle: local-only, not tracked
 home/.config/cliproxyapi/static/
+
+home/.config/herdr/session-snapshots/
+home/.config/herdr/*.sock
+home/.config/herdr/*.sock.*
