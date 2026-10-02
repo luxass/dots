@@ -6,9 +6,11 @@
     "npm:@luxass/pi-whimsical",
     "npm:@luxass/pi-btw"
   ],
-  "lastChangelogVersion": "0.99.2",
+  "lastChangelogVersion": "1.0.0",
   "theme": "dark",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6.1-sol",
-  "quietStartup": true
+  "quietStartup": true,
+  "deviceId": "a98c376d-aecc-4851-a8e5-ecff6f8824fb",
+  "defaultTools": ["+codemode"]
 }
