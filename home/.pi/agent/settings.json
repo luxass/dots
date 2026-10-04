@@ -1,7 +1,6 @@
 {
   "packages": [
     "../../dots/private/pi",
-    "npm:pi-subagents",
     "npm:@luxass/pi-voice",
     "npm:@luxass/pi-whimsical",
     "npm:@luxass/pi-btw"
