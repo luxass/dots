@@ -36,7 +36,7 @@ pi_update_self() {
 pi_update_extensions() {
   command_exists pi || return 0
   confirm "Update installed Pi extension packages?" n || return 0
-  PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 sfw pi update --extensions || {
+  NPM_CONFIG_MIN_RELEASE_AGE=0 PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 sfw pi update --extensions || {
     print_error "Failed to update Pi extensions"
     return 1
   }
