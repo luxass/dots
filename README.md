@@ -63,8 +63,7 @@ command is not available immediately.
 │   ├── bundle.personal # Optional personal-only Brewfile
 │   └── bundle.work     # Optional work-only Brewfile
 ├── private/
-│   ├── opencode/       # Private OpenCode plugins submodule
-│   └── pi/             # Private Pi extensions submodule
+│   └── opencode/       # Private OpenCode plugins submodule
 ├── AGENTS.md           # Notes for AI/code agents
 └── README.md
 ```
@@ -331,8 +330,6 @@ age rule.
   installed with Socket Firewall (`sfw pnpm add -g`).
 - Public Pi extensions live under `home/.pi/agent/extensions/` and are stowed
   to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
-- Private Pi plugins live in the `private/pi` submodule. Its parent gitlink is
-  updated with `dot submodule update`.
 - Auth, trust, sessions, logs, caches, and packages stay local through
   `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
   and are not duplicated here.

@@ -1,9 +1,9 @@
 {
   "packages": [
-    "../../dots/private/pi",
     "npm:@luxass/pi-voice",
     "npm:@luxass/pi-whimsical",
-    "npm:@luxass/pi-btw"
+    "npm:@luxass/pi-btw",
+    "npm:@luxass/pi-personal"
   ],
   "lastChangelogVersion": "1.0.2",
   "theme": "dark",
@@ -13,5 +13,6 @@
   "deviceId": "a98c376d-aecc-4851-a8e5-ecff6f8824fb",
   "defaultTools": [
     "+codemode"
-  ]
+  ],
+  "hideThinkingBlock": true
 }

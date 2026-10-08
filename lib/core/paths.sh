@@ -7,7 +7,6 @@ readonly STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
 readonly PREFS_FILE="$STATE_DIR/preferences"
 readonly BACKUP_ROOT="$STATE_DIR/backups"
 
-readonly PRIVATE_PI_DIR="$DOTFILES_DIR/private/pi"
 readonly PRIVATE_OPENCODE_DIR="$DOTFILES_DIR/private/opencode"
 
 # Homebrew bundle groups. base is always installed; the others are opt-in per

@@ -2,7 +2,3 @@
 	path = private/opencode
 	url = git@github.com:luxass/opencode-private.git
 	branch = main
-[submodule "private/pi"]
-	path = private/pi
-	url = git@github.com:luxass/pi-private.git
-	branch = main

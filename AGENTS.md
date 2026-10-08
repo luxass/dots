@@ -36,8 +36,7 @@ dots/
 |   |-- bundle.personal # Optional personal-only Brewfile
 |   `-- bundle.work     # Optional work-only Brewfile
 |-- private/
-|   |-- opencode/       # Private OpenCode plugins submodule (voice, ...)
-|   `-- pi/             # Private Pi extensions submodule
+|   `-- opencode/       # Private OpenCode plugins submodule (voice, ...)
 |-- .githooks/          # Tracked repository hooks (pre-push: secret-scan, lint)
 |-- .editorconfig       # Shell style, also read by shfmt
 |-- .mise.toml          # Pinned lint tools for this repo (shellcheck, shfmt)
@@ -139,13 +138,6 @@ dots/
   stale links; do not add a mirrored `home/.config/opencode/` tree there unless
   explicitly requested. The voice plugin lives there and fetches its own
   Whisper model; dot does not download it.
-- Private Pi extensions live in the `private/pi` submodule and load
-  through Pi's native local-path package (`pi install` pointed in-tree,
-  recorded in `settings.json`); edits take effect immediately with
-  no copy step. Never track them outside the submodule. `dot stow`
-  aligns the checkout to the parent gitlink and installs the package. Use
-  `dot submodule update` to advance the submodule. The Pi voice extension
-  fetches its own Whisper model.
 - Fish plugins are listed in `home/.config/fish/fish_plugins` and installed by
   Fisher into `fisher_path` (`~/.local/share/fisher`, set in
   `conf.d/fisher.fish`), never into `home/.config/fish/`. Add plugins to
