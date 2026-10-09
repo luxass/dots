@@ -1,3 +1,8 @@
 {
-  "syncClaudeAiSkills": false
+  "syncClaudeAiSkills": false,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "tui": "fullscreen"
 }
