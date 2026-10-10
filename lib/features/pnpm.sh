@@ -154,7 +154,7 @@ pnpm_update() {
 pnpm_check_origins() {
   local command path failed=0
 
-  for command in pnpm node npm npx sfw pi; do
+  for command in pnpm node npm npx sfw pi agent-browser; do
     path="$(command -v "$command" 2>/dev/null || true)"
     if [[ -z "$path" ]]; then
       print_error "$command is missing; run 'dot init'"

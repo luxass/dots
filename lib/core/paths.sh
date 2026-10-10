@@ -24,12 +24,11 @@ readonly PNPM_GLOBAL_PACKAGES=(
   "sfw:sfw"
   "npm@${NPM_RUNTIME_VERSION}:npm"
   "@earendil-works/pi-coding-agent:pi"
+  "agent-browser:agent-browser"
 )
-# A reviewed release old enough for the managed five-day install policy.
-readonly SKILLS_CLI_PACKAGE="skills@1.7.0"
 readonly SKILLS_DIR="$HOME_DIR/.agents/skills"
-readonly SKILLS_LOCK="$DOTFILES_DIR/skills-lock.json"
-readonly SKILLS_LOCAL="$DOTFILES_DIR/skills-local.json"
+readonly SKILLS_LOCK="$HOME_DIR/.agents/.skill-lock.json"
+readonly SKILLS_STATE_LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-lock.json"
 
 # Features in run order. lib/features/<name>.sh may define any of these hooks:
 #   <name>_prestow   before GNU Stow links home/

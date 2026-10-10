@@ -16,6 +16,7 @@ dots/
 |   |-- features/       # One file per managed thing, exposing hooks (see CLI DESIGN)
 |   `-- commands/       # CLI surface: `dot foo-bar` runs cmd_foo_bar
 |-- home/               # Stowed into $HOME
+|   |-- .agents/        # Shared skills and the native global skills CLI lock
 |   |-- .codex/         # Ignore policy only; Codex config stays local and unmanaged
 |   |-- .config/
 |   |   |-- fish/       # Primary shell config
@@ -29,8 +30,6 @@ dots/
 |   |-- .npmrc          # npm policy only; no auth
 |   |-- .pi/            # Lean Pi agent config (settings, keybindings, notes)
 |   `-- dot-gitignore   # Stowed as ~/.gitignore via stow --dotfiles
-|-- skills-lock.json    # Native project inventory for external Agent Skills
-|-- skills-local.json   # Local/adapted skills excluded from upstream replacement
 |-- packages/
 |   |-- bundle          # Base Brewfile
 |   |-- bundle.fonts    # Optional font casks
@@ -69,7 +68,7 @@ dots/
 | Change OpenCode config/plugins | `home/.config/opencode/`, `lib/features/opencode.sh` |
 | Change private OpenCode plugins | `private/opencode/plugins/` |
 | Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
-| Change Agent Skills | `lib/features/skills.sh`, `lib/commands/tools.sh`, `home/.agents/`, `skills-lock.json`, `skills-local.json` |
+| Change Agent Skills | `sfw pnpx skills` directly; links in `lib/features/skills.sh`, files/lock in `home/.agents/` |
 | Change Claude Code skills link | `lib/features/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
 | Remove a one-time migration | `lib/core/migrations.sh` |
 | Install hooks | `dot hooks` |
@@ -185,11 +184,10 @@ dot package list     # List managed packages per group
 dot package check    # Show missing packages
 dot package add X    # Track and install a package (--cask, --group GROUP)
 dot package unmanaged # Installed packages no bundle tracks
-dot skills add U     # Add shared global Agent Skills from a URL/source
-dot skills list      # Show external and locally maintained shared skills
-dot skills update    # Upgrade external skills in the tracked project inventory
-dot skills remove N  # Remove skill files and their inventory entries
-dot skills migrate   # Archive and clear obsolete global skills state
+sfw pnpx skills add U -g --skill N  # Import a shared global skill
+sfw pnpx skills list -g            # List shared global skills and provenance
+sfw pnpx skills update -g          # Update tracked upstream imports
+sfw pnpx skills remove N -g        # Remove a skill and its global lock entry
 ```
 
 Use `dot --verbose doctor` when diagnostics need more detail. `-y`/`--yes`
@@ -221,8 +219,9 @@ answers yes to confirmations.
   Node.js currently remains managed by pnpm unless explicitly migrated.
 - `dot init` stows package-manager policy before installing standalone pnpm and
   pnpm-managed runtime tools, so install policy is active during setup.
-- Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12, and
-  Pi (`pi`). OpenCode v2 (`opencode`) is installed through the
+- Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12,
+  Pi (`pi`), and `agent-browser`. Run `agent-browser install` once for its Chrome
+  browser download. OpenCode v2 (`opencode`) is installed through the
   `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` runs Pi's native
   self-updater and handles OpenCode updates through Homebrew.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
@@ -234,20 +233,21 @@ answers yes to confirmations.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.
-- Shared skills live in `home/.agents/skills/`. The repo-root
-  `skills-lock.json` is the native project inventory for external imports;
-  `skills-local.json` classifies locally maintained/adapted skills. Every skill
-  must belong to exactly one inventory. Use `dot skills add/list/update/remove`,
-  not global CLI state. The pinned CLI runs through Socket Firewall in a
-  temporary project; only canonical skill files and inventories are published.
-  Commit or stash skill changes before mutations and review the resulting diff.
-- Only locally maintained skills may be edited directly. Before adapting an
-  external skill, move its inventory entry from `skills-lock.json` to
-  `skills-local.json`; updates must never overwrite local adaptations.
-- Keep upstream/path/hash provenance in the native lock, not per-skill metadata
-  files. Record the upstream source SHA in import/update commit messages when
-  known. A pinned ref in the lock deliberately stays pinned until explicitly
-  changed with `dot skills add`. The obsolete global inventories are archived
-  and cleared by `dot skills migrate` / `dot stow`; XDG settings stay unchanged.
+- Shared skills live in `home/.agents/skills/`. Manage them directly with
+  `sfw pnpx skills add/list/update/remove` and opt into global scope with `-g`.
+  There is no `dot skills` command or scope-forcing wrapper. Project installs
+  in other repositories remain project-local.
+- The native global lock is tracked at `home/.agents/.skill-lock.json`.
+  `dot stow` links both `~/.agents/.skill-lock.json` and
+  `${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-lock.json` to it. Never
+  clear this inventory during stow or restore the archived stale records.
+  Keep credentials, private sources, and machine-local paths out of the lock.
+- Only locally maintained skills should be edited directly. Keep them out of
+  the global lock so native upstream updates leave them alone. Before adapting
+  an imported skill, remove its lock entry without deleting the files. There is
+  no separate local inventory. Commit or stash skill edits before CLI updates,
+  then review and commit the resulting diff.
+- Record upstream source SHAs in import/update commit messages when known;
+  the CLI maintains upstream/path/hash provenance in its native global lock.
 - `dot stow` also links `~/.claude/skills` to `~/.agents/skills` so Claude Code
   shares the same skills; `dot doctor` checks this link.

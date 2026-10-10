@@ -13,7 +13,6 @@ complete -c dot -n __fish_use_subcommand -a info -d 'Show paths, runtimes, and r
 complete -c dot -n __fish_use_subcommand -a secret-scan -d 'Scan for secrets'
 complete -c dot -n __fish_use_subcommand -a lint -d 'Run shellcheck and shfmt on dot'
 complete -c dot -n __fish_use_subcommand -a package -d 'Homebrew packages'
-complete -c dot -n __fish_use_subcommand -a skills -d 'Shared Agent Skills'
 complete -c dot -n __fish_use_subcommand -a config -d 'Machine-local preferences'
 complete -c dot -n __fish_use_subcommand -a submodule -d 'Private submodules'
 complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks'
@@ -27,10 +26,6 @@ complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcomm
 complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from add' -l cask -d 'Add a cask'
 complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from add' -l formula -d 'Add a formula'
 
-complete -c dot -n '__fish_seen_subcommand_from skills; and not __fish_seen_subcommand_from add list update remove migrate help' -a 'add list update remove migrate help'
-complete -c dot -n '__fish_seen_subcommand_from skills; and __fish_seen_subcommand_from add' -s s -l skill -x -d 'Select upstream skill names'
-complete -c dot -n '__fish_seen_subcommand_from skills; and __fish_seen_subcommand_from add' -s l -l list -d 'Preview upstream skills'
-complete -c dot -n '__fish_seen_subcommand_from skills; and __fish_seen_subcommand_from list' -l json -d 'Print inventories as JSON'
 complete -c dot -n '__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from list get set unset reset path help' -a 'list get set unset reset path help'
 complete -c dot -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from get set unset' -a 'packages.brew.fonts.enabled packages.brew.work.enabled packages.brew.personal.enabled'
 complete -c dot -n '__fish_seen_subcommand_from submodule; and not __fish_seen_subcommand_from status update help' -a 'status update help'

@@ -62,7 +62,8 @@ git_setup() {
 # not scanned.
 git_secret_scan() {
   local pattern placeholder matches
-  pattern='(_auth''Token|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=|://[^/[:space:]"'"'"']*:[^/[:space:]"'"'"']*@)'
+  # Match auth token assignments, not bare key names or ellipsis-only values.
+  pattern='(_auth''Token["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[[:alnum:]_+/-]|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=|://[^/[:space:]"'"'"']*:[^/[:space:]"'"'"']*@)'
   # Placeholders in docs and examples (env var refs, YOUR_* tokens) are not secrets.
   placeholder='\$[{A-Za-z_]|YOUR_[A-Z_]+|process\.env|[Ee]xample|xxxx|XXXX|<[^<>]*>'
 

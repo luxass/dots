@@ -22,7 +22,6 @@ ${BOLD}DIAGNOSTICS${RESET}
 
 ${BOLD}MANAGE${RESET}
   package        Homebrew packages ('dot package help')
-  skills         Shared Agent Skills ('dot skills help')
   config         Machine-local preferences ('dot config help')
   submodule      Private submodules: status, update
   hooks          Point Git at .githooks

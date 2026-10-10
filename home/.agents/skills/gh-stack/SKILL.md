@@ -1,13 +1,13 @@
 ---
 name: gh-stack
 description: >
-  Manage stacked Git branches and dependent PRs with gh-stack. Use for requested
-  stack creation, inspection, push, submit, sync, rebase, merge, or checkout; splitting
-  work into reviewable branches; or changes to an existing stack's branches.
+  Manages stacked PRs and splits multi-part work into reviewable branches with gh-stack.
+  Use for stack creation, viewing, edits, push, submit, sync, rebase, merge, or checkout;
+  when asked to split or isolate work for review; whenever a user mentions a stack,
+  branch layers, dependent PRs, or gh stack; or when a stack is checked out.
 metadata:
   author: github
-  version: "0.1.0"
-  maintenance: local
+  version: "0.2.0"
 ---
 
 # gh-stack
@@ -29,8 +29,7 @@ layers, read `references/stack-design.md`.
 
 ## Setup
 
-Check the installed extension and existing repository configuration first. Run only
-the setup commands needed for the requested work; do not overwrite a configured remote.
+Requires Git 2.36+ and an authenticated GitHub CLI.
 
 ```bash
 gh extension install github/gh-stack
@@ -62,20 +61,19 @@ Agent harnesses differ, so always pass the flags below instead of relying on tha
 - `view --short` is safe in both modes, but it is formatted for humans. Use `--json` to parse.
 - **`checkout <pr>` when a different local stack already covers those branches** cannot be forced.
   Run `gh stack unstack --local` first (this keeps the stack on GitHub), then retry.
+- **Worktrees:** local stacks share one common-directory catalog. Use `--print-path` with
+  navigation or explicit-target `checkout` to locate a foreign-owned branch without stealing its
+  checkout. Unoccupied targets are checked out here first. Check the exit status before changing
+  directories; parse only successful path-mode stdout, never status messages.
 
 ## Branch placement
 
-- **Starting a requested stack:** choose the dependency order before implementation when
-  practical. Adopt and split existing work when that is the starting point. Multi-part
-  work alone is not a reason to create branches or PRs.
+- **Starting multi-part work:** create the stack before writing files. Do not implement every
+  concern on trunk and split it later. Put one dependent concern in each layer, bottom to top.
 - **Editing an existing stack:** check out the layer that owns the change before editing. Never
   commit a lower layer's concern on the current top branch. Run `gh stack view --json`; if
   ownership is unclear, inspect `git log --all -- <path>`. Then check out the owner, edit, commit,
   rebase upstack, and return to top.
-
-The examples below show available operations, not automatic permission to run the
-whole sequence. Commit, push, publish, merge, or prune only within the user's request.
-Preserve unrelated working changes before switching branches or rewriting history.
 
 ```bash
 gh stack down                   # or: gh stack checkout api
@@ -112,20 +110,17 @@ diverged, `sync` prints both chains, makes no changes, and exits 0 with `Sync ab
 
 ## Merging
 
-Resolve the target kind and exact PR set before running a merge:
+Scope the merge with an argument:
 
 ```bash
-gh stack merge <resolved-number> --yes --squash
-# Other methods: --merge, --rebase, --merge-method <method>
+gh stack merge 42 --yes          # PR #42 plus every unmerged PR below it
+gh stack merge 7 --yes           # every unmerged PR in stack #7
+gh stack merge 42 --yes --squash # or --merge, --rebase, --merge-method <method>
 ```
 
-A bare number resolves as a **stack number first**, then a PR number. A resolved stack
-number merges every unmerged PR in that stack; a resolved PR number merges that PR and
-every unmerged PR below it. Do not assume `42` means PR #42. If a number collision
-prevents selecting the requested subset, check the installed command's supported
-selectors or report the limitation; do not merge a larger set.
-
-The operation is all-or-nothing: if any PR in that set cannot merge, none do.
+Pass a PR number to merge that PR and every unmerged PR below it, or a stack number to merge every
+unmerged PR in that stack. The operation is all-or-nothing: if any PR in that set cannot merge,
+none do.
 
 Without a method flag the last-used method is reused. If the base branch uses a merge queue, the
 stack is queued instead and the queue picks the method, ignoring any flag you passed with a
@@ -133,11 +128,8 @@ warning; queued PRs may land in separate groups.
 
 ## Reading state
 
-`gh stack view --json` writes JSON to **stdout**. Status messages go to **stderr**.
-Use exit codes for error handling, but not as proof that the requested change happened:
-`sync` can abort on divergence with exit 0. Inspect its diagnostic and compare
-`view --json` with the expected branch order, heads, and PR state. PR state refresh
-is best-effort, so verify on GitHub when remote completion matters.
+`gh stack view --json` writes JSON to **stdout**. Status messages go to **stderr** — do not parse
+them, branch on exit codes instead.
 
 ```
 trunk           string
@@ -154,7 +146,7 @@ an ancestor of the branch.
 
 | Code | Meaning | Recovery |
 |---|---|---|
-| 0 | No command error; may include an aborted sync | Verify the expected state |
+| 0 | Success | — |
 | 1 | Generic error | Read stderr |
 | 2 | Not in a stack | `gh stack init`, or `gh stack checkout <target>` |
 | 3 | Rebase conflict | Follow the Exit 3 recovery below |
@@ -176,6 +168,13 @@ an ancestor of the branch.
 ## Constraints
 
 - Stacks are strictly linear: one parent, at most one child. Use separate stacks for parallel work.
+- `rebase` and `sync` automatically update affected clean worktrees; they never auto-stash or
+  create/remove worktrees. Mutations serialize across the clone, and paused operations require
+  recovery in their recorded owners.
+- `modify` supports distributed stack branches, but its editor remains TUI-only. Actions run in
+  affected clean owners; unoccupied branches use the origin. Drop/fold source branches and
+  worktrees are preserved. Recovery flags may run from any worktree and use recorded native
+  operation owners; never resolve/stage in the caller's tree unless the diagnostic names it.
 - There is no non-interactive reorder or removal. Errors may suggest `gh stack modify`, but it is
   TUI-only — restructure with `unstack` then `init` instead.
 - PR titles and bodies are auto-generated. Use `gh pr edit` afterwards to change them.

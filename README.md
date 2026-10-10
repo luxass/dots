@@ -84,7 +84,6 @@ dot info             # show paths, runtime versions, and git status
 dot secret-scan      # scan tracked and unignored files for secrets
 dot lint             # run shellcheck and shfmt on dot itself
 dot package ...      # Homebrew packages (see below)
-dot skills ...       # shared Agent Skills
 dot config ...       # local-only preferences
 dot submodule status # show private submodule revisions
 dot submodule update # move private submodules to their branches
@@ -246,7 +245,11 @@ Homebrew and checks the tracked npm, pnpm, and Bun policy files.
 sfw
 npm 12
 pi (@earendil-works/pi-coding-agent)
+agent-browser
 ```
+
+Run `agent-browser install` once to download its Chrome browser. Global CLI
+installs go through `sfw pnpm add -g`; the browser download uses the native CLI.
 
 OpenCode v2 is installed from `anomalyco/tap/opencode-v2` through
 `packages/bundle`. `dot update` runs Pi's native self-updater, which detects
@@ -335,59 +338,70 @@ age rule.
 
 ## Agent Skills
 
-Skill files live in `home/.agents/skills/`, linked globally through
-`~/.agents/skills` and `~/.claude/skills`. Their inventories live at the repo root:
+Use the upstream CLI directly. Dot only maintains these links:
 
-- `skills-lock.json` is the skills CLI's native project lock. It records external
-  imports by name, upstream, repository path, optional ref, and content hash.
-- `skills-local.json` lists locally maintained or adapted skills and why they
-  are excluded from automatic upstream replacement. Every skill belongs to
-  exactly one inventory; `dot doctor` checks this.
-
-```sh
-dot skills list                  # names, maintenance type, and upstream
-dot skills list --json           # full provenance and local-maintenance reasons
-dot skills add <url> --skill <name>
-dot skills add <url> --list       # preview upstream skills without publishing
-dot skills update                # upgrade all external imports
-dot skills update unslop tdd     # upgrade selected imports
-dot skills remove <name>         # remove files and the corresponding inventory entry
-dot skills migrate               # archive obsolete global inventories
+```text
+~/.agents/skills                         -> home/.agents/skills/
+~/.claude/skills                         -> ~/.agents/skills/
+~/.agents/.skill-lock.json               -> home/.agents/.skill-lock.json
+$XDG_STATE_HOME/skills/.skill-lock.json   -> home/.agents/.skill-lock.json
 ```
 
-`dot skills` uses pinned `skills@1.7.0` through `sfw pnpm dlx`; no global CLI
-installation is needed. This reviewed release meets the managed five-day
-package-age policy. Operations are project-scoped, even though agents consume
-the files globally. The CLI runs in a temporary copy with isolated prompt state.
-Only the canonical skill files and inventories are published after success;
-automatically detected agent mirrors are discarded. Publication backs up the
-old collection and rolls it back on failure.
+The XDG link uses `~/.local/state` when `XDG_STATE_HOME` is unset. Both global
+lock locations point to the same native lock. Stowing never clears its entries.
+No alias or wrapper forces global scope.
 
-Commit or stash changes to skill files and inventories before adding, updating,
-or removing. Review and commit the resulting diff afterward. Updates cannot
-introduce new skill names or change their upstream repository. New upstream
-skills require an explicit `add`. Upstream deletions are reported, not applied
-automatically; use `remove` when you want to drop a skill. A pinned ref stays
-pinned during updates; change it with `add <source>#<new-ref> --skill <name>`.
+```sh
+sfw pnpx skills add <source> -g --skill <name> -a universal --copy
+sfw pnpx skills list -g
+sfw pnpx skills update -g
+sfw pnpx skills remove <name> -g
+```
 
-To maintain or adapt a skill locally, move its entry from `skills-lock.json` to
-`skills-local.json` before editing it. New custom skills go directly in
-`home/.agents/skills/<name>/` with an entry in `skills-local.json`. Imports cannot
-overwrite local skills, and named updates reject them. Local removals still
-require an explicit `dot skills remove <name>`.
+Global operations change the shared files and lock inside this repo. Review and
+commit the Git diff. Commit or stash edits before updating; the upstream CLI
+can overwrite skill files and change agent-specific links.
 
-The initial external inventory was verified against
-`cursor/plugins@46125561306434d8a1d7745d540d8932ab0cd2a2` and
-`mattpocock/skills@5b15a47f2d7150f545fbcacbfe381787fc0230dc`. Both `tdd` and
-`teach` come from pstack in `cursor/plugins`, not Matt Pocock.
+Without `-g`, commands use project scope by default. Interactive `add` can
+also ask you to choose a scope. Project installs in other repositories stay
+there with their own `skills-lock.json`; they are not redirected into dots.
+Running from `~` is a special case: project and global skill directories both
+resolve to `~/.agents/skills`, but their lock files are still different. Use
+`-g` to manage this shared collection.
 
-The old global lock is not an inventory for this collection. `dot stow` and
-mutating skill commands archive and clear legacy records from
-`$XDG_STATE_HOME/skills/.skill-lock.json` and `~/.agents/.skill-lock.json` without
-changing XDG settings. Untracked stale skills recorded in those inventories
-and empty installation remnants are archived too; registered and Git-tracked
-skills are preserved. Backups live under the normal dot backup directory.
-Use `dot skills`, not raw `skills update -g`, for this collection.
+### Re-register the existing external imports
+
+The wrapper's project inventory has been removed. Existing skill files are
+unchanged, and the native global lock starts empty. Re-add only the selected
+imports below to populate their upstream/path/hash metadata. These commands
+also refresh their contents from upstream; review the resulting diff.
+
+```sh
+sfw pnpx skills add cursor/plugins/pstack/skills -g -a universal --copy \
+  --skill architect blast-radius bro how \
+  principle-encode-lessons-in-structure principle-guard-the-context-window \
+  principle-laziness-protocol principle-minimize-reader-load \
+  principle-prove-it-works principle-subtract-before-you-add \
+  tdd teach technical-writing typescript-best-practices unslop why
+
+sfw pnpx skills add mattpocock/skills/skills/productivity -g -a universal --copy \
+  --skill grill-me grilling
+```
+
+Both `tdd` and `teach` come from pstack in `cursor/plugins`, not Matt Pocock.
+Do not restore the archived stale inventory; it contains intentionally removed
+skills and incorrect upstreams.
+
+Locally maintained/adapted skills remain in `home/.agents/skills/` without
+entries in the global lock, so the CLI updater does not manage them. Currently
+these are `commit`, `gh-stack`, `github`, `herdr`, `install-anti-slop`,
+`tailscale`, and `writing-great-skills`. No separate local inventory is needed.
+To keep an imported skill locally, remove its entry from the global lock without
+deleting its files before editing it. Native `remove` deletes the files too.
+
+The lock is public tracked content. Keep credentials, private sources, and
+machine-local paths out of it. CLI prompt preferences and installation timestamps
+may produce normal lock-file churn.
 
 ## CLI development
 
