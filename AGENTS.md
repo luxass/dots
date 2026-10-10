@@ -18,7 +18,6 @@ dots/
 |-- home/               # Stowed into $HOME
 |   |-- .codex/         # Ignore policy only; Codex config stays local and unmanaged
 |   |-- .config/
-|   |   |-- cliproxyapi/ # CLIProxyAPI config; auth/ is never tracked
 |   |   |-- fish/       # Primary shell config
 |   |   |-- ghostty/    # Terminal config
 |   |   |-- opencode/   # OpenCode config, TS plugins, package lock
@@ -69,7 +68,6 @@ dots/
 | Change private OpenCode plugins | `private/opencode/plugins/` |
 | Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
 | Change Agent Skills | `lib/features/skills.sh`, `lib/commands/tools.sh`, `home/.agents/` |
-| Change CLIProxyAPI config | `home/.config/cliproxyapi/config.yaml`, `lib/features/cliproxyapi.sh` |
 | Change Claude Code skills link | `lib/features/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
 | Remove a one-time migration | `lib/core/migrations.sh` |
 | Install hooks | `dot hooks` |
@@ -187,7 +185,6 @@ dot package add X    # Track and install a package (--cask, --group GROUP)
 dot package unmanaged # Installed packages no bundle tracks
 dot skills add U     # Add shared global Agent Skills from a URL/source
 dot skills list      # List installed shared global Agent Skills
-dot cliproxyapi      # Run CLIProxyAPI in the foreground with the stowed config
 ```
 
 Use `dot --verbose doctor` when diagnostics need more detail. `-y`/`--yes`
@@ -206,7 +203,6 @@ answers yes to confirmations.
 | pnpm | `home/.config/pnpm/config.yaml` | Security policy and runtime behavior |
 | Bun | `home/.bunfig.toml` | Install policy |
 | OpenCode | `home/.config/opencode/` | Global config and local TypeScript plugins |
-| CLIProxyAPI | `home/.config/cliproxyapi/config.yaml` | `dot stow` links it to `$(brew --prefix)/etc/cliproxyapi.conf`; `auth/` holds OAuth credentials and is git-ignored |
 
 ## NOTES
 
@@ -243,7 +239,3 @@ answers yes to confirmations.
   adds or updates the skills; re-check that SHA when updating.
 - `dot stow` also links `~/.claude/skills` to `~/.agents/skills` so Claude Code
   shares the same skills; `dot doctor` checks this link.
-- `dot stow` links `$(brew --prefix)/etc/cliproxyapi.conf` to the stowed
-  `~/.config/cliproxyapi/config.yaml` so the Homebrew service uses the tracked
-  config; `dot doctor` checks this link. Never commit
-  `home/.config/cliproxyapi/auth/` (OAuth credentials).

@@ -27,7 +27,6 @@ ${BOLD}MANAGE${RESET}
   submodule      Private submodules: status, update
   hooks          Point Git at .githooks
   git-identity   Create or update ~/.gitconfig.local
-  cliproxyapi    Run CLIProxyAPI in the foreground
 
 ${BOLD}OPTIONS${RESET}
   -v, --verbose  Print extra diagnostics

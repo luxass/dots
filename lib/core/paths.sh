@@ -34,4 +34,4 @@ readonly SKILLS_CLI_PACKAGE="${SKILLS_CLI_PACKAGE:-skills}"
 #   <name>_unstow    before GNU Stow removes links
 #   <name>_check     doctor diagnostics; return 1 on failure
 # Removing a feature means deleting its file and its entry here.
-readonly FEATURES=(homebrew stow skills fish pnpm rust git pi opencode cliproxyapi)
+readonly FEATURES=(homebrew stow skills fish pnpm rust git pi opencode)

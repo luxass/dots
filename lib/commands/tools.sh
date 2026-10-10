@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# skills, cliproxyapi, and lint: thin wrappers around other tools.
+# skills and lint: thin wrappers around other tools.
 
 skills_help() {
   cat <<EOF
@@ -45,35 +45,6 @@ cmd_skills() {
       return 1
       ;;
   esac
-}
-
-cmd_cliproxyapi() {
-  case "${1:-}" in
-    help | -h | --help)
-      cat <<EOF
-${BOLD}dot cliproxyapi${RESET} [FLAGS] - run CLIProxyAPI in the foreground
-
-Uses $(pretty_path "$CLIPROXYAPI_CONFIG"); Ctrl+C stops it. Extra flags are
-passed through, for example:
-  dot cliproxyapi -codex-login
-  dot cliproxyapi -claude-login -no-browser
-EOF
-      return 0
-      ;;
-  esac
-
-  command_exists cliproxyapi || {
-    print_error "cliproxyapi is not installed; run 'dot package add cliproxyapi'"
-    return 1
-  }
-  [[ -f "$CLIPROXYAPI_CONFIG" ]] || {
-    print_error "Missing $(pretty_path "$CLIPROXYAPI_CONFIG"); run 'dot stow'"
-    return 1
-  }
-
-  mkdir -p "$(dirname "$CLIPROXYAPI_CONFIG")/auth"
-  print_info "Starting CLIProxyAPI (Ctrl+C to stop)"
-  exec cliproxyapi -config "$CLIPROXYAPI_CONFIG" "$@"
 }
 
 # lint_tool TOOL ARGS...: run a linter at the version pinned in .mise.toml.

@@ -18,7 +18,6 @@ complete -c dot -n __fish_use_subcommand -a config -d 'Machine-local preferences
 complete -c dot -n __fish_use_subcommand -a submodule -d 'Private submodules'
 complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks'
 complete -c dot -n __fish_use_subcommand -a git-identity -d 'Create or update ~/.gitconfig.local'
-complete -c dot -n __fish_use_subcommand -a cliproxyapi -d 'Run CLIProxyAPI in the foreground'
 complete -c dot -n __fish_use_subcommand -a help -d 'Show help'
 
 set -l package_cmds list check add remove unmanaged update help

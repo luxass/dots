@@ -90,7 +90,6 @@ dot submodule status # show private submodule revisions
 dot submodule update # move private submodules to their branches
 dot hooks            # point Git at .githooks
 dot git-identity     # create or update ~/.gitconfig.local
-dot cliproxyapi      # run CLIProxyAPI in the foreground
 ```
 
 ## Package Management
