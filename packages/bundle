@@ -5,6 +5,7 @@ tap "luxass/tap", trusted: { formula: ["actioneer", "agent-repos"] }
 tap "oven-sh/bun", trusted: true
 
 brew "anomalyco/tap/opencode-v2"
+brew "ansible"
 brew "bat"
 brew "deno"
 brew "direnv"
