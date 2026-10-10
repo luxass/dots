@@ -335,27 +335,59 @@ age rule.
 
 ## Agent Skills
 
-The repo tracks shared global Agent Skills in `home/.agents/`:
+Skill files live in `home/.agents/skills/`, linked globally through
+`~/.agents/skills` and `~/.claude/skills`. Their inventories live at the repo root:
 
-- `skills/` contains checked-in global skills, including local helpers like
-  `commit`, `github`, and `bro`, plus imported engineering/productivity
-  workflows.
-- `.skill-lock.json` records shared skills CLI state.
-
-External skills are managed through `dot skills`, which wraps the open `skills`
-CLI with `pnpm dlx` so the CLI does not need to be installed globally.
-Run `dot stow` first so `~/.agents/skills` points at this repo and installed
-skill files stay visible to Git under `home/.agents/skills`.
+- `skills-lock.json` is the skills CLI's native project lock. It records external
+  imports by name, upstream, repository path, optional ref, and content hash.
+- `skills-local.json` lists locally maintained or adapted skills and why they
+  are excluded from automatic upstream replacement. Every skill belongs to
+  exactly one inventory; `dot doctor` checks this.
 
 ```sh
-dot skills add <url>
+dot skills list                  # names, maintenance type, and upstream
+dot skills list --json           # full provenance and local-maintenance reasons
 dot skills add <url> --skill <name>
-dot skills list
+dot skills add <url> --list       # preview upstream skills without publishing
+dot skills update                # upgrade all external imports
+dot skills update unslop tdd     # upgrade selected imports
+dot skills remove <name>         # remove files and the corresponding inventory entry
+dot skills migrate               # archive obsolete global inventories
 ```
 
-`dot skills add` installs to the shared global Agent Skills directory with
-`pnpm dlx skills add --global --agent universal --copy`. The skills CLI updates
-its lock/inventory as part of installation.
+`dot skills` uses pinned `skills@1.7.0` through `sfw pnpm dlx`; no global CLI
+installation is needed. This reviewed release meets the managed five-day
+package-age policy. Operations are project-scoped, even though agents consume
+the files globally. The CLI runs in a temporary copy with isolated prompt state.
+Only the canonical skill files and inventories are published after success;
+automatically detected agent mirrors are discarded. Publication backs up the
+old collection and rolls it back on failure.
+
+Commit or stash changes to skill files and inventories before adding, updating,
+or removing. Review and commit the resulting diff afterward. Updates cannot
+introduce new skill names or change their upstream repository. New upstream
+skills require an explicit `add`. Upstream deletions are reported, not applied
+automatically; use `remove` when you want to drop a skill. A pinned ref stays
+pinned during updates; change it with `add <source>#<new-ref> --skill <name>`.
+
+To maintain or adapt a skill locally, move its entry from `skills-lock.json` to
+`skills-local.json` before editing it. New custom skills go directly in
+`home/.agents/skills/<name>/` with an entry in `skills-local.json`. Imports cannot
+overwrite local skills, and named updates reject them. Local removals still
+require an explicit `dot skills remove <name>`.
+
+The initial external inventory was verified against
+`cursor/plugins@46125561306434d8a1d7745d540d8932ab0cd2a2` and
+`mattpocock/skills@5b15a47f2d7150f545fbcacbfe381787fc0230dc`. Both `tdd` and
+`teach` come from pstack in `cursor/plugins`, not Matt Pocock.
+
+The old global lock is not an inventory for this collection. `dot stow` and
+mutating skill commands archive and clear legacy records from
+`$XDG_STATE_HOME/skills/.skill-lock.json` and `~/.agents/.skill-lock.json` without
+changing XDG settings. Untracked stale skills recorded in those inventories
+and empty installation remnants are archived too; registered and Git-tracked
+skills are preserved. Backups live under the normal dot backup directory.
+Use `dot skills`, not raw `skills update -g`, for this collection.
 
 ## CLI development
 

@@ -1,50 +1,100 @@
 # shellcheck shell=bash
-# skills and lint: thin wrappers around other tools.
+# Skills use the repo's inventories; lint delegates to pinned tools.
 
 skills_help() {
   cat <<EOF
-${BOLD}dot skills${RESET} - shared global Agent Skills
+${BOLD}dot skills${RESET} - tracked shared Agent Skills
 
-  add SOURCE [OPTIONS]   Install skills from a URL or source
-  list                   List installed skills
+  add SOURCE [OPTIONS]   Import remote skills (--skill NAME, --list, --yes)
+  list [--json]          List external and locally maintained skills
+  update [NAME...]       Upgrade external imports only (--yes)
+  remove NAME...         Remove skills and their inventory entries (--yes)
+  migrate               Archive and clear obsolete global inventories
 
-Runs 'pnpm dlx $SKILLS_CLI_PACKAGE' through sfw, always with
---global --agent universal (and --copy for add), so skills land in
-home/.agents/skills. Other options, such as --skill NAME, --list, and --yes,
-are passed through.
+Mutations run $SKILLS_CLI_PACKAGE through sfw in a temporary project and
+publish only skill files and inventories after success. Commit or stash skill
+changes first. The shared global links stay unchanged; global CLI state is
+not used. Locally maintained skills are never overwritten by imports.
 EOF
 }
 
 cmd_skills() {
-  local action="${1:-help}" arg
+  local action="${1:-help}" arg names=0 first=true
   [[ "$#" -gt 0 ]] && shift
 
-  for arg in "$@"; do
-    case "$arg" in
-      -a | --agent | --agent=* | -g | --global | --global=* | --all | --copy)
-        print_error "dot skills sets the destination itself; remove '$arg'"
-        return 1
-        ;;
-    esac
-  done
-
   case "$action" in
-    add)
-      [[ "$#" -gt 0 ]] || {
-        print_error "Usage: dot skills add SOURCE [OPTIONS]"
+    help | -h | --help)
+      skills_help
+      return
+      ;;
+    list)
+      [[ "$#" -eq 0 || ("$#" -eq 1 && "$1" == --json) ]] || {
+        print_error "Usage: dot skills list [--json]"
         return 1
       }
-      skills_prestow || return 1
-      sfw pnpm dlx "$SKILLS_CLI_PACKAGE" add "$@" --global --agent universal --copy
+      skills_list "$@"
+      return
       ;;
-    list) sfw pnpm dlx "$SKILLS_CLI_PACKAGE" list "$@" --global --agent universal ;;
-    help | -h | --help) skills_help ;;
+    migrate)
+      no_args "$@" && migrate_skills_inventory
+      return
+      ;;
+    add | update | remove) ;;
     *)
       print_error "Unknown skills command: $action"
       skills_help
       return 1
       ;;
   esac
+
+  skills_require_jq || return 1
+  for arg in "$@"; do
+    if [[ "$action" == add && "$first" == true ]]; then
+      [[ "$arg" != -* ]] || {
+        print_error "Usage: dot skills add SOURCE [OPTIONS]"
+        return 1
+      }
+      first=false
+      names=$((names + 1))
+      continue
+    fi
+    case "$arg" in
+      -y | --yes) ;;
+      -s | --skill | -l | --list | --full-depth)
+        [[ "$action" == add ]] || {
+          print_error "Unsupported $action option: $arg"
+          return 1
+        }
+        ;;
+      -*)
+        print_error "Unsupported skills option: $arg; dot controls scope and destinations"
+        return 1
+        ;;
+      *)
+        names=$((names + 1))
+        if [[ "$action" != add ]]; then
+          if [[ ! "$arg" =~ ^[a-z0-9][a-z0-9._-]*$ ]] || [[ "$arg" == *..* ]]; then
+            print_error "Invalid skill name: $arg"
+            return 1
+          fi
+          if ! jq -se --arg name "$arg" 'any(.[]; .skills | has($name))' "$SKILLS_LOCK" "$SKILLS_LOCAL" >/dev/null; then
+            print_error "Unknown skill: $arg"
+            return 1
+          fi
+          if [[ "$action" == update ]] && jq -e --arg name "$arg" '.skills | has($name)' "$SKILLS_LOCAL" >/dev/null; then
+            print_error "'$arg' is locally maintained; merge upstream changes manually"
+            return 1
+          fi
+        fi
+        ;;
+    esac
+  done
+  if [[ "$action" != update && "$names" -eq 0 ]]; then
+    print_error "Usage: dot skills $action $([[ "$action" == add ]] && printf SOURCE || printf NAME) [OPTIONS]"
+    return 1
+  fi
+  migrate_skills_inventory || return 1
+  skills_mutate "$action" "$@"
 }
 
 # lint_tool TOOL ARGS...: run a linter at the version pinned in .mise.toml.
