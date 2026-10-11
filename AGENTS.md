@@ -35,8 +35,6 @@ dots/
 |   |-- bundle.fonts    # Optional font casks
 |   |-- bundle.personal # Optional personal-only Brewfile
 |   `-- bundle.work     # Optional work-only Brewfile
-|-- private/
-|   `-- opencode/       # Private OpenCode plugins submodule (voice, ...)
 |-- .githooks/          # Tracked repository hooks (pre-push: secret-scan, lint)
 |-- .editorconfig       # Shell style, also read by shfmt
 |-- .mise.toml          # Pinned lint tools for this repo (shellcheck, shfmt)
@@ -66,7 +64,7 @@ dots/
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
 | Change OpenCode config/plugins | `home/.config/opencode/`, `lib/features/opencode.sh` |
-| Change private OpenCode plugins | `private/opencode/plugins/` |
+| Change OpenCode voice plugin | `home/.config/opencode/opencode.json` (`@luxass/opencode-voice`, v2 `plugins` array) |
 | Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
 | Change Agent Skills | `sfw pnpx skills` directly; links in `lib/features/skills.sh`, files/lock in `home/.agents/` |
 | Change Claude Code skills link | `lib/features/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
@@ -109,8 +107,7 @@ dots/
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
   provider secret files. `dot stow` installs TypeScript plugin dependencies with
-  `sfw pnpm install` in `~/.config/opencode/` (and in `private/opencode/` when
-  private plugins exist); `dot doctor` verifies them.
+  `sfw pnpm install` in `~/.config/opencode/`; `dot doctor` verifies them.
 - `home/.config/opencode/node_modules/` may exist locally for editor/type
   resolution, but it is ignored by Git and Stow. Keep `pnpm-lock.yaml`
   tracked.
@@ -131,12 +128,26 @@ dots/
   `dot doctor` verifies them. `home/.pi/node_modules/` is ignored by Git and
   Stow; keep `pnpm-lock.yaml` tracked. The `pi` binary itself is a managed
   pnpm global (`PNPM_GLOBAL_PACKAGES` in `lib/core/paths.sh`).
-- Private OpenCode plugins live in the private submodule at
-  `private/opencode/`. It uses a flat `plugins/` layout and `dot stow` links
-  each plugin file or directory into `~/.config/opencode/plugins/` and removes
-  stale links; do not add a mirrored `home/.config/opencode/` tree there unless
-  explicitly requested. The voice plugin lives there and fetches its own
-  Whisper model; dot does not download it.
+- This setup uses OpenCode v2. Register `@luxass/opencode-voice` once in the
+  plural `plugins` array in `opencode.json`. OpenCode loads its terminal UI
+  component locally; its server component is a no-op. Do not also register it
+  in `cli.json`. CLI configuration is an alternative, not the only valid route.
+  Restart OpenCode and run `/voice setup`; use API transcription because local
+  transcription is currently unsupported on Bun. Keep credentials in the
+  environment. OpenCode's internal npm resolver reads the global npm age policy.
+  Server package installs and updates run in its background server. Configure
+  that server once with `opencode service set env NPM_CONFIG_MIN_RELEASE_AGE 0`
+  using the managed Homebrew binary, after closing active OpenCode sessions.
+  The setter stops the server; never run it automatically during an update.
+  Keep `service.json` and per-channel service configuration local and ignored
+  by Git and Stow because they can contain passwords and private remote URLs.
+  `dot update` offers native OpenCode plugin updates with a command-scoped npm
+  override for CLI-only plugins and checks the server setting before updating.
+  `dot stow` bypasses pnpm release age only for local OpenCode plugin deps.
+  A pnpm package exception does not override OpenCode's internal npm resolver.
+  The private submodule and its dependency/linking hooks are removed. Stow
+  backs up only leftover symlinks created by the retired setup; it leaves other
+  local plugins alone.
 - Fish plugins are listed in `home/.config/fish/fish_plugins` and installed by
   Fisher into `fisher_path` (`~/.local/share/fisher`, set in
   `conf.d/fisher.fish`), never into `home/.config/fish/`. Add plugins to
@@ -178,8 +189,6 @@ dot lint             # shellcheck + shfmt (pinned in .mise.toml) over dot, lib/,
 dot hooks            # Install repository Git hooks
 dot git-identity     # Create or update ~/.gitconfig.local
 dot config           # Manage local-only preferences (git-config format)
-dot submodule status # Show private submodule revisions
-dot submodule update # Fetch latest private submodule branches
 dot package list     # List managed packages per group
 dot package check    # Show missing packages
 dot package add X    # Track and install a package (--cask, --group GROUP)
@@ -223,13 +232,10 @@ answers yes to confirmations.
   Pi (`pi`), and `agent-browser`. Run `agent-browser install` once for its Chrome
   browser download. OpenCode v2 (`opencode`) is installed through the
   `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` runs Pi's native
-  self-updater and handles OpenCode updates through Homebrew.
+  self-updater and handles OpenCode binary updates through Homebrew. It also
+  offers native OpenCode package-plugin updates after linking the dotfiles.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.
   Restart OpenCode after editing config or plugins.
-- The private OpenCode submodule is initialized and aligned to the parent
-  gitlink by `dot init` / `dot stow`. Run `dot submodule update` to fetch its
-  configured `main` branch, then commit the gitlink changes in the parent.
-  Dependencies should install with `sfw pnpm install` from `private/opencode/`.
 - Optional package groups are controlled by local-only preferences under
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
   when first prompted, work packages default to no.

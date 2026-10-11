@@ -1,1 +1,3 @@
 node_modules
+# OpenCode service configuration can contain passwords and private remote URLs.
+\.config/opencode/service(-[^/]*)?\.json

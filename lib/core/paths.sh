@@ -7,8 +7,6 @@ readonly STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
 readonly PREFS_FILE="$STATE_DIR/preferences"
 readonly BACKUP_ROOT="$STATE_DIR/backups"
 
-readonly PRIVATE_OPENCODE_DIR="$DOTFILES_DIR/private/opencode"
-
 # Homebrew bundle groups. base is always installed; the others are opt-in per
 # machine through the packages.brew.<group>.enabled preference.
 readonly BUNDLE_GROUPS=(base fonts work personal)

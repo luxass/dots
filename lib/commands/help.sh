@@ -23,7 +23,6 @@ ${BOLD}DIAGNOSTICS${RESET}
 ${BOLD}MANAGE${RESET}
   package        Homebrew packages ('dot package help')
   config         Machine-local preferences ('dot config help')
-  submodule      Private submodules: status, update
   hooks          Point Git at .githooks
   git-identity   Create or update ~/.gitconfig.local
 

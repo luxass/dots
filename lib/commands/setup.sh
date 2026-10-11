@@ -83,6 +83,7 @@ cmd_update() {
   fish_update_plugins || failed=1
   install_deps || failed=1
   pi_update_extensions || failed=1
+  opencode_update_plugins || failed=1
 
   if [[ "$failed" -eq 0 ]]; then
     print_success "Update complete"

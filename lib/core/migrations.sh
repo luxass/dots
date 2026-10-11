@@ -28,6 +28,20 @@ migrate_legacy_prefs() {
   print_info "Migrated $(pretty_path "$PREFS_FILE") to git-config format"
 }
 
+# The private OpenCode submodule was retired in favour of a published plugin.
+# Back up only links created by its old setup; leave other local plugins alone.
+migrate_opencode_private_links() {
+  local link plugins="$HOME/.config/opencode/plugins"
+  local old_plugins="$DOTFILES_DIR/private/opencode/plugins/"
+
+  for link in "$plugins"/*; do
+    if [[ -L "$link" && "$(readlink "$link")" == "$old_plugins"* ]]; then
+      backup_path "$link" || return 1
+    fi
+  done
+  return 0
+}
+
 # Homebrew packages replaced by another entry in a Brewfile, as old:new.
 readonly BREW_PACKAGE_REPLACEMENTS=(
   "opencode:anomalyco/tap/opencode-v2"

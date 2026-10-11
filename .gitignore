@@ -81,3 +81,5 @@ home/.codex/auth.json
 home/.config/herdr/session-snapshots/
 home/.config/herdr/*.sock
 home/.config/herdr/*.sock.*
+home/.config/opencode/service.json
+home/.config/opencode/service-*.json

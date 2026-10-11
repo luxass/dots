@@ -34,8 +34,9 @@ cd ~/dots
 ./dot init
 ```
 
-After setup, `dot` is linked into `~/.local/bin/dot`. Restart the shell if the
-command is not available immediately.
+Run `dot` directly from the repository by keeping `~/dots` on your PATH.
+If needed, run `fish_add_path ~/dots` once in Fish. Setup does not create a
+second CLI link in `~/.local/bin/`.
 
 ## Repository Structure
 
@@ -62,8 +63,6 @@ command is not available immediately.
 │   ├── bundle.fonts    # Optional font casks
 │   ├── bundle.personal # Optional personal-only Brewfile
 │   └── bundle.work     # Optional work-only Brewfile
-├── private/
-│   └── opencode/       # Private OpenCode plugins submodule
 ├── AGENTS.md           # Notes for AI/code agents
 └── README.md
 ```
@@ -85,8 +84,6 @@ dot secret-scan      # scan tracked and unignored files for secrets
 dot lint             # run shellcheck and shfmt on dot itself
 dot package ...      # Homebrew packages (see below)
 dot config ...       # local-only preferences
-dot submodule status # show private submodule revisions
-dot submodule update # move private submodules to their branches
 dot hooks            # point Git at .githooks
 dot git-identity     # create or update ~/.gitconfig.local
 ```
@@ -281,8 +278,8 @@ Tracked files include:
 Keep `node_modules/` local-only. It is ignored by Git and by Stow through
 `home/.stow-local-ignore`, but can exist in the source tree for editor/type
 resolution. `dot stow` and `dot update` install or refresh plugin dependencies
-with Socket Firewall (`sfw pnpm install` in `~/.config/opencode/`, plus
-`private/opencode/` when private plugins exist), and `dot doctor` verifies that
+with Socket Firewall (`sfw pnpm install` in `~/.config/opencode/`), and
+`dot doctor` verifies that
 `@opencode/plugin` is installed. Manual refresh is still available:
 
 ```sh
@@ -290,35 +287,47 @@ cd ~/.config/opencode
 sfw pnpm install
 ```
 
-Restart OpenCode after changing `opencode.json` or plugin files; running
-sessions keep the config and plugin code loaded from startup.
+Restart OpenCode after changing `opencode.json`, `cli.json`, or plugin files;
+running sessions keep the config and plugin code loaded from startup.
 
-Private OpenCode plugins live in the private Git submodule at
-`private/opencode/`. The parent repository pins the submodule to a commit, while
-`dot submodule update` can advance it to the configured `main` branch. That repo
-intentionally uses a flat plugin layout:
+OpenCode v2 registers `@luxass/opencode-voice` in the `plugins` array in
+`opencode.json`. Use the plural `plugins` key. OpenCode loads the package's
+terminal UI component in the local client. Its server component does no work.
+Do not also register Voice in `cli.json`. That file is an alternative for
+client-only plugins that must stay available with a different server.
 
-```text
-private/opencode/
-├── plugins/
-│   └── private-plugin.ts
-├── package.json
-└── pnpm-lock.yaml
-```
+Restart OpenCode, then run `/voice setup`. Choose an API profile because local
+transcription is currently unsupported on Bun. Keep API keys in environment
+variables, not tracked configuration. No private submodule or private
+dependency install is needed.
 
-`dot init` and `dot stow` initialize the submodule when needed, symlink
-`private/opencode/plugins/*.ts`, `*.js`, and plugin directories into
-`~/.config/opencode/plugins/`,
-prune links whose private source was deleted, and install private dependencies
-when plugins exist.
-The private repo does not need to mirror `$HOME` with a `home/` directory.
+OpenCode's internal npm resolver reads the global npm release-age policy.
+Server plugins install and update in its background server. A CLI environment
+override alone does not change the policy of an existing server.
 
-Manual refresh is still available:
+Close active OpenCode sessions before this one-time command. It stops the
+background server and sets its npm release age to zero for future starts:
 
 ```sh
-cd ~/dots/private/opencode
-sfw pnpm install
+"$(brew --prefix opencode-v2)/bin/opencode" service set env NPM_CONFIG_MIN_RELEASE_AGE 0
 ```
+
+The setting applies only to OpenCode. Keep `service.json` and `service-*.json`
+local because they can also contain passwords and private remote URLs. Git
+and Stow ignore them. Reopen OpenCode after the command.
+
+`dot update` offers to run OpenCode's native `plugin update`, like the Pi
+extension update step. It uses the managed Homebrew binary and a temporary
+`NPM_CONFIG_MIN_RELEASE_AGE=0` override for CLI-only plugin updates. It checks
+the server setting first and does not stop or reconfigure a running server.
+Local plugin files and pinned package revisions remain unchanged.
+
+`dot stow` and setup also bypass the age filter for the tracked local OpenCode
+plugin dependencies. Normal cached-plugin sessions need no special launcher.
+Unrelated npm and pnpm installs keep the five-day policy.
+
+Stow backs up leftover links from the retired private plugin setup. Other local
+plugins are left alone.
 
 ## Pi
 

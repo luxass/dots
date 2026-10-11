@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# GNU Stow: links home/ into $HOME, plus the dot CLI link in ~/.local/bin.
+# GNU Stow: links home/ into $HOME.
 
 stow_require() {
   command_exists stow && return 0
@@ -60,10 +60,6 @@ stow_remove() {
   print_success "Dotfiles unlinked"
 }
 
-stow_poststow() {
-  ensure_link "$HOME/.local/bin/dot" "$DOTFILES_DIR/dot"
-}
-
 stow_check() {
   local rel source target total=0 broken=0 failed=0
 
@@ -89,7 +85,6 @@ stow_check() {
     failed=1
   fi
 
-  check_link "$HOME/.local/bin/dot" "$DOTFILES_DIR/dot" "dot CLI link" || failed=1
   case ":$PATH:" in
     *":$HOME/.local/bin:"*) ;;
     *) print_warning "$(pretty_path "$HOME/.local/bin") is not on PATH" ;;

@@ -1,94 +1,51 @@
 # shellcheck shell=bash
-# OpenCode plugin dependencies, plus plugins from the private/opencode submodule
-# linked into ~/.config/opencode/plugins/.
-
-readonly OPENCODE_PLUGINS="$HOME/.config/opencode/plugins"
-readonly OPENCODE_PRIVATE_PLUGINS="$PRIVATE_OPENCODE_DIR/plugins"
-
-# Private plugins: top-level directories and .ts/.js files.
-opencode_private_plugins() {
-  local entry
-  for entry in "$OPENCODE_PRIVATE_PLUGINS"/*; do
-    if [[ -d "$entry" || "$entry" == *.ts || "$entry" == *.js ]]; then
-      printf '%s\n' "$entry"
-    fi
-  done
-}
-
-# Links in the plugins directory that point into the private submodule.
-opencode_private_links() {
-  local link
-  for link in "$OPENCODE_PLUGINS"/*; do
-    if [[ -L "$link" && "$(readlink "$link")" == "$OPENCODE_PRIVATE_PLUGINS/"* ]]; then
-      printf '%s\n' "$link"
-    fi
-  done
-}
+# Local OpenCode plugin dependencies and native package-plugin updates.
 
 opencode_prestow() {
-  # Keep the plugins directory real, so private plugins are not linked into the repo.
-  if [[ -L "$OPENCODE_PLUGINS" ]] && same_path "$OPENCODE_PLUGINS" "$HOME_DIR/.config/opencode/plugins"; then
-    rm "$OPENCODE_PLUGINS" || return 1
-  fi
-  mkdir -p "$OPENCODE_PLUGINS"
-}
-
-opencode_poststow() {
-  local link plugin failed=0
-
-  submodule_sync private/opencode || return 1
-  while IFS= read -r link; do
-    [[ -e "$link" ]] || rm "$link" || failed=1
-  done < <(opencode_private_links)
-  while IFS= read -r plugin; do
-    ensure_link "$OPENCODE_PLUGINS/${plugin##*/}" "$plugin" || failed=1
-  done < <(opencode_private_plugins)
-  return "$failed"
-}
-
-opencode_unstow() {
-  local link
-  while IFS= read -r link; do
-    rm "$link" || return 1
-  done < <(opencode_private_links)
+  migrate_opencode_private_links
 }
 
 opencode_deps() {
-  local failed=0
-  pnpm_install_deps "$HOME/.config/opencode" "OpenCode plugin" || failed=1
-  if [[ -n "$(opencode_private_plugins)" ]]; then
-    pnpm_install_deps "$PRIVATE_OPENCODE_DIR" "private OpenCode plugin" || failed=1
-  fi
-  return "$failed"
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 pnpm_install_deps "$HOME/.config/opencode" "OpenCode plugin"
 }
 
-# opencode_check_deps DIR LABEL
-opencode_check_deps() {
-  [[ -f "$1/package.json" ]] || return 0
-  if [[ -d "$1/node_modules/@opencode/plugin" ]]; then
-    print_success "$2 dependencies"
-  else
-    print_error "$2 dependencies are missing; run 'dot stow'"
+opencode_update_plugins() {
+  local prefix binary age
+
+  command_exists brew || return 0
+  prefix="$(brew --prefix opencode-v2 2>/dev/null)" || return 0
+  binary="$prefix/bin/opencode"
+  if [[ ! -x "$binary" ]]; then
+    print_warning "OpenCode is missing; skipping plugin updates"
+    return 0
+  fi
+  confirm "Update installed OpenCode package plugins?" n || return 0
+
+  # Server plugins update in the persistent server, not this CLI process.
+  age="$("$binary" service get env NPM_CONFIG_MIN_RELEASE_AGE)" || {
+    print_error "Could not read OpenCode service release-age policy"
+    return 1
+  }
+  if [[ "$age" != 0 ]]; then
+    print_error "Close OpenCode sessions, then run: '$binary' service set env NPM_CONFIG_MIN_RELEASE_AGE 0"
+    print_info "This stops the OpenCode background server and exempts only its installs from the age policy"
     return 1
   fi
+
+  # CLI-only plugins install locally; keep their override scoped to this command.
+  if ! (cd "$DOTFILES_DIR" && NPM_CONFIG_MIN_RELEASE_AGE=0 sfw "$binary" plugin update); then
+    print_error "Failed to update OpenCode package plugins"
+    return 1
+  fi
+  print_success "OpenCode package plugins updated"
 }
 
 opencode_check() {
-  local plugin link failed=0
-
-  while IFS= read -r plugin; do
-    check_link "$OPENCODE_PLUGINS/${plugin##*/}" "$plugin" "Private OpenCode plugin ${plugin##*/}" || failed=1
-  done < <(opencode_private_plugins)
-  while IFS= read -r link; do
-    if [[ ! -e "$link" ]]; then
-      print_error "Stale private OpenCode plugin link: ${link##*/}; run 'dot stow'"
-      failed=1
-    fi
-  done < <(opencode_private_links)
-
-  opencode_check_deps "$HOME/.config/opencode" "OpenCode plugin" || failed=1
-  if [[ -n "$(opencode_private_plugins)" ]]; then
-    opencode_check_deps "$PRIVATE_OPENCODE_DIR" "Private OpenCode plugin" || failed=1
+  [[ -f "$HOME/.config/opencode/package.json" ]] || return 0
+  if [[ -d "$HOME/.config/opencode/node_modules/@opencode/plugin" ]]; then
+    print_success "OpenCode plugin dependencies"
+  else
+    print_error "OpenCode plugin dependencies are missing; run 'dot stow'"
+    return 1
   fi
-  return "$failed"
 }

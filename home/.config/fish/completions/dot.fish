@@ -14,7 +14,6 @@ complete -c dot -n __fish_use_subcommand -a secret-scan -d 'Scan for secrets'
 complete -c dot -n __fish_use_subcommand -a lint -d 'Run shellcheck and shfmt on dot'
 complete -c dot -n __fish_use_subcommand -a package -d 'Homebrew packages'
 complete -c dot -n __fish_use_subcommand -a config -d 'Machine-local preferences'
-complete -c dot -n __fish_use_subcommand -a submodule -d 'Private submodules'
 complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks'
 complete -c dot -n __fish_use_subcommand -a git-identity -d 'Create or update ~/.gitconfig.local'
 complete -c dot -n __fish_use_subcommand -a help -d 'Show help'
@@ -28,4 +27,3 @@ complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcomm
 
 complete -c dot -n '__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from list get set unset reset path help' -a 'list get set unset reset path help'
 complete -c dot -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from get set unset' -a 'packages.brew.fonts.enabled packages.brew.work.enabled packages.brew.personal.enabled'
-complete -c dot -n '__fish_seen_subcommand_from submodule; and not __fish_seen_subcommand_from status update help' -a 'status update help'
