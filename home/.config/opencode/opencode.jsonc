@@ -3,5 +3,6 @@
   "plugins": [
     "./herdr-opencode",
     "@luxass/opencode-voice",
+    "@luxass/opencode-personal"
   ]
 }

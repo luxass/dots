@@ -1,0 +1,9 @@
+{
+  "activeProfile": "local",
+  "profiles": {
+    "local": {
+      "type": "local",
+      "model": "~/.cache/agent-voice/whisper-large-v3-turbo.gguf"
+    }
+  }
+}
