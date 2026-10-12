@@ -23,6 +23,7 @@ readonly PNPM_GLOBAL_PACKAGES=(
   "npm@${NPM_RUNTIME_VERSION}:npm"
   "@earendil-works/pi-coding-agent:pi"
   "agent-browser:agent-browser"
+  "cf:cf"
 )
 readonly SKILLS_DIR="$HOME_DIR/.agents/skills"
 readonly SKILLS_LOCK="$HOME_DIR/.agents/.skill-lock.json"
