@@ -149,7 +149,7 @@
       "center": "ctrl+option+c",
       "center-half": null,
       "center-two-thirds": null,
-      "make-larger": null,
+      "make-larger": "ctrl+option+shift+0",
       "make-smaller": "ctrl+option+-",
       "restore": "ctrl+option+delete",
       "move-left": null,
