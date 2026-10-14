@@ -24,6 +24,7 @@ readonly PNPM_GLOBAL_PACKAGES=(
   "@earendil-works/pi-coding-agent:pi"
   "agent-browser:agent-browser"
   "cf:cf"
+  "coderabbit:coderabbit"
 )
 readonly SKILLS_DIR="$HOME_DIR/.agents/skills"
 readonly SKILLS_LOCK="$HOME_DIR/.agents/.skill-lock.json"
