@@ -270,7 +270,7 @@ Global OpenCode config is tracked under `home/.config/opencode/` and stowed to
 
 Tracked files include:
 
-- `opencode.json` for shared global OpenCode settings.
+- `opencode.jsonc` for shared global OpenCode settings.
 - `plugins/notification.ts`, a small AppleScript notification plugin that fires
   when a session becomes idle.
 - `package.json` and `pnpm-lock.yaml` for TypeScript plugin types.
@@ -287,11 +287,11 @@ cd ~/.config/opencode
 sfw pnpm install
 ```
 
-Restart OpenCode after changing `opencode.json`, `cli.json`, or plugin files;
+Restart OpenCode after changing `opencode.jsonc`, `cli.json`, or plugin files;
 running sessions keep the config and plugin code loaded from startup.
 
 OpenCode v2 registers `@luxass/opencode-voice` in the `plugins` array in
-`opencode.json`. Use the plural `plugins` key. OpenCode loads the package's
+`opencode.jsonc`. Use the plural `plugins` key. OpenCode loads the package's
 terminal UI component in the local client. Its server component does no work.
 Do not also register Voice in `cli.json`. That file is an alternative for
 client-only plugins that must stay available with a different server.
@@ -344,6 +344,31 @@ age rule.
 - Auth, trust, sessions, logs, caches, and packages stay local through
   `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
   and are not duplicated here.
+
+## Plannotator
+
+Pi declares `npm:@plannotator/pi-extension` in `home/.pi/agent/settings.json`.
+OpenCode v2 declares `@plannotator/opencode@latest` in the plural `plugins`
+array in `home/.config/opencode/opencode.jsonc`. Its `plan` agent can submit
+plans for browser review. These declarations do not bundle installed packages.
+Starting either host can download its declared packages.
+
+Once the packages are installed, use `/plannotator-review` for code review,
+`/plannotator-annotate <file.md>` for a document, or `/plannotator-last` for the
+last response. In Pi, `/plannotator-plan-mode` toggles planning restrictions
+until you approve the plan. Restart the hosts after installing the packages.
+
+Shared review preferences live in `home/.plannotator/config.json`. They use
+unified diffs, wrap long lines, hide whitespace changes, and keep reviewer
+feedback focused on the requested corrections. Reviews and credentials stay
+local and are excluded from Git and Stow.
+
+The separate terminal app, `plannotator-tui`, is not installed or declared as a
+managed package. Its preferences in `home/.config/plannotator-tui/config.toml`
+select a full-tab Herdr overlay when that app is available. Browser reviews do
+not require it. These preferences follow [Dillon's configuration](https://github.com/dmmulroy/.dotfiles/tree/4a783032e8f1254759ed9e97b65f6108478f0cb6),
+without his display name. No additional command files or skills are required
+for the current Pi and OpenCode v2 plugins.
 
 ## Agent Skills
 

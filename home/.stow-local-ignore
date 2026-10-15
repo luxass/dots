@@ -1,3 +1,5 @@
 node_modules
+# Only Plannotator preferences are managed. Leave runtime state local.
+\.plannotator/(?!config\.json$).*
 # OpenCode service configuration can contain passwords and private remote URLs.
 \.config/opencode/service(-[^/]*)?\.json

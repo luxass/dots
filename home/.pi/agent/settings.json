@@ -3,7 +3,8 @@
     "npm:@luxass/pi-voice",
     "npm:@luxass/pi-whimsical",
     "npm:@luxass/pi-btw",
-    "npm:@luxass/pi-personal"
+    "npm:@luxass/pi-personal",
+    "npm:@plannotator/pi-extension"
   ],
   "lastChangelogVersion": "1.2.0",
   "theme": "dark",

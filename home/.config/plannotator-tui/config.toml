@@ -1,0 +1,8 @@
+# Plannotator TUI preferences. The separate plannotator-tui app is required.
+
+[herdr]
+# Open reviews in a full-tab overlay. Alternatives: "split" or "popup".
+placement = "overlay"
+split_direction = "right"
+popup_width = "90%"
+popup_height = "85%"

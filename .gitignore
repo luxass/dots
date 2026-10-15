@@ -24,6 +24,10 @@ auth.json
 *.p12
 *.pfx
 
+# Plannotator preferences only; reviews, credentials, and runtime state stay local.
+home/.plannotator/*
+!home/.plannotator/config.json
+
 # App-generated state
 home/.config/fish/fish_variables
 # CLI-managed fish completions regenerate on every CLI update; never track

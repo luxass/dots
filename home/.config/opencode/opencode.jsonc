@@ -3,6 +3,13 @@
   "plugins": [
     "./herdr-opencode",
     "@luxass/opencode-voice",
-    "@luxass/opencode-personal"
+    "@luxass/opencode-personal",
+    {
+      "package": "@plannotator/opencode@latest",
+      "options": {
+        "workflow": "plan-agent",
+        "planningAgents": ["plan"]
+      }
+    }
   ]
 }
