@@ -1,4 +1,8 @@
 node_modules
+# Herdr downloads plugins and stores a machine-local registry here.
+\.config/herdr/plugins(/.*)?
+\.config/herdr/plugins\.json
+\.config/herdr/\.plugins\.lock
 # Only Plannotator preferences are managed. Leave runtime state local.
 \.plannotator/(?!config\.json$).*
 # OpenCode service configuration can contain passwords and private remote URLs.

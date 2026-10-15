@@ -1,0 +1,4 @@
+# GitHub plugin sources installed by `dot init` and `dot stow`.
+# `dot update` offers updates. One owner/repository[/subdirectory] per line.
+plannotator/herdr-annotate
+plannotator/herdr-annotate/links

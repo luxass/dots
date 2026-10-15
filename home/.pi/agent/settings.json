@@ -15,5 +15,5 @@
   "defaultTools": [
     "+codemode"
   ],
-  "hideThinkingBlock": true
+  "hideThinkingBlock": false
 }

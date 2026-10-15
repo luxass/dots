@@ -63,6 +63,7 @@ dots/
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
+| Change Herdr plugins | `home/.config/herdr/plugins.txt`, `lib/features/herdr.sh`; shortcuts in `home/.config/herdr/config.toml` |
 | Change OpenCode config/plugins | `home/.config/opencode/`, `lib/features/opencode.sh` |
 | Change OpenCode voice plugin | `home/.config/opencode/opencode.json` (`@luxass/opencode-voice`, v2 `plugins` array) |
 | Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
@@ -148,6 +149,14 @@ dots/
   The private submodule and its dependency/linking hooks are removed. Stow
   backs up only leftover symlinks created by the retired setup; it leaves other
   local plugins alone.
+- Herdr plugins are listed in `home/.config/herdr/plugins.txt`. `dot init` and
+  `dot stow` install missing sources through `sfw herdr plugin install`;
+  `dot update` offers scoped native updates. Do not track or stow Herdr
+  `plugins/`, `plugins.json`, or `.plugins.lock`: they contain downloaded
+  code, machine-local paths, and potentially private plugin configuration.
+  Herdr Annotate bundles its own TUI. Keep `prefix+m` for pane zoom and
+  `prefix+o` for document review; notifications use `prefix+i`. Do not stop
+  a running Herdr server to apply plugin changes.
 - Fish plugins are listed in `home/.config/fish/fish_plugins` and installed by
   Fisher into `fisher_path` (`~/.local/share/fisher`, set in
   `conf.d/fisher.fish`), never into `home/.config/fish/`. Add plugins to
