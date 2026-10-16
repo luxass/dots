@@ -18,6 +18,20 @@ Use the `gh` CLI for GitHub work. Prefer structured output and explicit reposito
 
 ## Pull Requests
 
+### Attribution
+
+- End every PR description you create with `Made with {model} in {agent}.`
+- Apply this to every creation method, including `gh pr create`, `gh stack`, other CLIs, and APIs. Include every PR in a stack.
+- Use verified runtime details. The agent is the coding tool, such as Pi or Claude Code. Use the current footer supplied by a runtime extension when available.
+- Omit unknown fields and their connecting words. Do not guess model names, versions, or agents. Do not add a host name.
+- If only the agent is known, use `Made with {agent}.` If no details are known, use `This PR was created with the help of an agent.`
+- Preserve existing attribution when updating descriptions. Add missing attribution for your contribution without replacing earlier credits or duplicating the same footer.
+- Before finishing, read each created or updated PR description and make sure that its attribution is present and accurate.
+
+For example, use `Made with Pi.` when Pi is known but the model is not.
+
+### Commands
+
 Inspect a PR:
 
 ```sh
