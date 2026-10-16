@@ -4,9 +4,10 @@
     "npm:@luxass/pi-whimsical",
     "npm:@luxass/pi-btw",
     "npm:@luxass/pi-personal",
+    "npm:@luxass/pi-questions",
     "npm:@plannotator/pi-extension"
   ],
-  "lastChangelogVersion": "1.2.0",
+  "lastChangelogVersion": "1.3.0",
   "theme": "dark",
   "defaultProvider": "crow",
   "defaultModel": "gpt-6.1-sol",

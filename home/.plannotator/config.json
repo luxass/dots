@@ -16,5 +16,6 @@
   "reviewAnalysis": {
     "semanticDiff": true,
     "callFlow": false
-  }
+  },
+  "agentTool": true
 }
