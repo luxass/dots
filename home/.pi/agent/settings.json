@@ -5,6 +5,7 @@
     "npm:@luxass/pi-btw",
     "npm:@luxass/pi-personal",
     "npm:@luxass/pi-questions",
+    "npm:@luxass/pi-resources",
     "npm:@plannotator/pi-extension"
   ],
   "lastChangelogVersion": "1.3.0",
