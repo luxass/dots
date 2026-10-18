@@ -365,10 +365,8 @@ local and are excluded from Git and Stow.
 
 Terminal reviews use Herdr Annotate, which bundles `plannotator-tui`. Its
 preferences in `home/.config/plannotator-tui/config.toml` select a full-tab
-Herdr overlay. Browser reviews do not require this plugin. The review
-preferences follow [Dillon's configuration](https://github.com/dmmulroy/.dotfiles/tree/4a783032e8f1254759ed9e97b65f6108478f0cb6),
-without his display name. No additional command files or skills are required
-for the current Pi and OpenCode v2 plugins.
+Herdr overlay. Browser reviews do not require this plugin. No additional
+command files or skills are required for the current Pi and OpenCode v2 plugins.
 
 ## Herdr plugins
 
@@ -378,9 +376,8 @@ for the current Pi and OpenCode v2 plugins.
 uninstall it, and setup does not re-enable a disabled plugin.
 `dot doctor` checks that the sources are registered and the configuration is valid.
 
-The list includes Herdr Annotate and its Markdown-link add-on. Annotate
-bundles its own TUI, so no separate Homebrew package is needed for these
-reviews. Plugin downloads, registry files, and local plugin configuration
+The list includes Herdr Annotate. Annotate bundles its own TUI, so no
+separate Homebrew package is needed for these reviews. Plugin downloads, registry files, and local plugin configuration
 remain outside Git and Stow. No plugin installation restarts the Herdr server.
 
 After installing, reload the shortcuts with `herdr server reload-config`.
@@ -393,9 +390,9 @@ The prefix remains `Ctrl+B`. Press the prefix, then one of these keys:
 - `Shift+O`: Review the agent's recent replies.
 - `i`: Open the notification target, moved from `prefix+o`.
 
-Ctrl-click a Markdown `file://` link to open it in Annotate. In a document
-review, select text, press `c` to comment, and press `E` to send feedback to
-the agent. The shared `plannotator-tui` skill lets an agent open reviews too,
+Markdown `file://` links use Herdr's normal opener. To review a document,
+use `prefix+o`. In a document review, select text, press `c` to comment,
+and press `E` to send feedback to the agent. The shared `plannotator-tui` skill lets an agent open reviews too,
 using the Herdr plugin when no standalone TUI executable is on `PATH`.
 
 ## Agent Skills
