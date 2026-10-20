@@ -6,7 +6,7 @@
     "popToRootSeconds": 0,
     "escapeKeyBehavior": "navigateBackOrClose",
     "autoSwitchInputSource": null,
-    "supportReminders": true
+    "supportReminders": false
   },
   "appearance": {
     "theme": "system",

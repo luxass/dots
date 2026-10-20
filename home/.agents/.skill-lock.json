@@ -226,15 +226,6 @@
       "installedAt": "2026-10-10T04:07:35.357Z",
       "updatedAt": "2026-10-10T04:07:35.357Z"
     },
-    "agent-browser": {
-      "source": "vercel-labs/agent-browser",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/vercel-labs/agent-browser.git",
-      "skillPath": "skills/agent-browser/SKILL.md",
-      "skillFolderHash": "82def67855a0d2aad7794207951820fa5422fdb0",
-      "installedAt": "2026-10-10T04:07:50.079Z",
-      "updatedAt": "2026-10-10T04:07:50.079Z"
-    },
     "show-me": {
       "source": "humanlayer/skills",
       "sourceType": "github",
@@ -252,24 +243,24 @@
       "skillFolderHash": "626f21d2febf8e0b80084169a127e57153d2e614",
       "installedAt": "2026-10-15T03:48:58.570Z",
       "updatedAt": "2026-10-15T03:48:58.570Z"
+    },
+    "cua-driver": {
+      "source": "trycua/cua",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/trycua/cua.git",
+      "ref": "cua-driver-rs-v0.36.0",
+      "skillPath": "libs/cua-driver/rust/Skills/cua-driver/SKILL.md",
+      "skillFolderHash": "229cf71d61810fb3fe25771705478985640d93a0",
+      "installedAt": "2026-10-20T04:44:49.014Z",
+      "updatedAt": "2026-10-20T04:44:49.014Z"
     }
   },
   "dismissed": {
     "findSkillsPrompt": true
   },
   "lastSelectedAgents": [
-    "amp",
-    "cline",
     "codex",
-    "cursor",
-    "droid",
-    "gemini-cli",
-    "github-copilot",
-    "kilo",
-    "kimi-code-cli",
     "opencode",
-    "pi",
-    "warp",
-    "zed"
+    "pi"
   ]
 }

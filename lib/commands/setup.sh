@@ -41,6 +41,7 @@ cmd_init() {
     "optional|Fish shell|fish_setup" \
     "required|pnpm, Node.js, and globals|pnpm_setup" \
     "optional|Rust|rust_setup" \
+    "optional|Cua Driver|cua_setup" \
     "optional|Plugin dependencies|install_deps" \
     "optional|Git hooks and identity|git_setup"
 }
@@ -72,6 +73,7 @@ cmd_update() {
   print_section "Runtimes"
   pnpm_update || failed=1
   pi_update_self || failed=1
+  cua_update || failed=1
 
   print_section "Homebrew"
   brew update || failed=1

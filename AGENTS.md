@@ -238,9 +238,24 @@ answers yes to confirmations.
 - `dot init` stows package-manager policy before installing standalone pnpm and
   pnpm-managed runtime tools, so install policy is active during setup.
 - Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12,
-  Pi (`pi`), and `agent-browser`. Run `agent-browser install` once for its Chrome
-  browser download. OpenCode v2 (`opencode`) is installed through the
-  `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` runs Pi's native
+  Pi (`pi`), `cf`, and `coderabbit`. `lib/features/cua.sh` installs Cua Driver
+  through its official stable installer during `dot init` and offers native
+  updates during `dot update`. Ask before stopping a running daemon for an
+  update and warn that connected computer-use sessions will be interrupted.
+  Abort if the daemon does not stop or restarts immediately. `dot init` and
+  successful updates offer `cua-driver permissions grant`; the human approves
+  macOS dialogs. `dot stow` never installs or launches Cua Driver.
+  Native Pi MCP configuration lives in
+  `home/.pi/agent/mcp.json` (`computer` server). The upstream Cua skill pack in
+  `home/.agents/skills/cua-driver/` is imported through `sfw pnpx skills` and
+  tracked in the native skills lock. A read-first note in `SKILL.md` loads its
+  locally maintained `LOCAL.md`. Preserve both additions manually after skills
+  CLI updates. This pack is an exception to the imported-skill editing rule:
+  retain its lock entry and keep local edits limited to `LOCAL.md` and that
+  note. `dot doctor` checks the CLI, app
+  signature, daemon, and permissions without starting the daemon or prompting.
+  OpenCode v2 (`opencode`) is installed through
+  the `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` runs Pi's native
   self-updater and handles OpenCode binary updates through Homebrew. It also
   offers native OpenCode package-plugin updates after linking the dotfiles.
 - OpenCode local plugins are tracked under `home/.config/opencode/plugins/`.

@@ -17,12 +17,13 @@ readonly PNPM_INSTALL_VERSION="${PNPM_INSTALL_VERSION:-12}"
 readonly PNPM_UPDATE_TAG="${PNPM_UPDATE_TAG:-latest-12}"
 readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
 readonly NPM_RUNTIME_VERSION="${NPM_RUNTIME_VERSION:-12}"
+readonly CUA_DRIVER_INSTALL_URL="https://cua.ai/driver/install.sh"
+readonly CUA_DRIVER_APP="/Applications/CuaDriver.app"
 # Managed pnpm globals as package:command. OpenCode is installed through Homebrew.
 readonly PNPM_GLOBAL_PACKAGES=(
   "sfw:sfw"
   "npm@${NPM_RUNTIME_VERSION}:npm"
   "@earendil-works/pi-coding-agent:pi"
-  "agent-browser:agent-browser"
   "cf:cf"
   "coderabbit:coderabbit"
 )
@@ -37,4 +38,4 @@ readonly SKILLS_STATE_LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-
 #   <name>_unstow    before GNU Stow removes links
 #   <name>_check     doctor diagnostics; return 1 on failure
 # Removing a feature means deleting its file and its entry here.
-readonly FEATURES=(homebrew stow skills fish pnpm rust git pi opencode herdr)
+readonly FEATURES=(homebrew stow skills fish pnpm rust git pi cua opencode herdr)

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "computer": {
+      "command": "cua-driver",
+      "args": ["mcp"],
+      "exposure": "codemode",
+      "description": "Operate browsers and native desktop apps with Cua Driver: inspect windows, view screenshots, click, type, scroll, and verify results."
+    }
+  }
+}

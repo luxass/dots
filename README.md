@@ -242,11 +242,11 @@ Homebrew and checks the tracked npm, pnpm, and Bun policy files.
 sfw
 npm 12
 pi (@earendil-works/pi-coding-agent)
-agent-browser
+cf
+coderabbit
 ```
 
-Run `agent-browser install` once to download its Chrome browser. Global CLI
-installs go through `sfw pnpm add -g`; the browser download uses the native CLI.
+Global CLI installs go through `sfw pnpm add -g`.
 
 OpenCode v2 is installed from `anomalyco/tap/opencode-v2` through
 `packages/bundle`. `dot update` runs Pi's native self-updater, which detects
@@ -344,6 +344,61 @@ age rule.
 - Auth, trust, sessions, logs, caches, and packages stay local through
   `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
   and are not duplicated here.
+
+### Computer use
+
+`home/.pi/agent/mcp.json` declares Cua Driver as the `computer` server through
+[Pi's native MCP support](https://pi.dev/docs/latest/mcp). No MCP adapter
+extension is needed. Tools use `codemode` exposure and the
+`mcp__computer__` prefix. The driver starts with standard permissions, without
+existing-browser-profile access or approval bypasses.
+
+`dot init` installs Cua Driver through its official stable
+[macOS installer](https://cua.ai/docs/cua-driver/quickstart). The installer
+places the signed `CuaDriver.app` in `/Applications` and its CLI in
+`~/.local/bin`. It does not edit shell startup files. The upstream skill pack
+is imported separately through `sfw pnpx skills` and tracked in this repo.
+
+`dot init` offers to open the macOS permission flow, including for an existing
+installation. You approve Accessibility and Screen Recording permissions
+yourself. If you decline, run it later:
+
+```sh
+cua-driver permissions grant
+cua-driver doctor
+```
+
+Once the configuration is linked and the driver is installed, run
+`pi mcp list` to test the connection. In an existing Pi session, run `/reload`
+and inspect `/mcp`. Cua Spaces and a VM are not required.
+
+`dot update` checks for Cua Driver releases and offers its native updater.
+If its daemon is running, dots asks before stopping it and warns that connected
+computer-use sessions will be interrupted. If the daemon does not stop or
+restarts immediately, the update fails without running the installer.
+Reconnect Pi afterward. The native updater preserves the selected release
+channel. A replacement signing identity can require permission grants again,
+so dots also offers the permission flow after an update. Declining that offer
+leaves the installation intact. `--yes` accepts these offers, but cannot approve
+macOS dialogs for you.
+
+`dot doctor` checks the CLI, app signature, daemon, and permissions without
+starting the daemon or opening permission prompts. A stopped daemon produces
+a warning because its permissions cannot be read reliably. `dot stow` only
+links the Cua configuration and skill. It does not install or launch Cua.
+
+The upstream skill pack at `home/.agents/skills/cua-driver/` is pinned to
+`cua-driver-rs-v0.36.0` in the native skills lock. Manage it through
+`sfw pnpx skills`. Local integration rules live in `LOCAL.md` alongside the
+pack. A read-first note in `SKILL.md` tells agents to load that file. These are
+the only local additions to the upstream pack. Commit or stash local changes
+before a skills CLI update. Afterward, review the diff and manually restore
+`LOCAL.md` and the note if overwritten. Do not rely on the CLI to preserve them
+automatically. Keep the native lock entry as upstream provenance.
+
+Use Cua for browser and native GUI work. Keep ordinary file and command-line
+tasks on their existing tools. Ask before visible desktop takeover unless the
+task already authorizes it.
 
 ## Plannotator
 
