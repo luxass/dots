@@ -15,7 +15,7 @@ PNPM_HOME="${PNPM_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/pnpm}"
 readonly PNPM_HOME
 readonly PNPM_INSTALL_VERSION="${PNPM_INSTALL_VERSION:-12}"
 readonly PNPM_UPDATE_TAG="${PNPM_UPDATE_TAG:-latest-12}"
-readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-lts}"
+readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-24}"
 readonly NPM_RUNTIME_VERSION="${NPM_RUNTIME_VERSION:-12}"
 readonly CUA_DRIVER_INSTALL_URL="https://cua.ai/driver/install.sh"
 readonly CUA_DRIVER_APP="/Applications/CuaDriver.app"

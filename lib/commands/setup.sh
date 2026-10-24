@@ -72,6 +72,7 @@ cmd_update() {
 
   print_section "Runtimes"
   pnpm_update || failed=1
+  pnpm_update_node || failed=1
   pi_update_self || failed=1
   cua_update || failed=1
 

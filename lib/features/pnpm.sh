@@ -151,6 +151,42 @@ pnpm_update() {
   print_success "pnpm $(pnpm --version)"
 }
 
+pnpm_update_node() {
+  local current latest newest
+
+  if ! command_exists pnpm || ! command_exists node || ! command_exists sfw; then
+    print_warning "Skipping Node.js update; run 'dot init' to install pnpm, Node.js, and sfw"
+    return 0
+  fi
+
+  current="$(pnpm list --global node --depth 0 --json \
+    | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8"))[0].dependencies.node.version')" || return 1
+  if ! latest="$(curl -fsSL --connect-timeout 5 --max-time 20 https://nodejs.org/dist/index.tab \
+    | awk -F '\t' -v target="$NODE_RUNTIME_VERSION" '
+      NR > 1 && !version && (target == "latest" ||
+        (target == "lts" && $10 != "-") ||
+        $1 == "v" target || index($1, "v" target ".") == 1) {
+        version = substr($1, 2)
+      }
+      END { if (version) print version; else exit 1 }
+    ')" || [[ ! "$latest" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    print_warning "Could not check for a Node.js update"
+    return 0
+  fi
+
+  newest="$(printf '%s\n' "$current" "$latest" | sort -V | tail -n 1)"
+  if [[ "$newest" == "$current" ]]; then
+    print_success "No Node.js update needed ($current)"
+    return 0
+  fi
+
+  print_info "Node.js $latest is available (installed: $current)"
+  confirm "Update Node.js to $latest?" n || return 0
+  sfw pnpm runtime set node "$latest" -g -y || return 1
+  hash -r
+  print_success "Node.js $(node --version); restart Node.js applications to use the new runtime"
+}
+
 pnpm_check_origins() {
   local command path failed=0
 

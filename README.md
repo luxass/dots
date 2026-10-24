@@ -223,10 +223,12 @@ the repo.
 
 `mise` is installed from the base Homebrew bundle and activated automatically
 in Fish by `home/.config/fish/conf.d/mise.fish`. Use `mise use` in a project to
-select a runtime and record its version in `.mise.toml`; no global runtime
-versions are pinned by this repo. Node.js remains managed by pnpm in the current
-setup, so do not select a competing Node.js version with mise unless you intend
-to migrate that ownership.
+select a runtime and record its version in `.mise.toml`. Node.js is managed by
+pnpm and defaults to the latest Node 24 release. `dot update` offers Node updates
+within that release line; it does not move to the next major automatically.
+Restart Node.js applications after updating. Project-specific runtimes, containers,
+and bundled Node copies need separate updates. Do not select a competing Node.js
+version with mise unless you intend to migrate that ownership.
 
 `dot init` stows these configs before installing standalone pnpm 12, the
 pnpm-managed Node.js runtime, npm 12, or pnpm global tools, so package-manager
