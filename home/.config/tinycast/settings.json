@@ -6,7 +6,8 @@
     "popToRootSeconds": 0,
     "escapeKeyBehavior": "navigateBackOrClose",
     "autoSwitchInputSource": null,
-    "supportReminders": false
+    "supportReminders": false,
+    "language": "en"
   },
   "appearance": {
     "theme": "system",
@@ -19,7 +20,8 @@
   "hyperKey": {
     "key": "none",
     "includesShift": true,
-    "quickPress": "none"
+    "quickPress": "none",
+    "secureInputCompatibility": false
   },
   "calculator": {
     "numberStyle": "system"
@@ -60,7 +62,7 @@
     "enabled": false,
     "showInLauncher": true,
     "opensNewWindow": false,
-    "selectionFallback": "ask",
+    "passesSelectedText": false,
     "confirmsBeforeDelete": true,
     "commands": {}
   },
@@ -70,6 +72,7 @@
   "ai": {
     "enabled": false,
     "webSearch": false,
+    "choices": true,
     "systemPrompt": "",
     "systemPromptEnabled": true,
     "retentionDays": "forever",
@@ -89,6 +92,7 @@
     "microphone": null,
     "destination": "paste",
     "adaptsCapitalization": true,
+    "liveInsertion": false,
     "releaseAfterMinutes": 1,
     "language": null
   },
@@ -98,6 +102,8 @@
       "~"
     ],
     "ignorePatterns": [],
+    "removedDefaultPatterns": [],
+    "showInLauncher": false,
     "commands": {}
   },
   "notes": {
