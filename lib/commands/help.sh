@@ -24,7 +24,6 @@ ${BOLD}MANAGE${RESET}
   package        Homebrew packages ('dot package help')
   config         Machine-local preferences ('dot config help')
   hooks          Point Git at .githooks
-  git-identity   Create or update ~/.gitconfig.local
 
 ${BOLD}OPTIONS${RESET}
   -v, --verbose  Print extra diagnostics

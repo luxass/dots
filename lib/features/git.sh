@@ -1,5 +1,17 @@
 # shellcheck shell=bash
-# Repository hooks, the private ~/.gitconfig.local identity, and secret scanning.
+# Repository hooks, public Git identity, and secret scanning.
+
+# Retire only the old Stow link; leave independently managed ~/.gitconfig alone.
+git_prestow() {
+  local old="$HOME/.gitconfig" target
+  [[ -L "$old" ]] || return 0
+  target="$(readlink "$old")" || return 1
+  [[ "$target" == /* ]] || target="$HOME/$target"
+  if [[ "$target" == "$DOTFILES_DIR/home/.gitconfig" ]]; then
+    backup_path "$old" || return 1
+  fi
+  return 0
+}
 
 git_install_hooks() {
   repo_is_git || {
@@ -8,53 +20,6 @@ git_install_hooks() {
   }
   repo_git config core.hooksPath .githooks || return 1
   print_success "Git hooks path set to .githooks"
-}
-
-# git_write_identity [force]: create ~/.gitconfig.local, prompting for values.
-git_write_identity() {
-  local force="${1:-false}" file="$HOME/.gitconfig.local"
-  local name email key default_name default_email default_key
-
-  if [[ -f "$file" && "$force" != true ]]; then
-    print_success "Git identity exists"
-    return 0
-  fi
-  if [[ ! -t 0 ]]; then
-    print_warning "Missing $(pretty_path "$file"); run 'dot git-identity'"
-    return 1
-  fi
-
-  default_name="$(git config --global --includes --get user.name || true)"
-  default_email="$(git config --global --includes --get user.email || true)"
-  default_key="$(git config --global --includes --get user.signingkey || true)"
-
-  read -r -p "Git user.name${default_name:+ [$default_name]}: " name || true
-  read -r -p "Git user.email${default_email:+ [$default_email]}: " email || true
-  print_info "For 1Password SSH signing keys, enable the 1Password SSH agent and run: ssh-add -L"
-  read -r -p "Git user.signingkey${default_key:+ [$default_key]}: " key || true
-  name="${name:-$default_name}"
-  email="${email:-$default_email}"
-  key="${key:-$default_key}"
-
-  if [[ -z "$name" || -z "$email" ]]; then
-    print_warning "Git identity skipped"
-    return 1
-  fi
-
-  touch "$file" && chmod 600 "$file" || return 1
-  git config --file "$file" user.name "$name" || return 1
-  git config --file "$file" user.email "$email" || return 1
-  if [[ -n "$key" ]]; then
-    git config --file "$file" user.signingkey "$key" || return 1
-  fi
-  print_success "Wrote $(pretty_path "$file")"
-}
-
-git_setup() {
-  local failed=0
-  git_install_hooks || failed=1
-  git_write_identity || failed=1
-  return "$failed"
 }
 
 # git_secret_scan: print likely secrets in tracked and unignored files.
@@ -85,10 +50,29 @@ git_check() {
     print_error "pre-push hook is not executable"
     failed=1
   fi
-  if [[ -f "$HOME/.gitconfig.local" ]]; then
-    print_success "Git identity"
+  local file="$HOME_DIR/.config/git/config" field expected actual
+  check_link "$HOME/.config/git/config" "$file" "Git configuration link" || failed=1
+  for field in user.name user.email user.signingkey; do
+    expected="$(git config --file "$file" --get "$field" || true)"
+    actual="$(git config --global --includes --get "$field" || true)"
+    if [[ -z "$expected" && "$field" != user.signingkey ]]; then
+      print_error "Missing public Git $field; edit home/.config/git/config"
+      failed=1
+    elif [[ "$actual" != "$expected" ]]; then
+      print_error "Global Git $field differs from the tracked public identity; check local overrides"
+      failed=1
+    else
+      print_success "Public Git $field"
+    fi
+  done
+  local bundle configured
+  bundle="$(git config --file "$HOME_DIR/.config/git/config" --path --get http.sslCAInfo)" || return 1
+  configured="$(git config --global --includes --path --get http.sslCAInfo || true)"
+  if [[ "$configured" == "$bundle" && -s "$bundle" && -r "$bundle" ]]; then
+    print_success "Git Homebrew CA bundle"
   else
-    print_warning "Missing ~/.gitconfig.local; run 'dot git-identity'"
+    print_error "Git CA bundle is missing or overridden; check Homebrew ca-certificates and ~/.config/git/config"
+    failed=1
   fi
   if git_secret_scan; then
     print_success "Secret scan"

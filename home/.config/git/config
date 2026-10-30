@@ -1,0 +1,52 @@
+[user]
+	name = Lucas Nørgård
+	email = lucasnrgaard@gmail.com
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOIE7zbJD4tPaAOouTuQokOO2MzIhbAJDOnYPAV4B/x+
+
+[branch]
+	sort = -committerdate
+
+[column]
+	ui = auto
+
+[http]
+	sslCAInfo = /opt/homebrew/etc/ca-certificates/cert.pem
+
+[init]
+	defaultBranch = main
+
+[push]
+	autoSetupRemote = true
+
+[fetch]
+	prune = true
+	writeCommitGraph = true
+
+[core]
+	editor = nvim
+	excludesfile = ~/.gitignore
+	fsmonitor = true
+
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
+
+[commit]
+	gpgsign = true
+
+[tag]
+	gpgsign = true
+
+[pull]
+	rebase = true
+
+[rebase]
+	updateRefs = true
+
+[rerere]
+	enabled = true
+
+[url "git@github.com:"]
+	insteadOf = https://github.com/

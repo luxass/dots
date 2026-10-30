@@ -6,7 +6,7 @@ Personal macOS dotfiles managed with GNU Stow and a small `dot` CLI.
 
 This repository contains a reproducible macOS development setup. Files under
 `home/` mirror `$HOME`, packages live in `packages/`, and `dot` handles setup,
-maintenance, package checks, symlinks, and local-only identity configuration.
+maintenance, package checks, symlinks, and public Git identity configuration.
 
 The repo is intentionally small: Fish, Git, Ghostty, Homebrew packages,
 and JavaScript runtime policy. It does not try to manage Linux, Neovim, tmux,
@@ -20,7 +20,7 @@ or other configs that are not currently wanted.
 - Homebrew-installed mise with Fish activation for project and language runtimes
 - Standalone pnpm 12 with pnpm-managed Node.js and npm 12
 - Managed pnpm global tools, including Socket Firewall (`sfw`)
-- Public-safe Git config with private identity in `~/.gitconfig.local`
+- Public Git settings and identity in `home/.config/git/config`
 - Tracked pre-push hook that runs secret scanning before publishing
 - npm, pnpm, and Bun install policy for build approvals and release age checks
 - Diagnostics for required tools, package state, managed links, and secrets
@@ -52,9 +52,9 @@ second CLI link in `~/.local/bin/`.
 │   ├── .config/
 │   │   ├── fish/
 │   │   ├── ghostty/
+│   │   ├── git/         # Public Git settings and identity
 │   │   ├── opencode/
 │   │   └── pnpm/
-│   ├── .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 │   ├── .npmrc          # Public npm policy only; no auth
 │   ├── .pi/            # Lean Pi agent config (settings, keybindings, notes)
 │   └── dot-gitignore   # Stowed as ~/.gitignore via --dotfiles
@@ -74,7 +74,7 @@ Global options: `-v` / `--verbose` prints extra diagnostics, and `-y` /
 default answer.
 
 ```sh
-dot init             # install packages, link dotfiles, set up runtimes, hooks, identity
+dot init             # install packages, link dotfiles, set up runtimes and hooks
 dot update           # pull, update Pi, offer pnpm/Homebrew/Pi extension upgrades, relink
 dot stow             # link home/ and install plugin dependencies
 dot unstow           # remove stowed symlinks
@@ -85,7 +85,6 @@ dot lint             # run shellcheck and shfmt on dot itself
 dot package ...      # Homebrew packages (see below)
 dot config ...       # local-only preferences
 dot hooks            # point Git at .githooks
-dot git-identity     # create or update ~/.gitconfig.local
 ```
 
 ## Package Management
@@ -145,18 +144,12 @@ Unset keys are asked about once, interactively, when `dot` needs them.
 
 ## Git Identity
 
-Tracked Git config intentionally excludes name, email, and signing key:
+Git reads the tracked configuration from `~/.config/git/config`. It contains
+the public name, email, and SSH signing public key. Private keys and credentials
+stay outside this repository. The 1Password SSH signing program and automatic
+commit signing remain enabled.
 
-```ini
-[include]
-  path = ~/.gitconfig.local
-```
-
-Create the local identity file with:
-
-```sh
-dot git-identity
-```
+To change the public identity, edit `home/.config/git/config` directly.
 
 For 1Password SSH signing, enable the 1Password SSH agent and use:
 
@@ -164,7 +157,30 @@ For 1Password SSH signing, enable the 1Password SSH agent and use:
 ssh-add -L
 ```
 
-Paste the relevant public key when prompted for `user.signingkey`.
+Set `user.signingkey` to the relevant public key. Do not copy a private key,
+credential, or work-only identity into the tracked file. Review the diff before
+committing.
+
+The old `~/.gitconfig.local` identity was merged by copying only the public
+name, email, and signing key. The original file was moved to
+`${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/.gitconfig.local`.
+The tracked configuration no longer includes it. Setup does not import local
+identity files automatically.
+
+`dot doctor` checks the configuration link, required public name and email,
+and global identity overrides. Keep work-only identity in a separate local
+repository configuration, never in the tracked file.
+
+Git uses Homebrew’s `ca-certificates` bundle through `http.sslCAInfo` in
+`home/.config/git/config`. These dots target Apple Silicon, so the path is
+`/opt/homebrew/etc/ca-certificates/cert.pem`. Homebrew updates the bundle in
+place. `dot doctor` checks the bundle and the global Git setting. This leaves
+Apple’s system certificate files unchanged and does not change curl or Python.
+Repository settings and environment variables can override the global setting.
+
+`dot stow` backs up the old managed `~/.gitconfig` symlink before linking the
+new location. It leaves independent `~/.gitconfig` files unchanged. Git reads
+those files too, and their values can override `~/.config/git/config`.
 
 ## Shell
 

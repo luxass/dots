@@ -43,7 +43,7 @@ cmd_init() {
     "optional|Rust|rust_setup" \
     "optional|Cua Driver|cua_setup" \
     "optional|Plugin dependencies|install_deps" \
-    "optional|Git hooks and identity|git_setup"
+    "optional|Git hooks|git_install_hooks"
 }
 
 # Pull the repo and restart with the new code when it changed.

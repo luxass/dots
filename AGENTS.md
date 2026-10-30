@@ -2,9 +2,8 @@
 
 Personal macOS development environment managed with GNU Stow and the `dot` CLI.
 
-This repo is public-facing. Keep tokens, auth files, shell histories, private
-Git identity, work-only details, and machine-local secrets out of tracked
-content. Personal Git identity belongs in `~/.gitconfig.local`.
+This repo is public-facing. Keep tokens, auth files, shell histories,
+work-only details, and machine-local secrets out of tracked content.
 
 ## STRUCTURE
 
@@ -21,11 +20,11 @@ dots/
 |   |-- .config/
 |   |   |-- fish/       # Primary shell config
 |   |   |-- ghostty/    # Terminal config
+|   |   |-- git/        # Public Git settings and identity
 |   |   |-- opencode/   # OpenCode config, TS plugins, package lock
 |   |   |-- pnpm/       # pnpm security policy
 |   |   `-- starship.toml
 |   |-- .bunfig.toml    # Bun install policy
-|   |-- .gitconfig      # Public Git settings; includes ~/.gitconfig.local
 |   |-- .npmrc          # npm policy only; no auth
 |   |-- .pi/            # Lean Pi agent config (settings, keybindings, notes)
 |   `-- dot-gitignore   # Stowed as ~/.gitignore via stow --dotfiles
@@ -58,8 +57,8 @@ dots/
 | Add a personal CLI tool | `home/.local/bin/`, then `dot stow` |
 | Change runtime tools | `lib/features/pnpm.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/` |
 | Change GitHub CLI config/extensions | `home/.config/gh/`, `lib/features/gh.sh` (never track `hosts.yml`) |
-| Change Git defaults | `home/.gitconfig` for public config only |
-| Change private Git identity | `~/.gitconfig.local`, never tracked files |
+| Change Git defaults | `home/.config/git/config` for public config only |
+| Change public Git identity | `home/.config/git/config` |
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
@@ -100,8 +99,13 @@ dots/
   symlink checks, and diagnostics.
 - Use GNU Stow semantics. Files under `home/` map to `$HOME`; `dot-*` names map
   to hidden files through `stow --dotfiles`.
-- Keep `home/.gitconfig` public-safe. It may include `~/.gitconfig.local`, but
-  must not contain name, email, signing key, or work-only identity values.
+- Public Git identity may be tracked in home/.config/git/config.
+  Never track private keys, tokens, credentials, or work-only identity.
+- These dots target Apple Silicon. Git uses Homebrew’s `ca-certificates`
+  bundle at `/opt/homebrew/etc/ca-certificates/cert.pem`, configured directly
+  in `home/.config/git/config`. `dot doctor` checks the bundle and global setting.
+  Do not add configuration-writing hooks, modify Apple’s system certificate
+  bundle, or disable TLS verification.
 - Codex is installed as a Homebrew cask, but its config is not managed. The
   live `~/.codex/config.toml` is local state and must not be stowed or
   tracked; `home/.codex/` only holds an ignore policy.
@@ -204,7 +208,7 @@ dots/
 ## COMMANDS
 
 ```sh
-dot init             # Install packages, link dotfiles, set up runtimes, hooks, identity
+dot init             # Install packages, link dotfiles, set up runtimes and hooks
 dot update           # Pull changes, offer pnpm/Homebrew/Pi upgrades, relink
 dot stow             # Link home/ with GNU Stow and install plugin dependencies
 dot unstow           # Remove symlinks using GNU Stow
@@ -213,7 +217,6 @@ dot info             # Show repo paths, runtime tools, and git status
 dot secret-scan      # Scan tracked and unignored files for secrets
 dot lint             # shellcheck + shfmt (pinned in .mise.toml) over dot, lib/, .githooks/
 dot hooks            # Install repository Git hooks
-dot git-identity     # Create or update ~/.gitconfig.local
 dot config           # Manage local-only preferences (git-config format)
 dot package list     # List managed packages per group
 dot package check    # Show missing packages
@@ -233,7 +236,7 @@ answers yes to confirmations.
 | Tool | Entry | Notes |
 | --- | --- | --- |
 | Fish | `home/.config/fish/` | Primary shell startup and environment |
-| Git | `home/.gitconfig` | Public config; private identity is local-only |
+| Git | `home/.config/git/config` | Public config and public identity only |
 | Ghostty | `home/.config/ghostty/config` | Terminal settings |
 | Starship | `home/.config/starship.toml` | Prompt |
 | Homebrew | `packages/bundle*` | Base, fonts, personal, and optional work bundles |
