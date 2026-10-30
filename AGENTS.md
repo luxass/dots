@@ -26,7 +26,6 @@ dots/
 |   |   `-- starship.toml
 |   |-- .bunfig.toml    # Bun install policy
 |   |-- .gitconfig      # Public Git settings; includes ~/.gitconfig.local
-|   |-- .local/bin/     # Personal CLI tools (git-wt-clean)
 |   |-- .npmrc          # npm policy only; no auth
 |   |-- .pi/            # Lean Pi agent config (settings, keybindings, notes)
 |   `-- dot-gitignore   # Stowed as ~/.gitignore via stow --dotfiles
