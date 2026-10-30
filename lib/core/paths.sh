@@ -38,4 +38,4 @@ readonly SKILLS_STATE_LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-
 #   <name>_unstow    before GNU Stow removes links
 #   <name>_check     doctor diagnostics; return 1 on failure
 # Removing a feature means deleting its file and its entry here.
-readonly FEATURES=(homebrew stow skills fish pnpm rust git pi cua opencode herdr)
+readonly FEATURES=(homebrew stow skills fish pnpm rust git gh pi cua opencode herdr)

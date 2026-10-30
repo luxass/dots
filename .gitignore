@@ -13,6 +13,11 @@ backups/
 Brewfile.lock.json
 packages/failed_packages_*.txt
 
+# GitHub CLI: preferences and extension sources only, never auth or runtime state.
+home/.config/gh/*
+!home/.config/gh/config.yml
+!home/.config/gh/extensions.txt
+
 # Secrets and auth state
 **/.npmrc
 !home/.npmrc

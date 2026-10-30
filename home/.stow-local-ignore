@@ -1,4 +1,6 @@
 node_modules
+# GitHub CLI authentication and runtime state stay local.
+\.config/gh/(?!config\.yml$|extensions\.txt$).*
 # Herdr downloads plugins and stores a machine-local registry here.
 \.config/herdr/plugins(/.*)?
 \.config/herdr/plugins\.json

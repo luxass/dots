@@ -58,6 +58,7 @@ dots/
 | Change symlink/Stow behavior | `lib/features/stow.sh`, `lib/core/fs.sh` |
 | Add a personal CLI tool | `home/.local/bin/`, then `dot stow` |
 | Change runtime tools | `lib/features/pnpm.sh`, `home/.npmrc`, `home/.config/pnpm/config.yaml`, `home/.bunfig.toml`, `home/.config/fish/conf.d/` |
+| Change GitHub CLI config/extensions | `home/.config/gh/`, `lib/features/gh.sh` (never track `hosts.yml`) |
 | Change Git defaults | `home/.gitconfig` for public config only |
 | Change private Git identity | `~/.gitconfig.local`, never tracked files |
 | Change shell startup | `home/.config/fish/` |
@@ -104,6 +105,11 @@ dots/
 - Codex is installed as a Homebrew cask, but its config is not managed. The
   live `~/.codex/config.toml` is local state and must not be stowed or
   tracked; `home/.codex/` only holds an ignore policy.
+- GitHub CLI preferences and aliases live in `home/.config/gh/config.yml`.
+  Extension sources live in `extensions.txt`; init/stow installs missing sources
+  through `sfw gh extension install`, and update offers scoped native upgrades.
+  Never track or stow `hosts.yml`, credentials, or extension downloads.
+  Stow uses `--no-folding` so newly created local state stays outside Git.
 - Keep package policy public and token-free. `home/.npmrc`, pnpm config, and
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local

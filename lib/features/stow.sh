@@ -41,7 +41,8 @@ stow_apply() {
   stow_backup_conflicts || return 1
 
   print_info "Linking $(pretty_path "$HOME_DIR") into ~"
-  if ! stow --dotfiles --restow --dir "$DOTFILES_DIR" --target "$HOME" home; then
+  # Keep real directories so new local auth/state files never land in the repo.
+  if ! stow --dotfiles --no-folding --restow --dir "$DOTFILES_DIR" --target "$HOME" home; then
     print_error "GNU Stow failed"
     return 1
   fi
@@ -56,7 +57,7 @@ stow_apply() {
 stow_remove() {
   stow_require || return 1
   run_hook unstow || return 1
-  stow --dotfiles --delete --dir "$DOTFILES_DIR" --target "$HOME" home || return 1
+  stow --dotfiles --no-folding --delete --dir "$DOTFILES_DIR" --target "$HOME" home || return 1
   print_success "Dotfiles unlinked"
 }
 

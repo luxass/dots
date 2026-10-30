@@ -425,6 +425,26 @@ preferences in `home/.config/plannotator-tui/config.toml` select a full-tab
 Herdr overlay. Browser reviews do not require this plugin. No additional
 command files or skills are required for the current Pi and OpenCode v2 plugins.
 
+## GitHub CLI
+
+`home/.config/gh/config.yml` holds public preferences and aliases. Commands such
+as `gh config set` and `gh alias set` change this tracked file after stowing.
+Review these changes before committing. Keep private values out of this file.
+Authentication in `hosts.yml` stays local and is excluded from Git and Stow.
+Stow links individual files instead of whole directories, so new local state
+does not enter the repository through a directory symlink.
+
+`home/.config/gh/extensions.txt` lists `github/gh-stack` and `luxass/gh-zizmor`.
+`dot init` and `dot stow` install missing extensions through Socket Firewall.
+`dot update` offers updates for the listed extensions only. Versions are not
+pinned. Removing a source does not uninstall it. Downloaded code stays local.
+`dot doctor` checks the configuration link and missing extensions.
+
+On a new Mac, run `gh auth login` to authenticate separately. Dots does not
+copy credentials or log in for you. If `GH_CONFIG_DIR` or `XDG_CONFIG_HOME`
+redirects GitHub CLI elsewhere, `dot doctor` reports the missing configuration
+link. The managed location is `~/.config/gh/config.yml`.
+
 ## Herdr plugins
 
 `home/.config/herdr/plugins.txt` declares the managed GitHub plugin sources.

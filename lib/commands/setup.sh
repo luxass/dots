@@ -88,6 +88,7 @@ cmd_update() {
   pi_update_extensions || failed=1
   opencode_update_plugins || failed=1
   herdr_update_plugins || failed=1
+  gh_update_extensions || failed=1
 
   if [[ "$failed" -eq 0 ]]; then
     print_success "Update complete"

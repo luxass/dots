@@ -1,0 +1,3 @@
+# GitHub CLI extension sources. Downloads and credentials stay local.
+github/gh-stack
+luxass/gh-zizmor
