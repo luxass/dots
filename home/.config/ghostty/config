@@ -1,5 +1,5 @@
 font-feature = -liga
-theme = dark:Apple System Colors,light:Apple System Colors Light
+theme = dark:Catppuccin Macchiato,light:Catppuccin Latte
 font-family = Monaspace Krypton
 font-size = 14
 keybind = shift+enter=text:\n

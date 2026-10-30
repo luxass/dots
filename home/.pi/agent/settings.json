@@ -9,7 +9,7 @@
     "npm:@plannotator/pi-extension"
   ],
   "lastChangelogVersion": "1.4.0",
-  "theme": "dark",
+  "theme": "catppuccin-latte/catppuccin-macchiato",
   "defaultProvider": "crow",
   "defaultModel": "gpt-6.1-sol",
   "quietStartup": true,

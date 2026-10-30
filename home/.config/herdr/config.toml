@@ -3,13 +3,9 @@ onboarding = false
 [terminal]
 default_shell = "fish"
 
-[theme.custom]
-accent = "#c6a0f6"
-panel_bg = "#24273a"
-green = "#a6da95"
-yellow = "#eed49f"
-red = "#ed8796"
-blue = "#8aadf4"
+[theme]
+name = "terminal"
+auto_switch = false
 
 [keys]
 settings = "prefix+shift+s"
@@ -63,7 +59,6 @@ description = "Review the agent's last reply"
 sidebar_width = 32
 right_click_passthrough_modifier = "ctrl"
 prompt_new_workspace_name = true
-accent = "#c6a0f6"
 agent_panel_sort = "priority"
 status_indicators = "symbols"
 

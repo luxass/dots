@@ -19,6 +19,11 @@ readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-24}"
 readonly NPM_RUNTIME_VERSION="${NPM_RUNTIME_VERSION:-12}"
 readonly CUA_DRIVER_INSTALL_URL="https://cua.ai/driver/install.sh"
 readonly CUA_DRIVER_APP="/Applications/CuaDriver.app"
+readonly REX_APP_PATH="/Applications/Rex Beta.app"
+readonly REX_INSTALLATION_URL="https://www.superlogical.com/rex/docs/installation"
+readonly REX_BUNDLED_CLI="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex"
+readonly REX_DEFAULTS_DOMAIN="com.superlogical.rex"
+readonly REX_SETTINGS_FILE="$HOME_DIR/.config/rex/macos-defaults.conf"
 # Managed pnpm globals as package:command. OpenCode is installed through Homebrew.
 readonly PNPM_GLOBAL_PACKAGES=(
   "sfw:sfw"
@@ -38,4 +43,4 @@ readonly SKILLS_STATE_LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-
 #   <name>_unstow    before GNU Stow removes links
 #   <name>_check     doctor diagnostics; return 1 on failure
 # Removing a feature means deleting its file and its entry here.
-readonly FEATURES=(homebrew stow skills fish pnpm rust git gh pi cua opencode herdr)
+readonly FEATURES=(homebrew stow skills fish pnpm rust git gh pi cua opencode herdr rex)

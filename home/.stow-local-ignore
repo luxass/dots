@@ -5,6 +5,8 @@ node_modules
 \.config/herdr/plugins(/.*)?
 \.config/herdr/plugins\.json
 \.config/herdr/\.plugins\.lock
+# Rex generates SSH and terminfo state with machine-local paths.
+\.config/rex/(?!init\.lua$|macos-defaults\.conf$|themes(/|$)).*
 # Only Plannotator preferences are managed. Leave runtime state local.
 \.plannotator/(?!config\.json$).*
 # OpenCode service configuration can contain passwords and private remote URLs.

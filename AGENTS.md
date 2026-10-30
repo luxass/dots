@@ -64,6 +64,7 @@ dots/
 | Change shell startup | `home/.config/fish/` |
 | Change prompt | `home/.config/starship.toml` |
 | Change terminal | `home/.config/ghostty/config` |
+| Change Rex configuration | `home/.config/rex/`, `lib/features/rex.sh` (configuration only; app installed separately) |
 | Change Herdr plugins | `home/.config/herdr/plugins.txt`, `lib/features/herdr.sh`; shortcuts in `home/.config/herdr/config.toml` |
 | Change OpenCode config/plugins | `home/.config/opencode/`, `lib/features/opencode.sh` |
 | Change OpenCode voice plugin | `home/.config/opencode/opencode.json` (`@luxass/opencode-voice`, v2 `plugins` array) |
@@ -155,6 +156,17 @@ dots/
   The private submodule and its dependency/linking hooks are removed. Stow
   backs up only leftover symlinks created by the retired setup; it leaves other
   local plugins alone.
+- Rex configuration lives in `home/.config/rex/`. `dot stow` applies selected
+  macOS preferences and reloads valid Lua only when the server is running.
+  It never installs, updates, launches, or restarts Rex. Existing app preferences
+  are backed up outside Git before changes. Keep Remote Control unchanged.
+  Rex follows macOS appearance with Macchiato/Latte after both theme files
+  are imported once through the app. Resolve their generated IDs locally from
+  the theme names in macos-defaults.conf. Never track IDs or the imported
+  registry. If an import is missing, leave app preferences unchanged and print
+  the missing path. Do not add a theme shortcut or action. Generated SSH
+  configuration and other Rex state stay local and are ignored by Git and
+  Stow. Do not add Neovim or Twitch integration.
 - Herdr plugins are listed in `home/.config/herdr/plugins.txt`. `dot init` and
   `dot stow` install missing sources through `sfw herdr plugin install`;
   `dot update` offers scoped native updates. Do not track or stow Herdr

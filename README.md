@@ -425,6 +425,49 @@ preferences in `home/.config/plannotator-tui/config.toml` select a full-tab
 Herdr overlay. Browser reviews do not require this plugin. No additional
 command files or skills are required for the current Pi and OpenCode v2 plugins.
 
+## Terminal themes and Rex
+
+Ghostty, Herdr, Pi, and Rex use Catppuccin Macchiato in dark mode and
+Catppuccin Latte in light mode. Ghostty and Rex follow macOS appearance.
+Herdr and Pi follow their host terminal. Ghostty and Rex keep Monaspace
+Krypton at size 14 with ligatures disabled. Pi loads the theme pair on its
+next start. Herdr uses its `terminal` theme to inherit the host colors.
+Herdr's own theme selector stays off because its appearance detection can
+report light mode for a dark terminal ([upstream issue #3198](https://github.com/herdrdev/herdr/issues/3198)).
+Terminal colors still follow the host's automatic appearance changes.
+
+Install Rex manually using the [official installation guide](https://www.superlogical.com/rex/docs/installation).
+If Rex is missing, `dot init`, `dot stow`, and `dot update` offer to open
+the guide. Declining skips Rex setup without failing the command.
+Launch Rex once to install its bundled CLI, then run `dot stow`.
+`dot doctor` prints the installation link without prompting or opening it.
+Dots does not install, update, launch, or restart Rex.
+Its tracked configuration lives under `home/.config/rex/`:
+
+- `init.lua` defines shortcuts.
+- `macos-defaults.conf` defines app preferences and both theme names.
+- `themes/` holds Macchiato and Latte in Ghostty format.
+
+Import both files from `~/.config/rex/themes/` through Rex once on each Mac.
+Run `dot stow` after the imports. It resolves each theme name to the local
+ID that Rex generates. The IDs and imported theme registry stay out of Git.
+If either import is missing, dots leaves app preferences unchanged and prints
+the path to import. No theme shortcut or custom action is needed.
+
+`dot stow` links the files, applies app preferences, and reloads Lua when
+the Rex server is running. Existing app preferences are backed up under the
+local dot backup directory before changes. Relaunch Rex to apply font,
+sidebar, and appearance preferences. Dots leaves Remote Control unchanged.
+
+The prefix remains Ctrl+B. Split, zoom, resize, session, and tab shortcuts
+follow the Herdr configuration. The detach shortcuts close the Rex window,
+not its server. Find replaces keyboard copy mode on `prefix+v`.
+Herdr Annotate and agent/worktree navigation have no mapped equivalents.
+
+Check Lua changes with `rex config check`, then apply them with
+`rex config reload`. Rex does not watch the file. The Fish configuration
+adds the bundled CLI to PATH and prefers the running server's CLI inside Rex.
+
 ## GitHub CLI
 
 `home/.config/gh/config.yml` holds public preferences and aliases. Commands such

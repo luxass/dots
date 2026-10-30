@@ -46,6 +46,12 @@ home/.config/raycast/
 
 home/.config/opencode/node_modules/
 
+# Rex: track configuration and themes only.
+home/.config/rex/*
+!home/.config/rex/init.lua
+!home/.config/rex/macos-defaults.conf
+!home/.config/rex/themes/
+
 # Herdr runtime/state
 home/.config/herdr/plugins/
 home/.config/herdr/plugins.json
