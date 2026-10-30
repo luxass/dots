@@ -109,7 +109,7 @@ dots/
   Extension sources live in `extensions.txt`; init/stow installs missing sources
   through `sfw gh extension install`, and update offers scoped native upgrades.
   Never track or stow `hosts.yml`, credentials, or extension downloads.
-  Stow uses `--no-folding` so newly created local state stays outside Git.
+  The gh prestow hook keeps its directory local so authentication stays outside Git.
 - Keep package policy public and token-free. `home/.npmrc`, pnpm config, and
   Bun config should contain install policy, not registry auth.
 - Keep OpenCode config public-safe. Do not track auth, trust, cache, or local

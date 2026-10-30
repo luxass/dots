@@ -474,8 +474,8 @@ adds the bundled CLI to PATH and prefers the running server's CLI inside Rex.
 as `gh config set` and `gh alias set` change this tracked file after stowing.
 Review these changes before committing. Keep private values out of this file.
 Authentication in `hosts.yml` stays local and is excluded from Git and Stow.
-Stow links individual files instead of whole directories, so new local state
-does not enter the repository through a directory symlink.
+The GitHub CLI setup keeps `~/.config/gh` as a local directory and links its
+managed files, so new authentication files stay outside the repository.
 
 `home/.config/gh/extensions.txt` lists `github/gh-stack` and `luxass/gh-zizmor`.
 `dot init` and `dot stow` install missing extensions through Socket Firewall.

@@ -5,6 +5,8 @@ node_modules
 \.config/herdr/plugins(/.*)?
 \.config/herdr/plugins\.json
 \.config/herdr/\.plugins\.lock
+# Herdr socket links are runtime state, not dotfiles.
+\.config/herdr/.*\.sock(\..*)?
 # Rex generates SSH and terminfo state with machine-local paths.
 \.config/rex/(?!init\.lua$|macos-defaults\.conf$|themes(/|$)).*
 # Only Plannotator preferences are managed. Leave runtime state local.

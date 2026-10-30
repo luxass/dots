@@ -29,7 +29,10 @@ stow_backup_conflicts() {
     source="$DOTFILES_DIR/$rel"
     [[ -e "$source" || -L "$source" ]] || continue
     target="$(stow_target "$rel")"
-    if [[ -e "$target" || -L "$target" ]] && ! same_path "$target" "$source"; then
+    if [[ -L "$target" ]] && [[ "$(readlink "$target")" == /* ]] && same_path "$target" "$source"; then
+      # Stow cannot own absolute links, even when they point to the right file.
+      backup_path "$target" || return 1
+    elif [[ -e "$target" || -L "$target" ]] && ! same_path "$target" "$source"; then
       backup_path "$target" || return 1
     fi
   done < <(stow_sources)
@@ -41,8 +44,7 @@ stow_apply() {
   stow_backup_conflicts || return 1
 
   print_info "Linking $(pretty_path "$HOME_DIR") into ~"
-  # Keep real directories so new local auth/state files never land in the repo.
-  if ! stow --dotfiles --no-folding --restow --dir "$DOTFILES_DIR" --target "$HOME" home; then
+  if ! stow --dotfiles --restow --dir "$DOTFILES_DIR" --target "$HOME" home; then
     print_error "GNU Stow failed"
     return 1
   fi
@@ -57,7 +59,7 @@ stow_apply() {
 stow_remove() {
   stow_require || return 1
   run_hook unstow || return 1
-  stow --dotfiles --no-folding --delete --dir "$DOTFILES_DIR" --target "$HOME" home || return 1
+  stow --dotfiles --delete --dir "$DOTFILES_DIR" --target "$HOME" home || return 1
   print_success "Dotfiles unlinked"
 }
 

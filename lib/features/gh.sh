@@ -3,6 +3,11 @@
 
 readonly GH_EXTENSIONS_FILE="$HOME_DIR/.config/gh/extensions.txt"
 
+# Keep new authentication files local instead of letting Stow fold this directory.
+gh_prestow() {
+  mkdir -p "$HOME/.config/gh" || return 1
+}
+
 gh_extension_sources() {
   [[ -f "$GH_EXTENSIONS_FILE" ]] || return 0
   awk '{ sub(/#.*/, ""); gsub(/[[:space:]]/, ""); if (length) print }' "$GH_EXTENSIONS_FILE" | sort -u
