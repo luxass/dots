@@ -66,7 +66,7 @@ rex_apply_settings() {
   while read -r key type value || [[ -n "$key" ]]; do
     [[ -z "$key" || "$key" == \#* ]] && continue
     case "$key" in
-      Workspace.*) ;;
+      Workspace.* | rex.server.tailnet-enabled) ;;
       *)
         print_error "Invalid Rex preference key: $key"
         return 1
