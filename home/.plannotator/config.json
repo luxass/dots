@@ -15,7 +15,11 @@
   },
   "reviewAnalysis": {
     "semanticDiff": true,
-    "callFlow": false
+    "callFlow": true
   },
-  "agentTool": true
+  "agentTool": true,
+  "conventionalComments": true,
+  "packageChanges": {
+    "lookup": true
+  }
 }
