@@ -1,4 +1,5 @@
 {
+  "$schema": "https://pi.dev/schemas/settings.schema.json",
   "packages": [
     "npm:@luxass/pi-voice",
     "npm:@luxass/pi-whimsical",
@@ -17,5 +18,8 @@
   "defaultTools": [
     "+codemode"
   ],
-  "hideThinkingBlock": false
+  "showCacheMissNotices": true,
+  "steeringMode": "all",
+  "followUpMode": "all",
+  "enableAnalytics": false
 }
