@@ -11,7 +11,11 @@ cmd_secret_scan() {
   if git_secret_scan; then
     print_success "Secret scan passed"
   else
-    print_error "Possible secrets found"
-    return 1
+    if [[ "$?" -eq 1 ]]; then
+      print_error "Possible secrets found"
+      return 1
+    fi
+    print_error "Secret scan did not complete"
+    return 2
   fi
 }

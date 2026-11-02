@@ -32,13 +32,19 @@ skills_prestow() {
   ensure_link "$HOME/.claude/skills" "$agents/skills"
 }
 
-# The XDG and Claude links are outside Stow's tracked home/ paths.
+# These links are owned by this feature, not GNU Stow's file inventory.
 skills_unstow() {
   if [[ -L "$SKILLS_STATE_LOCK" ]] && same_path "$SKILLS_STATE_LOCK" "$SKILLS_LOCK"; then
     rm "$SKILLS_STATE_LOCK" || return 1
   fi
   if [[ -L "$HOME/.claude/skills" ]] && same_path "$HOME/.claude/skills" "$SKILLS_DIR"; then
     rm "$HOME/.claude/skills" || return 1
+  fi
+  if [[ -L "$HOME/.agents/skills" ]] && same_path "$HOME/.agents/skills" "$SKILLS_DIR"; then
+    rm "$HOME/.agents/skills" || return 1
+  fi
+  if [[ -L "$HOME/.agents/.skill-lock.json" ]] && same_path "$HOME/.agents/.skill-lock.json" "$SKILLS_LOCK"; then
+    rm "$HOME/.agents/.skill-lock.json" || return 1
   fi
   return 0
 }

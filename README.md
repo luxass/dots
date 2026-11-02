@@ -87,6 +87,31 @@ dot config ...       # local-only preferences
 dot hooks            # point Git at .githooks
 ```
 
+## Managed Files
+
+`dot stow` links existing Git-tracked files under `home/`. Add new
+configuration to Git before linking it. A commit is not required:
+
+```sh
+git add home/.config/example/config.toml
+dot stow
+```
+
+Untracked, ignored, and locally deleted files are excluded from the managed
+inventory. Stow creates individual file links instead of folding directories
+into links that can expose untracked files.
+
+Use `dot stow`, not bare `stow`. Dot generates the default-deny filter from
+Git. `home/.stow-local-ignore` only disables Stow's built-in ignore rules so
+tracked files such as `.gitignore` and `README.md` remain eligible.
+There is no separate runtime-file list to maintain.
+
+The shared skills directory and native lock are intentional exceptions to
+individual file links. The skills feature owns those links directly so native
+skills imports and updates continue to change the shared repository files.
+They are excluded from GNU Stow's inventory and checked separately by
+`dot doctor`. Runtime relocation hooks remain for older machines.
+
 ## Package Management
 
 The base package list is `packages/bundle`. Fonts live in
@@ -142,6 +167,25 @@ packages.brew.personal.enabled
 
 Unset keys are asked about once, interactively, when `dot` needs them.
 
+### Application state
+
+Pi authentication, trust, sessions, and caches stay at their normal paths under
+`~/.pi/agent/`, outside this checkout. Public preferences and customizations
+remain linked to the repository. Fish variables and Herdr logs, sessions,
+plugin downloads, and registries also stay outside the checkout.
+
+Git ignores keep application state out of normal staging. Dot uses Git's
+tracked-file inventory to decide what Stow can link. New runtime files remain
+untracked and are excluded without adding another ignore pattern.
+
+Older installations can still have runtime files linked into this checkout.
+Run `dot stow` to move repo-backed state to its normal HOME paths without
+printing file contents. The move does not require closing sessions or checking
+running processes. It merges directories and keeps existing HOME files.
+Duplicate checkout copies go to the normal dot backup directory outside the
+repo. Existing sockets stay in place and do not block Stow.
+Applications that cache checkout paths can recreate state there until restarted.
+
 ## Git Identity
 
 Git reads the tracked configuration from `~/.config/git/config`. It contains
@@ -189,8 +233,10 @@ Fish is the primary interactive shell. The tracked Fish config keeps a small
 
 - `home/.config/fish/config.fish` stays small.
 - `home/.config/fish/conf.d/*.fish` contains environment, paths, Homebrew,
-  Starship, Zoxide, Direnv, pnpm, Bun, and OrbStack setup.
-- `home/.config/fish/completions/` contains Fish completions.
+  Starship, Zoxide, Direnv, pnpm, Bun, Rust, and OrbStack setup.
+- `home/.config/fish/completions/` contains managed Fish completions. OrbStack
+  owns the Docker, kubectl, and orbctl completions at their HOME paths. These
+  generated files are not managed by Git or Stow.
 - `home/.config/fish/fish_plugins` lists Fisher plugins (currently
   `jhillyerd/plugin-git`, which adds oh-my-zsh style git abbreviations such as
   `gst` and `gco`). `conf.d/fisher.fish` installs them to
@@ -201,6 +247,12 @@ Fish is the primary interactive shell. The tracked Fish config keeps a small
 `dot init` installs Fish through Homebrew, adds it to `/etc/shells` when needed,
 and sets it as the login shell with `chsh`. Restart the terminal after the
 change.
+
+## Rust
+
+`dot init` installs rustup if it is missing, using the official HTTPS installer
+from `https://sh.rustup.rs`. Rust setup is an optional step. Fish loads
+`~/.cargo/env.fish` once when that file exists. `dot doctor` checks for rustup.
 
 ## Git Hooks
 
@@ -223,6 +275,15 @@ Run this manually with:
 dot hooks
 dot secret-scan
 ```
+
+`dot secret-scan` checks tracked and unignored files for credential assignments,
+private-key markers, and credentials in URLs. Findings show a file, line, and
+category, never the detected value. Execution errors fail the command rather
+than report a successful scan.
+
+This is a basic warning system, not a complete secret detector. It does not
+scan ignored files, submodules, or Git history. Keep authentication files outside
+the checkout even when the scan passes.
 
 ## JavaScript Runtime Policy
 
@@ -293,9 +354,8 @@ Tracked files include:
   when a session becomes idle.
 - `package.json` and `pnpm-lock.yaml` for TypeScript plugin types.
 
-Keep `node_modules/` local-only. It is ignored by Git and by Stow through
-`home/.stow-local-ignore`, but can exist in the source tree for editor/type
-resolution. `dot stow` and `dot update` install or refresh plugin dependencies
+Keep `node_modules/` local-only. Git ignores it, so Dot's tracked-file filter
+excludes it from Stow. It can exist in the source tree for editor/type resolution. `dot stow` and `dot update` install or refresh plugin dependencies
 with Socket Firewall (`sfw pnpm install` in `~/.config/opencode/`), and
 `dot doctor` verifies that
 `@opencode/plugin` is installed. Manual refresh is still available:
@@ -359,9 +419,11 @@ age rule.
   installed with Socket Firewall (`sfw pnpm add -g`).
 - Public Pi extensions live under `home/.pi/agent/extensions/` and are stowed
   to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
-- Auth, trust, sessions, logs, caches, and packages stay local through
-  `home/dot-gitignore`. Shared Agent Skills live under `home/.agents/skills/`
-  and are not duplicated here.
+- Auth, trust, sessions, logs, caches, and downloaded packages stay outside
+  the checkout through Git ignores and Dot's tracked-file filter. The Pi
+  prestow hook relocates older repo-backed state without requiring Pi to exit.
+  Shared Agent Skills live under
+  `home/.agents/skills/` and are not duplicated here.
 
 ### Computer use
 
@@ -589,8 +651,10 @@ skills and incorrect upstreams.
 
 Locally maintained/adapted skills remain in `home/.agents/skills/` without
 entries in the global lock, so the CLI updater does not manage them. Currently
-these are `commit`, `gh-stack`, `github`, `herdr`, `install-anti-slop`,
-`tailscale`, and `writing-great-skills`. No separate local inventory is needed.
+these are `commit`, `github`, `install-anti-slop`, `rex`, and
+`writing-great-skills`. The native lock manages `gh-stack`, `herdr`, and
+`tailscale`, so upstream updates can overwrite edits to those skills.
+No separate local inventory is needed.
 To keep an imported skill locally, remove its entry from the global lock without
 deleting its files before editing it. Native `remove` deletes the files too.
 

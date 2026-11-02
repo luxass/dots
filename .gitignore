@@ -39,6 +39,9 @@ home/.config/fish/fish_variables
 home/.config/fish/completions/copilot.fish
 home/.config/fish/completions/grok.fish
 home/.config/fish/completions/pi.fish
+home/.config/fish/completions/docker.fish
+home/.config/fish/completions/kubectl.fish
+home/.config/fish/completions/orbctl.fish
 home/.config/zed/conversations/
 home/.config/zed/embeddings/
 home/.config/zed/.tmp*
@@ -87,6 +90,7 @@ home/.pi/agent/extensions/**/node_modules/
 !home/.pi/agent/cloak.json
 !home/.pi/agent/mcp.json
 !home/.pi/agent/settings.json
+!home/.pi/agent/AGENTS.md
 !home/.pi/agent/themes/
 !home/.pi/agent/themes/*.json
 !home/.pi/agent/extensions/

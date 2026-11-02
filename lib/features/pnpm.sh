@@ -16,6 +16,8 @@ in_pnpm_home() { [[ -n "$1" && "$1" == "$PNPM_HOME/bin/"* ]]; }
 pnpm_remove_installer_block() {
   local config="$HOME/.config/fish/config.fish" tmp
   [[ -f "$config" ]] && grep -qx '# pnpm' "$config" || return 0
+  # Replace the linked file, not Stow's symlink in HOME.
+  config="$(realpath "$config")" || return 1
 
   tmp="$(mktemp "$config.XXXXXX")" || return 1
   awk '

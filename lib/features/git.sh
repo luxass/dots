@@ -22,19 +22,96 @@ git_install_hooks() {
   print_success "Git hooks path set to .githooks"
 }
 
-# git_secret_scan: print likely secrets in tracked and unignored files.
-# Returns 1 when something is found. Submodules are separate repos and are
-# not scanned.
+# Scan tracked and unignored files, never printing credential values.
+# Returns 0 for no findings, 1 for findings, and 2 for an execution error.
+# Ignored files, submodules, and Git history are not scanned.
 git_secret_scan() {
-  local pattern placeholder matches
-  # Match auth token assignments, not bare key names or ellipsis-only values.
-  pattern='(_auth''Token["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[[:alnum:]_+/-]|BEGIN [A-Z ]*PRIVATE KEY|OPENAI_''API_KEY|ANTHROPIC_''API_KEY|GITHUB_''TOKEN|GH_''TOKEN|AWS_SECRET_''ACCESS_KEY|password[[:space:]]*=|secret[[:space:]]*=|://[^/[:space:]"'"'"']*:[^/[:space:]"'"'"']*@)'
-  # Placeholders in docs and examples (env var refs, YOUR_* tokens) are not secrets.
-  placeholder='\$[{A-Za-z_]|YOUR_[A-Z_]+|process\.env|[Ee]xample|xxxx|XXXX|<[^<>]*>'
+  local assignment url pattern matches_file findings status path number line finding
+  assignment="(^|[^[:alnum:]_.$/-])(_?auth[_-]?token|([[:alnum:]_-]+[_-])?(api[_-]?key|access[_-]?key|passwd|password|secret)|(auth|access|refresh|bearer|api|session|oauth|github|gh|npm|openai|anthropic)[_-]?token|token|clientsecret|apikey|accesskey|idtoken)[\"']?[[:space:]]*[:=][[:space:]]*"
+  url="://[^/[:space:]\"']*:[^/[:space:]\"']*@"
+  pattern="($assignment|BEGIN [A-Z ]*PRIVATE KEY|$url)"
 
-  matches="$(repo_git grep --untracked -nIE "$pattern" | grep -vE "$placeholder" || true)"
-  [[ -z "$matches" ]] && return 0
-  printf '%s\n' "$matches"
+  matches_file="$(mktemp "${TMPDIR:-/tmp}/dot-secret-scan.XXXXXX")" || {
+    print_error "Secret scan could not create its temporary file"
+    return 2
+  }
+  # NUL-delimited paths keep colons and newlines in filenames unambiguous.
+  if repo_git grep --untracked --no-color -nIizE "$pattern" >"$matches_file" 2>/dev/null; then
+    :
+  else
+    status=$?
+    rm -f "$matches_file" || return 2
+    [[ "$status" -eq 1 ]] && return 0
+    print_error "Secret scan could not read repository files"
+    return 2
+  fi
+
+  if ! findings="$(
+    while IFS= read -r -d '' path; do
+      IFS= read -r -d '' number && IFS= read -r line || exit 2
+      [[ "$number" =~ ^[0-9]+$ ]] || exit 2
+      finding="$(printf '%s\n' "$line" | LC_ALL=C awk -v path="$path" -v assignment="$assignment" -v url="$url" '
+    function placeholder(value) {
+      return value == "" || value ~ /^\$[{A-Za-z_]/ || value ~ /^YOUR_[A-Z_]+$/ ||
+        index(value, "process.env.") == 1 || index(value, "process.env[") == 1 ||
+        index(value, "os.Getenv(") == 1 || index(value, "os.environ[") == 1 ||
+        value ~ /^<[^<>]*>$/ || value ~ /^[xX]+$/ || value ~ /^[.][.][.]$/ || value == "…"
+    }
+    function value_of(text, quote, end) {
+      sub(/^[[:space:]]+/, "", text)
+      quote = substr(text, 1, 1)
+      if (quote == "\"" || quote == sprintf("%c", 39) || quote == sprintf("%c", 96)) {
+        text = substr(text, 2)
+        end = index(text, quote)
+        return end ? substr(text, 1, end - 1) : text
+      }
+      sub(/[[:space:],;)}`].*$/, "", text)
+      return text
+    }
+    function category(line, path, rest, key, value, auth, colon) {
+      if (toupper(line) ~ /BEGIN [A-Z ]*PRIVATE KEY/) return "private key"
+      rest = line
+      while (match(rest, url)) {
+        auth = substr(rest, RSTART + 3, RLENGTH - 4)
+        rest = substr(rest, RSTART + RLENGTH)
+        colon = index(auth, ":")
+        if (!placeholder(substr(auth, colon + 1))) return "credentials in URL"
+      }
+      rest = line
+      while (match(tolower(rest), assignment)) {
+        key = tolower(substr(rest, RSTART, RLENGTH))
+        rest = substr(rest, RSTART + RLENGTH)
+        # Equality tests and arrow functions are not credential assignments.
+        if (rest ~ /^[=>]/) continue
+        # YAML/JSON objects and lists are references, not scalar credentials.
+        if (substr(rest, 1, 1) == "{" || substr(rest, 1, 1) == "[") continue
+        # In source code, inspect literals, including typed defaults and backticks.
+        if (path ~ /[.](ts|tsx|js|jsx|go)$/) {
+          sub(/^[[:alnum:]_]+[[:space:]]*=[[:space:]]*/, "", rest)
+          if (rest !~ /^[\"]/ && substr(rest, 1, 1) != sprintf("%c", 39) && substr(rest, 1, 1) != sprintf("%c", 96)) continue
+        }
+        value = value_of(rest)
+        if (placeholder(value)) continue
+        if (key ~ /password|passwd/) return "password assignment"
+        if (key ~ /api[_-]?key|access[_-]?key/) return "API or access key assignment"
+        return "token or secret assignment"
+      }
+      return ""
+    }
+    { print category($0, path) }
+  ')" || exit 2
+      if [[ -n "$finding" ]]; then
+        printf '%s:%s: possible %s\n' "$path" "$number" "$finding"
+      fi
+    done <"$matches_file"
+  )"; then
+    rm -f "$matches_file" || return 2
+    print_error "Secret scan could not classify repository files"
+    return 2
+  fi
+  rm -f "$matches_file" || return 2
+  [[ -z "$findings" ]] && return 0
+  printf '%s\n' "$findings"
   return 1
 }
 
@@ -77,7 +154,11 @@ git_check() {
   if git_secret_scan; then
     print_success "Secret scan"
   else
-    print_error "Possible secrets found"
+    if [[ "$?" -eq 1 ]]; then
+      print_error "Possible secrets found"
+    else
+      print_error "Secret scan did not complete"
+    fi
     failed=1
   fi
   return "$failed"

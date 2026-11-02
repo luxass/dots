@@ -3,6 +3,21 @@
 
 readonly HERDR_PLUGINS_FILE="$HOME_DIR/.config/herdr/plugins.txt"
 
+herdr_prestow() {
+  local entry rel
+
+  local_config_dir .config || return 1
+  local_config_dir .config/herdr || return 1
+  for entry in "$HOME_DIR/.config/herdr"/*.log "$HOME_DIR/.config/herdr"/*.sock "$HOME_DIR/.config/herdr"/*.sock.* \
+    "$HOME_DIR/.config/herdr"/session.json "$HOME_DIR/.config/herdr"/session-history.json \
+    "$HOME_DIR/.config/herdr"/release-notes.json "$HOME_DIR/.config/herdr"/session-snapshots \
+    "$HOME_DIR/.config/herdr"/plugins "$HOME_DIR/.config/herdr"/plugins.json "$HOME_DIR/.config/herdr"/.plugins.lock; do
+    rel=".config/herdr/${entry##*/}"
+    local_state_move "$rel" || return 1
+  done
+  return 0
+}
+
 herdr_plugin_sources() {
   [[ -f "$HERDR_PLUGINS_FILE" ]] || return 0
   awk '{ sub(/#.*/, ""); gsub(/[[:space:]]/, ""); if (length) print }' "$HERDR_PLUGINS_FILE" | sort -u

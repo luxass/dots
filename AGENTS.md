@@ -65,7 +65,7 @@ dots/
 | Change Rex configuration | `home/.config/rex/`, `lib/features/rex.sh` (configuration only; app installed separately) |
 | Change Herdr plugins | `home/.config/herdr/plugins.txt`, `lib/features/herdr.sh`; shortcuts in `home/.config/herdr/config.toml` |
 | Change OpenCode config/plugins | `home/.config/opencode/`, `lib/features/opencode.sh` |
-| Change OpenCode voice plugin | `home/.config/opencode/opencode.json` (`@luxass/opencode-voice`, v2 `plugins` array) |
+| Change OpenCode voice plugin | `home/.config/opencode/opencode.jsonc` (`@luxass/opencode-voice`, v2 `plugins` array) |
 | Change Pi agent config | `home/.pi/agent/` (lean: settings, keybindings, notes only) |
 | Change Agent Skills | `sfw pnpx skills` directly; links in `lib/features/skills.sh`, files/lock in `home/.agents/` |
 | Change Claude Code skills link | `lib/features/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
@@ -98,7 +98,13 @@ dots/
 - Prefer the existing `dot` CLI over ad hoc commands for setup, package checks,
   symlink checks, and diagnostics.
 - Use GNU Stow semantics. Files under `home/` map to `$HOME`; `dot-*` names map
-  to hidden files through `stow --dotfiles`.
+  to hidden files through `stow --dotfiles`. Dot generates a default-deny filter
+  from existing Git-tracked files and uses `--no-folding`. New configuration
+  needs `git add` before `dot stow`; a commit is not required. Do not stage
+  files on the user's behalf unless asked. Use the Dot CLI, not bare Stow.
+  `home/.stow-local-ignore` only disables built-in Stow exclusions, not a
+  manually maintained runtime list. Shared skills and their native lock remain
+  owned by the skills feature's explicit links, outside GNU Stow's inventory.
 - Public Git identity may be tracked in home/.config/git/config.
   Never track private keys, tokens, credentials, or work-only identity.
 - These dots target Apple Silicon. Git uses Homebrew’s `ca-certificates`
@@ -125,8 +131,12 @@ dots/
 - Keep Pi config public-safe. `home/.pi/agent/` state is blanket-ignored
   with an allow-list for customization (`themes/`,
   `extensions/`, `mcp.json`, `cloak.json`, `settings.json`,
-  `APPEND_SYSTEM.md`, packaging); auth, trust, sessions, logs, caches, and
-  keybindings stay local. `settings.json` is tracked and holds preferences
+  `AGENTS.md`, `voice-settings.json`, packaging); auth, trust, sessions, logs,
+  caches, and keybindings stay outside the checkout. Git ignores keep them
+  untracked, and Dot's tracked-file filter excludes them from Stow. Pi's prestow hook keeps its HOME directories local and
+  relocates old repo-backed state without process checks or requiring sessions
+  to close. Leave sockets in place with a warning, without blocking Stow.
+  `settings.json` is tracked and holds preferences
   only. Pi writes to it unprompted, so expect churn from
   `lastChangelogVersion` on upgrade and from any `/settings` edit. Never put
   an `httpProxy` URL with a password in it: `dot secret-scan` now rejects
@@ -140,7 +150,7 @@ dots/
   Stow; keep `pnpm-lock.yaml` tracked. The `pi` binary itself is a managed
   pnpm global (`PNPM_GLOBAL_PACKAGES` in `lib/core/paths.sh`).
 - This setup uses OpenCode v2. Register `@luxass/opencode-voice` once in the
-  plural `plugins` array in `opencode.json`. OpenCode loads its terminal UI
+  plural `plugins` array in `opencode.jsonc`. OpenCode loads its terminal UI
   component locally; its server component is a no-op. Do not also register it
   in `cli.json`. CLI configuration is an alternative, not the only valid route.
   Restart OpenCode and run `/voice setup`; use API transcription because local
@@ -177,11 +187,16 @@ dots/
   code, machine-local paths, and potentially private plugin configuration.
   Herdr Annotate bundles its own TUI. Keep `prefix+m` for pane zoom and
   `prefix+o` for document review; notifications use `prefix+i`. Do not stop
-  a running Herdr server to apply plugin changes.
+  a running Herdr server to apply plugin changes. Logs, sessions, registries,
+  and other runtime files belong outside the checkout. The one-time prestow
+  relocation skips existing sockets without blocking Stow or stopping the server.
 - Fish plugins are listed in `home/.config/fish/fish_plugins` and installed by
   Fisher into `fisher_path` (`~/.local/share/fisher`, set in
   `conf.d/fisher.fish`), never into `home/.config/fish/`. Add plugins to
-  `fish_plugins` and run `dot stow`; do not commit plugin files.
+  `fish_plugins` and run `dot stow`; do not commit plugin files. Fish variables
+  and CLI-generated completions stay outside the checkout. OrbStack owns its
+  Docker, kubectl, and orbctl completion links. Runtime relocation does not
+  require closing Fish shells.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.
@@ -248,6 +263,9 @@ answers yes to confirmations.
 ## NOTES
 
 - The tracked pre-push hook runs `dot secret-scan` and `dot lint`.
+  The scanner reports paths, line numbers, and categories without values.
+  It fails on execution errors. It does not scan ignored files, submodules,
+  or Git history, and it is not a complete secret detector.
 - `dot stow` backs up anything blocking a managed link to
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/`. The old
   repo-local `backups/` directory is no longer written.
@@ -287,7 +305,10 @@ answers yes to confirmations.
   `sfw pnpx skills add/list/update/remove` and opt into global scope with `-g`.
   There is no `dot skills` command or scope-forcing wrapper. Project installs
   in other repositories remain project-local.
-- The native global lock is tracked at `home/.agents/.skill-lock.json`.
+- The shared skills directory and native lock use explicit links owned by
+  `lib/features/skills.sh`, not GNU Stow. Preserve these directory links so
+  native imports and updates write to the shared repository. The native global
+  lock is tracked at `home/.agents/.skill-lock.json`.
   `dot stow` links both `~/.agents/.skill-lock.json` and
   `${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-lock.json` to it. Never
   clear this inventory during stow or restore the archived stale records.

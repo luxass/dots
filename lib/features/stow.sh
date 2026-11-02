@@ -8,11 +8,59 @@ stow_require() {
   brew install stow
 }
 
-# stow_sources: NUL-separated repo-relative paths that should be linked, i.e.
-# every file under home/ that is tracked or untracked but not ignored by Git.
+# NUL-separated existing, tracked files. Shared skills have their own link hooks.
 stow_sources() {
-  repo_git ls-files -z --cached --others --exclude-standard -- home \
-    | tr '\0' '\n' | grep -vx 'home/.stow-local-ignore' | tr '\n' '\0'
+  local rel
+  repo_git ls-files -z --cached -- home | while IFS= read -r -d '' rel; do
+    case "$rel" in
+      home/.stow-local-ignore | home/.agents/skills/* | home/.agents/.skill-lock.json) continue ;;
+    esac
+    [[ -f "$DOTFILES_DIR/$rel" || -L "$DOTFILES_DIR/$rel" ]] || continue
+    printf '%s\0' "$rel"
+  done
+}
+
+# Default-deny filter: allow tracked files and the directories needed to reach them.
+stow_ignore_pattern() {
+  local rel path parent node candidate escaped character allowed='(?!)'
+  stow_sources | {
+    while IFS= read -r -d '' rel; do
+      path="${rel#home/}"
+      while [[ -n "$path" ]]; do
+        node="${path##*/}"
+        if [[ "$path" == */* ]]; then
+          parent="${path%/*}"
+        else
+          parent=''
+        fi
+        # Stow checks a node before applying --dotfiles to its name, but its
+        # parent directories already have their adjusted target names.
+        candidate="/$parent"
+        candidate="${candidate//\/dot-//.}"
+        candidate="${candidate#/}"
+        candidate="${candidate:+$candidate/}$node"
+        # Quote literal paths, including spaces and regex punctuation.
+        escaped="$candidate"
+        for character in "\\" . '[' ']' '(' ')' '{' '}' '*' + '?' '^' '$' '|'; do
+          escaped="${escaped//"$character"/\\$character}"
+        done
+        allowed="$allowed|$escaped"
+        path="$parent"
+      done
+    done
+    printf '\\A(?!(?:%s)\\z)(?s:.*)' "$allowed"
+  }
+}
+
+# Use the same inventory and filter for stowing and unstowing.
+stow_run() {
+  local action="$1" ignore
+  ignore="$(stow_ignore_pattern)" || {
+    print_error "Could not read the tracked Stow inventory"
+    return 1
+  }
+  stow --dotfiles --no-folding "--$action" --ignore="$ignore" \
+    --dir "$DOTFILES_DIR" --target "$HOME" home
 }
 
 # stow_target REL: where GNU Stow --dotfiles links home/REL (dot-x becomes .x).
@@ -44,7 +92,7 @@ stow_apply() {
   stow_backup_conflicts || return 1
 
   print_info "Linking $(pretty_path "$HOME_DIR") into ~"
-  if ! stow --dotfiles --restow --dir "$DOTFILES_DIR" --target "$HOME" home; then
+  if ! stow_run restow; then
     print_error "GNU Stow failed"
     return 1
   fi
@@ -59,7 +107,7 @@ stow_apply() {
 stow_remove() {
   stow_require || return 1
   run_hook unstow || return 1
-  stow --dotfiles --delete --dir "$DOTFILES_DIR" --target "$HOME" home || return 1
+  stow_run delete || return 1
   print_success "Dotfiles unlinked"
 }
 

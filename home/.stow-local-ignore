@@ -1,15 +1,5 @@
-node_modules
-# GitHub CLI authentication and runtime state stay local.
-\.config/gh/(?!config\.yml$|extensions\.txt$).*
-# Herdr downloads plugins and stores a machine-local registry here.
-\.config/herdr/plugins(/.*)?
-\.config/herdr/plugins\.json
-\.config/herdr/\.plugins\.lock
-# Herdr socket links are runtime state, not dotfiles.
-\.config/herdr/.*\.sock(\..*)?
-# Rex generates SSH and terminfo state with machine-local paths.
-\.config/rex/(?!init\.lua$|macos-defaults\.conf$|themes(/|$)).*
-# Only Plannotator preferences are managed. Leave runtime state local.
-\.plannotator/(?!config\.json$).*
-# OpenCode service configuration can contain passwords and private remote URLs.
-\.config/opencode/service(-[^/]*)?\.json
+# dot stow generates its default-deny filter from Git's tracked files.
+# Add new configuration with git add before running dot stow.
+#
+# Keep this file so Stow's built-in ignore list does not exclude tracked files.
+# No manual runtime-file patterns are needed here.
