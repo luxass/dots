@@ -1,5 +1,0 @@
-# dot stow generates its default-deny filter from Git's tracked files.
-# Add new configuration with git add before running dot stow.
-#
-# Keep this file so Stow's built-in ignore list does not exclude tracked files.
-# No manual runtime-file patterns are needed here.

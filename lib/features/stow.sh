@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# GNU Stow: links home/ into $HOME.
+# Native GNU Stow packages: each package mirrors its paths under HOME.
 
 stow_require() {
   command_exists stow && return 0
@@ -8,75 +8,34 @@ stow_require() {
   brew install stow
 }
 
-# NUL-separated existing, tracked files. Shared skills have their own link hooks.
+# Deployment files only; skip the shared ignore file and source byproducts.
 stow_sources() {
-  local rel
-  repo_git ls-files -z --cached -- home | while IFS= read -r -d '' rel; do
-    case "$rel" in
-      home/.stow-local-ignore | home/.agents/skills/* | home/.agents/.skill-lock.json) continue ;;
-    esac
-    [[ -f "$DOTFILES_DIR/$rel" || -L "$DOTFILES_DIR/$rel" ]] || continue
-    printf '%s\0' "$rel"
+  local package
+  for package in "${STOW_PACKAGES[@]}"; do
+    find "$STOW_DIR/$package" \
+      \( -name .stow-local-ignore -o -name node_modules -o -name .DS_Store \) -prune -o \
+      \( -type f -o -type l \) -print0 || return 1
   done
 }
 
-# Default-deny filter: allow tracked files and the directories needed to reach them.
-stow_ignore_pattern() {
-  local rel path parent node candidate escaped character allowed='(?!)'
-  stow_sources | {
-    while IFS= read -r -d '' rel; do
-      path="${rel#home/}"
-      while [[ -n "$path" ]]; do
-        node="${path##*/}"
-        if [[ "$path" == */* ]]; then
-          parent="${path%/*}"
-        else
-          parent=''
-        fi
-        # Stow checks a node before applying --dotfiles to its name, but its
-        # parent directories already have their adjusted target names.
-        candidate="/$parent"
-        candidate="${candidate//\/dot-//.}"
-        candidate="${candidate#/}"
-        candidate="${candidate:+$candidate/}$node"
-        # Quote literal paths, including spaces and regex punctuation.
-        escaped="$candidate"
-        for character in "\\" . '[' ']' '(' ')' '{' '}' '*' + '?' '^' '$' '|'; do
-          escaped="${escaped//"$character"/\\$character}"
-        done
-        allowed="$allowed|$escaped"
-        path="$parent"
-      done
-    done
-    printf '\\A(?!(?:%s)\\z)(?s:.*)' "$allowed"
-  }
-}
-
-# Use the same inventory and filter for stowing and unstowing.
-stow_run() {
-  local action="$1" ignore
-  ignore="$(stow_ignore_pattern)" || {
-    print_error "Could not read the tracked Stow inventory"
-    return 1
-  }
-  stow --dotfiles --no-folding "--$action" --ignore="$ignore" \
-    --dir "$DOTFILES_DIR" --target "$HOME" home
-}
-
-# stow_target REL: where GNU Stow --dotfiles links home/REL (dot-x becomes .x).
+# Map an absolute package source to its --dotfiles target in HOME.
 stow_target() {
-  local rel="/${1#home/}"
+  local rel="${1#"$STOW_DIR"/}"
+  rel="/${rel#*/}"
   rel="${rel//\/dot-//.}"
   printf '%s%s\n' "$HOME" "$rel"
 }
 
-# Move aside anything in $HOME that would block GNU Stow.
+stow_run() {
+  stow --dotfiles --no-folding --dir "$STOW_DIR" --target "$HOME" \
+    "$@" "${STOW_PACKAGES[@]}"
+}
+
+# Move aside files and old source links that would block native Stow.
 stow_backup_conflicts() {
-  local rel source target
-  while IFS= read -r -d '' rel; do
-    source="$DOTFILES_DIR/$rel"
-    [[ -e "$source" || -L "$source" ]] || continue
-    target="$(stow_target "$rel")"
+  local source target
+  while IFS= read -r -d '' source; do
+    target="$(stow_target "$source")"
     if [[ -L "$target" ]] && [[ "$(readlink "$target")" == /* ]] && same_path "$target" "$source"; then
       # Stow cannot own absolute links, even when they point to the right file.
       backup_path "$target" || return 1
@@ -88,11 +47,12 @@ stow_backup_conflicts() {
 
 stow_apply() {
   stow_require || return 1
+  migrate_stow_layout || return 1
   run_hook prestow || return 1
   stow_backup_conflicts || return 1
 
-  print_info "Linking $(pretty_path "$HOME_DIR") into ~"
-  if ! stow_run restow; then
+  print_info "Linking Stow packages: ${STOW_PACKAGES[*]}"
+  if ! stow_run --restow; then
     print_error "GNU Stow failed"
     return 1
   fi
@@ -107,33 +67,28 @@ stow_apply() {
 stow_remove() {
   stow_require || return 1
   run_hook unstow || return 1
-  stow_run delete || return 1
+  stow_run --delete || return 1
   print_success "Dotfiles unlinked"
 }
 
 stow_check() {
-  local rel source target total=0 broken=0 failed=0
+  local plan failed=0
 
-  while IFS= read -r -d '' rel; do
-    source="$DOTFILES_DIR/$rel"
-    [[ -e "$source" || -L "$source" ]] || continue
-    total=$((total + 1))
-    target="$(stow_target "$rel")"
-    same_path "$target" "$source" && continue
-
-    broken=$((broken + 1))
-    if [[ -e "$target" || -L "$target" ]]; then
-      print_error "Blocked by another file: $(pretty_path "$target")"
-    else
-      print_error "Missing link: $(pretty_path "$target")"
-    fi
-  done < <(stow_sources)
-
-  if [[ "$broken" -eq 0 ]]; then
-    print_success "Managed links ($total checked)"
-  else
-    print_error "$broken of $total managed links are broken; run 'dot stow'"
+  command_exists stow || {
+    print_error "GNU Stow is missing; run 'dot init'"
+    return 1
+  }
+  # Ask upstream Stow what it would change, rather than rebuilding its rules.
+  if ! plan="$(stow_run --simulate --stow --verbose=1 2>&1)"; then
+    print_error "GNU Stow reports conflicts; run 'dot --verbose doctor' for details"
+    print_verbose "$plan"
     failed=1
+  elif grep -Eq '^(LINK|UNLINK|MKDIR|RMDIR):' <<<"$plan"; then
+    print_error "GNU Stow would change managed links; run 'dot stow'"
+    print_verbose "$plan"
+    failed=1
+  else
+    print_success "Stow package links (${#STOW_PACKAGES[@]} packages)"
   fi
 
   case ":$PATH:" in

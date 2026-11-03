@@ -13,8 +13,8 @@ fish_prestow() {
   local_state_move .config/fish/fish_variables || return 1
   for name in copilot grok pi docker kubectl orbctl; do
     rel=".config/fish/completions/$name.fish"
-    # Retired wrappers are removed separately; do not relocate tracked config.
-    repo_git ls-files --error-unmatch -- "home/$rel" >/dev/null 2>&1 && continue
+    # Do not relocate configuration that now belongs to the Fish package.
+    [[ -e "$STOW_DIR/fish/$rel" || -L "$STOW_DIR/fish/$rel" ]] && continue
     local_state_move "$rel" || return 1
   done
   return 0

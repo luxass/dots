@@ -1,7 +1,10 @@
 # shellcheck shell=bash
 # Repository paths, managed versions, and feature order. Constants only.
 
-readonly HOME_DIR="$DOTFILES_DIR/home"
+readonly STOW_DIR="$DOTFILES_DIR/stow"
+readonly LEGACY_HOME_DIR="$DOTFILES_DIR/home"
+# Native Stow packages. Keep runtime data outside these deployment trees.
+readonly STOW_PACKAGES=(fish git ghostty starship runtime-policy pi opencode gh herdr rex plannotator tinycast claude codex)
 readonly PACKAGES_DIR="$DOTFILES_DIR/packages"
 readonly STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
 readonly PREFS_FILE="$STATE_DIR/preferences"
@@ -23,7 +26,7 @@ readonly REX_APP_PATH="/Applications/Rex Beta.app"
 readonly REX_INSTALLATION_URL="https://www.superlogical.com/rex/docs/installation"
 readonly REX_BUNDLED_CLI="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex"
 readonly REX_DEFAULTS_DOMAIN="com.superlogical.rex"
-readonly REX_SETTINGS_FILE="$HOME_DIR/.config/rex/macos-defaults.conf"
+readonly REX_SETTINGS_FILE="$STOW_DIR/rex/.config/rex/macos-defaults.conf"
 # Managed pnpm globals as package:command. OpenCode is installed through Homebrew.
 readonly PNPM_GLOBAL_PACKAGES=(
   "sfw:sfw"
@@ -32,13 +35,13 @@ readonly PNPM_GLOBAL_PACKAGES=(
   "cf:cf"
   "coderabbit:coderabbit"
 )
-readonly SKILLS_DIR="$HOME_DIR/.agents/skills"
-readonly SKILLS_LOCK="$HOME_DIR/.agents/.skill-lock.json"
+readonly SKILLS_DIR="$DOTFILES_DIR/shared/agents/skills"
+readonly SKILLS_LOCK="$DOTFILES_DIR/shared/agents/.skill-lock.json"
 readonly SKILLS_STATE_LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-lock.json"
 
 # Features in run order. lib/features/<name>.sh may define any of these hooks:
-#   <name>_prestow   before GNU Stow links home/
-#   <name>_poststow  after GNU Stow links home/
+#   <name>_prestow   before GNU Stow links the selected packages
+#   <name>_poststow  after GNU Stow links the selected packages
 #   <name>_deps      install dependencies (runs once pnpm exists)
 #   <name>_unstow    before GNU Stow removes links
 #   <name>_check     doctor diagnostics; return 1 on failure

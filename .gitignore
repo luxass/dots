@@ -13,94 +13,73 @@ backups/
 Brewfile.lock.json
 packages/failed_packages_*.txt
 
-# GitHub CLI: preferences and extension sources only, never auth or runtime state.
-home/.config/gh/*
-!home/.config/gh/config.yml
-!home/.config/gh/extensions.txt
+# Old home/ is only a migration source. Never re-track runtime leftovers.
+home/
 
 # Secrets and auth state
 **/.npmrc
-!home/.npmrc
+!stow/runtime-policy/.npmrc
 .gitconfig.local
-home/.gitconfig.local
 auth.json
 *.pem
 *.key
 *.p12
 *.pfx
 
-# Plannotator preferences only; reviews, credentials, and runtime state stay local.
-home/.plannotator/*
-!home/.plannotator/config.json
+# GitHub CLI: preferences and extension sources only.
+stow/gh/.config/gh/*
+!stow/gh/.config/gh/config.yml
+!stow/gh/.config/gh/extensions.txt
 
-# App-generated state
-home/.config/fish/fish_variables
-# CLI-managed fish completions regenerate on every CLI update; never track
-home/.config/fish/completions/copilot.fish
-home/.config/fish/completions/grok.fish
-home/.config/fish/completions/pi.fish
-home/.config/fish/completions/docker.fish
-home/.config/fish/completions/kubectl.fish
-home/.config/fish/completions/orbctl.fish
-home/.config/zed/conversations/
-home/.config/zed/embeddings/
-home/.config/zed/.tmp*
-home/.config/raycast/
+# Plannotator preferences only; reviews and credentials stay local.
+stow/plannotator/.plannotator/*
+!stow/plannotator/.plannotator/config.json
 
-home/.config/opencode/node_modules/
+# Fish state and CLI-generated completions stay outside the package.
+stow/fish/.config/fish/fish_variables
+stow/fish/.config/fish/completions/copilot.fish
+stow/fish/.config/fish/completions/grok.fish
+stow/fish/.config/fish/completions/pi.fish
+stow/fish/.config/fish/completions/docker.fish
+stow/fish/.config/fish/completions/kubectl.fish
+stow/fish/.config/fish/completions/orbctl.fish
 
-# Rex: track configuration and themes only.
-home/.config/rex/*
-!home/.config/rex/init.lua
-!home/.config/rex/macos-defaults.conf
-!home/.config/rex/themes/
+# Rex configuration and themes only.
+stow/rex/.config/rex/*
+!stow/rex/.config/rex/init.lua
+!stow/rex/.config/rex/macos-defaults.conf
+!stow/rex/.config/rex/themes/
 
-# Herdr runtime/state
-home/.config/herdr/plugins/
-home/.config/herdr/plugins.json
-# Plugin install lock is machine-generated; never track
-home/.config/herdr/.plugins.lock
-home/.config/herdr/*.log
-home/.config/herdr/*.sock
-home/.config/herdr/session.json
-home/.config/herdr/session-history.json
-home/.config/herdr/release-notes.json
+# Herdr downloads, registries, sessions, and sockets stay local.
+stow/herdr/.config/herdr/plugins/
+stow/herdr/.config/herdr/plugins.json
+stow/herdr/.config/herdr/.plugins.lock
+stow/herdr/.config/herdr/*.log
+stow/herdr/.config/herdr/*.sock
+stow/herdr/.config/herdr/*.sock.*
+stow/herdr/.config/herdr/session.json
+stow/herdr/.config/herdr/session-history.json
+stow/herdr/.config/herdr/session-snapshots/
+stow/herdr/.config/herdr/release-notes.json
 
-# Pi agent runtime/state (blanket-ignore like dmmulroy/.dotfiles, allow-list customization only)
-home/.pi/node_modules/
-home/.pi/package-lock.json
-home/.pi/agent/*
-home/.pi/todos/*
-home/.pi/.pi/todos/*
-.pi/todos/*
+# Pi preferences and customizations only, never runtime state.
+stow/pi/.pi/package-lock.json
+stow/pi/.pi/agent/*
+stow/pi/.pi/todos/
+stow/pi/.pi/.pi/todos/
+.pi/todos/
+!stow/pi/.pi/agent/tsconfig.json
+!stow/pi/.pi/agent/package.json
+!stow/pi/.pi/agent/cloak.json
+!stow/pi/.pi/agent/mcp.json
+!stow/pi/.pi/agent/settings.json
+!stow/pi/.pi/agent/AGENTS.md
+!stow/pi/.pi/agent/themes/
+!stow/pi/.pi/agent/themes/*.json
+!stow/pi/.pi/agent/extensions/
+!stow/pi/.pi/agent/extensions/**
+!stow/pi/.pi/agent/voice-settings.json
 
-# Pi MCP runtime/secrets
-home/.pi/agent/mcp-oauth/
-home/.pi/agent/mcp-cache.json
-home/.pi/agent/mcp-npx-cache.json
-home/.pi/agent/mcp-auth.json
-home/.pi/agent/models-store.json
-home/.local/share/pi/mcp-auth.json
-
-# Pi extensions node_modules
-home/.pi/agent/extensions/**/node_modules/
-
-!home/.pi/agent/tsconfig.json
-!home/.pi/agent/package.json
-!home/.pi/agent/cloak.json
-!home/.pi/agent/mcp.json
-!home/.pi/agent/settings.json
-!home/.pi/agent/AGENTS.md
-!home/.pi/agent/themes/
-!home/.pi/agent/themes/*.json
-!home/.pi/agent/extensions/
-!home/.pi/agent/extensions/**
-!home/.pi/agent/voice-settings.json
-
-home/.codex/auth.json
-
-home/.config/herdr/session-snapshots/
-home/.config/herdr/*.sock
-home/.config/herdr/*.sock.*
-home/.config/opencode/service.json
-home/.config/opencode/service-*.json
+# OpenCode service configuration can contain credentials and private URLs.
+stow/opencode/.config/opencode/service.json
+stow/opencode/.config/opencode/service-*.json

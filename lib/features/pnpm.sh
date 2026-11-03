@@ -216,10 +216,10 @@ pnpm_check_origins() {
 
 # policy_check FILE PATTERN LABEL: a tracked policy file contains a setting.
 policy_check() {
-  if grep -Eq "$2" "$HOME_DIR/$1" 2>/dev/null; then
+  if grep -Eq "$2" "$STOW_DIR/runtime-policy/$1" 2>/dev/null; then
     print_success "$3"
   else
-    print_error "$3 is not set in home/$1"
+    print_error "$3 is not set in stow/runtime-policy/$1"
     return 1
   fi
 }
