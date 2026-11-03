@@ -104,7 +104,8 @@ dots/
   selects all packages in `STOW_PACKAGES` from `lib/core/paths.sh`, rooted at
   `STOW_DIR`, and uses `--no-folding`. Users run `dot stow` and `dot unstow`
   without package arguments. Everything inside a selected package is eligible
-  except shared `.stow-local-ignore` rules for `node_modules` and `.DS_Store`.
+  except shared `.stow-local-ignore` rules for `node_modules`, `.DS_Store`,
+  and private Git customization paths (`.config/git/local.conf` and `extras/`).
   The root ignore file is exposed through relative per-package symlinks and
   overrides Stow's built-in exclusions, allowing `.gitignore` and README files
   to deploy. There is no Git inventory or generated filter, and local stowing
@@ -112,7 +113,15 @@ dots/
   asked. Use the Dot CLI, not bare Stow. Shared skills and their native lock
   live under `shared/agents/` and remain owned by the skills feature's explicit
   directory and lock aliases, outside GNU Stow.
-- Public Git identity may be tracked in stow/git/.config/git/config.
+- Public personal Git defaults live in `stow/git/.config/git/config`. It includes
+  `~/.config/git/local.conf` last. Work identities and conditional includes belong
+  in that user-owned file and `~/.config/git/extras/`, outside the checkout.
+  The Git poststow hook creates comment-only starters without replacing existing
+  files. Keep the work name, email, and signing key together in each profile.
+  Doctor validates public defaults separately from effective local identity;
+  legitimate work overrides are not errors and their values are not printed.
+  Reserve the corresponding source paths in both Git and Stow ignores, and
+  exclude them from `stow_sources` so backup handling never moves private files.
   Never track private keys, tokens, credentials, or work-only identity.
 - These dots target Apple Silicon. Git uses Homebrew’s `ca-certificates`
   bundle at `/opt/homebrew/etc/ca-certificates/cert.pem`, configured directly

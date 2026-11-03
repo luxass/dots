@@ -13,7 +13,9 @@ stow_sources() {
   local package
   for package in "${STOW_PACKAGES[@]}"; do
     find "$STOW_DIR/$package" \
-      \( -name .stow-local-ignore -o -name node_modules -o -name .DS_Store \) -prune -o \
+      \( -name .stow-local-ignore -o -name node_modules -o -name .DS_Store \
+      -o -path "$STOW_DIR/$package/.config/git/local.conf" \
+      -o -path "$STOW_DIR/$package/.config/git/extras" \) -prune -o \
       \( -type f -o -type l \) -print0 || return 1
   done
 }

@@ -10,6 +10,44 @@ git_prestow() {
   return 0
 }
 
+# Private starters are created once. Existing local customization is never replaced.
+git_poststow() {
+  local dir="$HOME/.config/git"
+  (
+    umask 077
+    mkdir -p "$dir/extras" || return 1
+    if [[ ! -e "$dir/local.conf" && ! -L "$dir/local.conf" ]]; then
+      cat >"$dir/local.conf" <<'GIT_LOCAL' || return 1
+# Private machine customization. Personal defaults remain in the managed config.
+# Add includes and overrides here. The examples below are deliberately inactive.
+
+# Work repositories under one folder:
+# [includeIf "gitdir:~/work/"]
+#     path = extras/work.conf
+
+# Work repositories selected by remote URL (use your own organization):
+# [includeIf "hasconfig:remote.*.url:git@github.com:YOUR_ORG/**"]
+#     path = extras/work.conf
+# [includeIf "hasconfig:remote.*.url:https://github.com/YOUR_ORG/**"]
+#     path = extras/work.conf
+GIT_LOCAL
+      print_success "Created $(pretty_path "$dir/local.conf")"
+    fi
+    if [[ ! -e "$dir/extras/work.conf" && ! -L "$dir/extras/work.conf" ]]; then
+      cat >"$dir/extras/work.conf" <<'GIT_WORK' || return 1
+# Private work identity. Fill in all identity fields together before enabling it.
+# Keep private keys in your SSH agent or 1Password, never in this file.
+
+# [user]
+#     name = YOUR_WORK_NAME
+#     email = YOUR_WORK_EMAIL
+#     signingkey = YOUR_WORK_PUBLIC_SIGNING_KEY
+GIT_WORK
+      print_success "Created $(pretty_path "$dir/extras/work.conf")"
+    fi
+  )
+}
+
 git_install_hooks() {
   repo_is_git || {
     print_error "$DOTFILES_DIR is not a Git repository"
@@ -152,16 +190,17 @@ git_check() {
   local file="$STOW_DIR/git/.config/git/config" field expected actual
   check_link "$HOME/.config/git/config" "$file" "Git configuration link" || failed=1
   for field in user.name user.email user.signingkey; do
-    expected="$(git config --file "$file" --get "$field" || true)"
+    expected="$(git config --no-includes --file "$file" --get "$field" || true)"
     actual="$(git config --global --includes --get "$field" || true)"
     if [[ -z "$expected" && "$field" != user.signingkey ]]; then
       print_error "Missing public Git $field; edit stow/git/.config/git/config"
       failed=1
-    elif [[ "$actual" != "$expected" ]]; then
-      print_error "Global Git $field differs from the tracked public identity; check local overrides"
-      failed=1
     else
-      print_success "Public Git $field"
+      print_success "Public Git default $field"
+    fi
+    if [[ -z "$actual" && ("$field" != user.signingkey || -n "$expected") ]]; then
+      print_error "Effective Git $field is missing; check your local includes"
+      failed=1
     fi
   done
   local bundle configured
