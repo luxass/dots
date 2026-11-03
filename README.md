@@ -107,8 +107,9 @@ Use `dot stow`, not bare `stow`. Every file inside a selected package is
 eligible for linking. The shared root `.stow-local-ignore` file is exposed to
 each package by a relative symlink. It overrides Stow's built-in exclusions,
 so files such as `.gitignore` and `README.md` can deploy. It retains only the
-shared byproduct exclusions for `node_modules` and `.DS_Store`. No `git add` is
-needed before local stowing, and there is no Git inventory or generated filter.
+shared exclusions for `node_modules`, `.DS_Store`, and the private Git paths
+`local.conf` and `extras/`. No `git add` is needed before local stowing, and
+there is no Git inventory or generated filter.
 
 The shared skills directory and native lock live under `shared/agents/`. The
 skills feature owns their existing explicit directory and lock aliases; GNU
@@ -179,8 +180,8 @@ plugin downloads, and registries also stay outside the checkout.
 
 Git ignores keep application state out of normal staging. Stow links the
 contents of selected packages directly; do not put local application state in
-a package. The shared Stow ignore rules exclude only `node_modules` and
-`.DS_Store` byproducts.
+a package. The shared Stow ignore rules exclude `node_modules`, `.DS_Store`,
+and reserved private Git customization paths.
 
 Older installations can still have runtime files linked into this checkout.
 Run `dot stow` to move repo-backed state to its normal HOME paths without
@@ -212,12 +213,13 @@ committing.
 The old `~/.gitconfig.local` identity was merged by copying only the public
 name, email, and signing key. The original file was moved to
 `${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/.gitconfig.local`.
-The tracked configuration no longer includes it. Setup does not import local
-identity files automatically.
+The tracked configuration no longer includes it. Setup never copies private
+identities into the tracked configuration.
 
-`dot doctor` checks the configuration link, required public name and email,
-and global identity overrides. Keep work-only identity in a separate local
-repository configuration, never in the tracked file.
+`dot doctor` checks the managed link and public defaults without following
+private includes. It also checks that the effective identity fields are present.
+A work identity selected by local includes is valid, even when it differs from
+the public defaults. Doctor does not print those private identity values.
 
 Git uses Homebrew’s `ca-certificates` bundle through `http.sslCAInfo` in
 `stow/git/.config/git/config`. These dots target Apple Silicon, so the path is
@@ -229,6 +231,80 @@ Repository settings and environment variables can override the global setting.
 `dot stow` backs up the old managed `~/.gitconfig` symlink before linking the
 new location. It leaves independent `~/.gitconfig` files unchanged. Git reads
 those files too, and their values can override `~/.config/git/config`.
+
+### Private Git customization
+
+The managed Git configuration includes `~/.config/git/local.conf` last.
+Personal identity remains the default. Work-only identities and machine-specific
+includes belong in these local files, never in `stow/git/`:
+
+```text
+~/.config/git/
+├── config -> managed public configuration
+├── local.conf
+└── extras/
+    └── work.conf
+```
+
+`dot stow` creates `local.conf`, `extras/`, and `extras/work.conf` if absent.
+The starter files contain comments only. Repeated runs preserve existing files
+and symlinks. The private files are not tracked or stowed. Their corresponding
+source paths are also excluded by Git and Stow to prevent accidental deployment.
+
+The initial `local.conf` contains inactive examples:
+
+```gitconfig
+# [includeIf "gitdir:~/work/"]
+#     path = extras/work.conf
+
+# [includeIf "hasconfig:remote.*.url:git@github.com:YOUR_ORG/**"]
+#     path = extras/work.conf
+# [includeIf "hasconfig:remote.*.url:https://github.com/YOUR_ORG/**"]
+#     path = extras/work.conf
+```
+
+The initial `extras/work.conf` also leaves identity fields inactive:
+
+```gitconfig
+# [user]
+#     name = YOUR_WORK_NAME
+#     email = YOUR_WORK_EMAIL
+#     signingkey = YOUR_WORK_PUBLIC_SIGNING_KEY
+```
+
+Fill in and uncomment the work identity fields before enabling an include rule.
+Keep the work name, email, and signing key together in the profile. Use a public
+SSH signing key or a key reference. Keep private keys in your SSH agent or
+1Password. The managed SSH signing program and signing-enabled defaults remain
+unchanged.
+
+Then uncomment only the matching rules that you want in `local.conf`. Replace
+the example directory or organization with your own local values. Use a folder
+rule, remote rules, or your own combination. The folder rule matches Git's
+repository metadata directory. For linked worktrees, that directory can belong
+to the main repository rather than the checkout's visible folder. Remote-matched
+profiles must not define remote URLs themselves.
+
+Add more private files under `extras/` and include them from `local.conf` as
+needed. Relative include paths resolve beside the file containing the include.
+Git reads includes in place, and the last matching value wins. Put more specific
+rules last. An unconditional email or signing-key override in `local.conf`
+applies to every repository, so keep identity overrides inside conditional
+profiles to retain the personal default elsewhere.
+
+From a repository, check the chosen identity and its source before committing:
+
+```sh
+git config --show-origin --get user.name
+git config --show-origin --get user.email
+git config --show-origin --get user.signingkey
+git config --show-origin --get commit.gpgsign
+```
+
+`dot doctor` also works from repositories with a matching work profile. It checks
+that identity fields exist without demanding that they match personal defaults.
+An independent `~/.gitconfig` is read after the XDG configuration and can still
+override these values.
 
 ## Shell
 

@@ -26,6 +26,10 @@ auth.json
 *.p12
 *.pfx
 
+# Private Git overrides and included profiles stay outside the repository.
+stow/git/.config/git/local.conf
+stow/git/.config/git/extras
+
 # GitHub CLI: preferences and extension sources only.
 stow/gh/.config/gh/*
 !stow/gh/.config/gh/config.yml

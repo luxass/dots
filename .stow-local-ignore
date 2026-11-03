@@ -2,3 +2,6 @@
 node_modules
 # Ignore macOS directory metadata.
 \.DS_Store
+# Private Git customization belongs only in HOME.
+\.config/git/local\.conf
+\.config/git/extras
