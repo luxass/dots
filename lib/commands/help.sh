@@ -11,7 +11,7 @@ ${BOLD}USAGE${RESET}
 ${BOLD}SETUP${RESET}
   init           Install packages, link dotfiles, and set up runtimes
   update         Pull changes, offer upgrades, and relink
-  stow           Link home/ into ~ and install plugin dependencies
+  stow           Link selected Stow packages and install plugin dependencies
   unstow         Remove the links
 
 ${BOLD}DIAGNOSTICS${RESET}

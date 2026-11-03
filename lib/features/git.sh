@@ -3,11 +3,8 @@
 
 # Retire only the old Stow link; leave independently managed ~/.gitconfig alone.
 git_prestow() {
-  local old="$HOME/.gitconfig" target
-  [[ -L "$old" ]] || return 0
-  target="$(readlink "$old")" || return 1
-  [[ "$target" == /* ]] || target="$HOME/$target"
-  if [[ "$target" == "$DOTFILES_DIR/home/.gitconfig" ]]; then
+  local old="$HOME/.gitconfig"
+  if link_points_to "$old" "$LEGACY_HOME_DIR/.gitconfig"; then
     backup_path "$old" || return 1
   fi
   return 0
@@ -20,6 +17,25 @@ git_install_hooks() {
   }
   repo_git config core.hooksPath .githooks || return 1
   print_success "Git hooks path set to .githooks"
+}
+
+# Match only reviewed documentation examples by exact source line and path.
+git_secret_scan_allowed() {
+  local file="$DOTFILES_DIR/.secret-scan-allowlist"
+  local digest entry
+
+  [[ -f "$file" ]] || return 1
+
+  digest="$(printf '%s' "$2" | shasum -a 256)" || return 2
+  digest="${digest%% *}"
+
+  while IFS= read -r entry || [[ -n "$entry" ]]; do
+    if [[ "$entry" == "$digest  $1" ]]; then
+      return 0
+    fi
+  done <"$file" || return 2
+
+  return 1
 }
 
 # Scan tracked and unignored files, never printing credential values.
@@ -101,6 +117,12 @@ git_secret_scan() {
     { print category($0, path) }
   ')" || exit 2
       if [[ -n "$finding" ]]; then
+        if git_secret_scan_allowed "$path" "$line"; then
+          continue
+        else
+          status=$?
+          [[ "$status" -eq 1 ]] || exit 2
+        fi
         printf '%s:%s: possible %s\n' "$path" "$number" "$finding"
       fi
     done <"$matches_file"
@@ -127,13 +149,13 @@ git_check() {
     print_error "pre-push hook is not executable"
     failed=1
   fi
-  local file="$HOME_DIR/.config/git/config" field expected actual
+  local file="$STOW_DIR/git/.config/git/config" field expected actual
   check_link "$HOME/.config/git/config" "$file" "Git configuration link" || failed=1
   for field in user.name user.email user.signingkey; do
     expected="$(git config --file "$file" --get "$field" || true)"
     actual="$(git config --global --includes --get "$field" || true)"
     if [[ -z "$expected" && "$field" != user.signingkey ]]; then
-      print_error "Missing public Git $field; edit home/.config/git/config"
+      print_error "Missing public Git $field; edit stow/git/.config/git/config"
       failed=1
     elif [[ "$actual" != "$expected" ]]; then
       print_error "Global Git $field differs from the tracked public identity; check local overrides"
@@ -143,7 +165,7 @@ git_check() {
     fi
   done
   local bundle configured
-  bundle="$(git config --file "$HOME_DIR/.config/git/config" --path --get http.sslCAInfo)" || return 1
+  bundle="$(git config --file "$STOW_DIR/git/.config/git/config" --path --get http.sslCAInfo)" || return 1
   configured="$(git config --global --includes --path --get http.sslCAInfo || true)"
   if [[ "$configured" == "$bundle" && -s "$bundle" && -r "$bundle" ]]; then
     print_success "Git Homebrew CA bundle"

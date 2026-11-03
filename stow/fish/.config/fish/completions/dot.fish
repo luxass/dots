@@ -6,7 +6,7 @@ complete -c dot -l version -d 'Show version'
 
 complete -c dot -n __fish_use_subcommand -a init -d 'Install packages, link dotfiles, set up runtimes'
 complete -c dot -n __fish_use_subcommand -a update -d 'Pull changes, offer upgrades, relink'
-complete -c dot -n __fish_use_subcommand -a stow -d 'Link home/ and install plugin dependencies'
+complete -c dot -n __fish_use_subcommand -a stow -d 'Link selected Stow packages and install plugin dependencies'
 complete -c dot -n __fish_use_subcommand -a unstow -d 'Remove the links'
 complete -c dot -n __fish_use_subcommand -a doctor -d 'Check the whole setup'
 complete -c dot -n __fish_use_subcommand -a info -d 'Show paths, runtimes, and repo status'

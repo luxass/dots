@@ -1,0 +1,4 @@
+# Keep installed dependencies out of Stow packages.
+node_modules
+# Ignore macOS directory metadata.
+\.DS_Store

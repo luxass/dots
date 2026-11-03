@@ -28,6 +28,57 @@ migrate_legacy_prefs() {
   print_info "Migrated $(pretty_path "$PREFS_FILE") to git-config format"
 }
 
+# Unfold old home/ directory links before deploying the new native packages.
+# File links are handled by stow_backup_conflicts; runtime data stays with its
+# existing feature relocation hooks until the other machines have migrated.
+migrate_stow_layout() {
+  local source target rel rest part cursor
+
+  # Preserve existing source-side dependencies for plugin/editor resolution.
+  # These byproducts remain excluded by native Stow and Git.
+  for rel in pi/.pi opencode/.config/opencode; do
+    source="$LEGACY_HOME_DIR/${rel#*/}/node_modules"
+    target="$STOW_DIR/$rel/node_modules"
+    if [[ -d "$source" && ! -L "$source" && ! -e "$target" && ! -L "$target" ]]; then
+      local_state_move "${rel#*/}/node_modules" "$target" || return 1
+    fi
+  done
+
+  while IFS= read -r -d '' source; do
+    target="$(stow_target "$source")"
+    rel="${target#"$HOME"/}"
+    [[ "$rel" == */* ]] || continue
+    rest="${rel%/*}"
+    cursor=''
+    while [[ -n "$rest" ]]; do
+      part="${rest%%/*}"
+      if [[ "$rest" == */* ]]; then
+        rest="${rest#*/}"
+      else
+        rest=''
+      fi
+      cursor="${cursor:+$cursor/}$part"
+      if link_points_to "$HOME/$cursor" "$LEGACY_HOME_DIR/$cursor"; then
+        local_config_dir "$cursor" || return 1
+      fi
+    done
+  done < <(stow_sources)
+
+  # Preserve uncommitted/ignored skill additions in their shared source tree.
+  local_state_move .agents/skills "$SKILLS_DIR" || return 1
+  local_state_move .agents/.skill-lock.json "$SKILLS_LOCK" || return 1
+
+  # Everything left under the old package is local data, not new deployment
+  # content. Restore it to HOME, including GH auth and OpenCode service state.
+  for source in "$LEGACY_HOME_DIR"/* "$LEGACY_HOME_DIR"/.[!.]* "$LEGACY_HOME_DIR"/..?*; do
+    [[ -e "$source" || -L "$source" ]] || continue
+    rel="${source##*/}"
+    [[ "$rel" == .stow-local-ignore ]] && continue
+    local_state_move "$rel" || return 1
+  done
+  return 0
+}
+
 # The private OpenCode submodule was retired in favour of a published plugin.
 # Back up only links created by its old setup; leave other local plugins alone.
 migrate_opencode_private_links() {

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # GitHub CLI: public preferences and extension sources, never authentication.
 
-readonly GH_EXTENSIONS_FILE="$HOME_DIR/.config/gh/extensions.txt"
+readonly GH_EXTENSIONS_FILE="$STOW_DIR/gh/.config/gh/extensions.txt"
 
 # Keep new authentication files local instead of letting Stow fold this directory.
 gh_prestow() {
@@ -72,7 +72,7 @@ gh_check() {
     return 1
   fi
   config_dir="${GH_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/gh}"
-  check_link "$config_dir/config.yml" "$HOME_DIR/.config/gh/config.yml" "GitHub CLI preferences" || failed=1
+  check_link "$config_dir/config.yml" "$STOW_DIR/gh/.config/gh/config.yml" "GitHub CLI preferences" || failed=1
   missing="$(gh_extensions_missing)" || {
     print_error "Could not read installed GitHub CLI extensions"
     return 1

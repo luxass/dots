@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Native skills CLI: share global skill files and its global lock with the repo.
 
-# Relative links let GNU Stow recognise the ~/.agents links as its own.
+# Keep shared-skills links relative when the repository lives under HOME.
 skills_link_value() {
   local target="$1" dir="$HOME/.agents" up=''
 
@@ -19,8 +19,8 @@ skills_link_value() {
 skills_prestow() {
   local agents="$HOME/.agents"
 
-  # ~/.agents must be a real directory so Stow owns its individual links.
-  if [[ -L "$agents" ]] && same_path "$agents" "$HOME_DIR/.agents"; then
+  # Keep HOME local while the native skills CLI writes to shared/agents/.
+  if link_points_to "$agents" "$LEGACY_HOME_DIR/.agents"; then
     rm "$agents" || return 1
   elif [[ -L "$agents" || (-e "$agents" && ! -d "$agents") ]]; then
     backup_path "$agents" || return 1
