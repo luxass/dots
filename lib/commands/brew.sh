@@ -75,17 +75,124 @@ package_groups() {
   fi
 }
 
-# package_find GROUP NAME: print "TYPE ENTRY" when the group tracks NAME,
-# matching either the full entry or its short name.
+# Match declarations by canonical identity, never by a shortened tap name.
 package_find() {
-  local type entry
-  while read -r type entry; do
-    if [[ "$entry" == "$2" || "${entry##*/}" == "$2" ]]; then
-      printf '%s %s\n' "$type" "$entry"
-      return 0
+  awk -F '\t' -v group="$1" -v type="$2" -v identity="$3" '
+    (!group || $1 == group) && $2 == type && $4 == identity { print; found = 1 }
+    END { exit !found }
+  ' <<<"$BUNDLE_ROWS"
+}
+
+# One strict parser for package mutations. Results stay in this shell.
+package_parse() {
+  local action="$1" flag group_seen=false
+  shift
+  PACKAGE_NAME=''
+  PACKAGE_TYPE=''
+  PACKAGE_GROUP=''
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --formula | --cask)
+        flag="${1#--}"
+        if [[ -n "$PACKAGE_TYPE" && "$PACKAGE_TYPE" != "$flag" ]]; then
+          print_error "Choose either --formula or --cask"
+          return 1
+        fi
+        PACKAGE_TYPE="$flag"
+        ;;
+      --group=* | --group | -g)
+        [[ "$action" == add || "$action" == remove ]] || {
+          print_error "$action does not take --group"
+          return 1
+        }
+        [[ "$group_seen" == false ]] || {
+          print_error "Choose one bundle"
+          return 1
+        }
+        group_seen=true
+        if [[ "$1" == --group=* ]]; then
+          PACKAGE_GROUP="${1#*=}"
+        else
+          [[ "$#" -ge 2 ]] || {
+            print_error "$1 needs a bundle name"
+            return 1
+          }
+          PACKAGE_GROUP="$2"
+          shift
+        fi
+        bundle_file "$PACKAGE_GROUP" >/dev/null || return 1
+        ;;
+      -*)
+        print_error "Unknown option: $1"
+        return 1
+        ;;
+      *)
+        [[ -z "$PACKAGE_NAME" ]] || {
+          print_error "Choose one package"
+          return 1
+        }
+        PACKAGE_NAME="$1"
+        ;;
+    esac
+    shift
+  done
+  if [[ -z "$PACKAGE_NAME" ]]; then
+    [[ "$action" == update && -z "$PACKAGE_TYPE" ]] && return 0
+    print_error "Usage: dot brew $action NAME [--formula|--cask]"
+    return 1
+  fi
+  [[ "$PACKAGE_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9@._+/-]*$ ]] || {
+    print_error "Invalid package name"
+    return 1
+  }
+  if [[ "$action" == add && -z "$PACKAGE_GROUP" ]]; then PACKAGE_GROUP=base; fi
+}
+
+# Resolve a known name. More than one type or tap requires an explicit choice.
+package_resolve() {
+  local type identity status found=false
+  RESOLVED_TYPE=''
+  RESOLVED_NAME=''
+  for type in formula cask; do
+    [[ -z "$PACKAGE_TYPE" || "$PACKAGE_TYPE" == "$type" ]] || continue
+    if identity="$(brew_identity "$type" "$PACKAGE_NAME")"; then
+      if [[ "$found" == true ]]; then
+        print_error "$PACKAGE_NAME is both a formula and a cask; use --formula or --cask"
+        return 1
+      fi
+      RESOLVED_TYPE="$type"
+      RESOLVED_NAME="$identity"
+      found=true
+    else
+      status=$?
+      [[ "$status" -ne 2 ]] || {
+        print_error "Use a fully qualified tap name for $PACKAGE_NAME"
+        return 1
+      }
     fi
-  done < <(bundle_entries "$(bundle_file "$1")")
-  return 1
+  done
+  [[ "$found" == true ]] || {
+    print_error "Cannot resolve $PACKAGE_NAME; check its name and type"
+    return 1
+  }
+}
+
+# New declarations need current native metadata, not a second name resolver.
+package_available() {
+  local type data index found=false
+  for type in formula cask; do
+    [[ -z "$PACKAGE_TYPE" || "$PACKAGE_TYPE" == "$type" ]] || continue
+    if data="$(HOMEBREW_NO_AUTO_UPDATE=1 brew info --json=v2 "--$type" "$PACKAGE_NAME" 2>/dev/null)"; then
+      index="$(brew_metadata_index <<<"$data")" || return 1
+      BREW_NAMES+="$index"$'\n'
+      found=true
+    fi
+  done
+  [[ "$found" == true ]] || {
+    print_error "Cannot read Homebrew metadata for $PACKAGE_NAME"
+    return 1
+  }
+  package_resolve
 }
 
 package_list() {
@@ -156,130 +263,147 @@ package_bundle() {
 }
 
 package_add() {
-  local name='' type='' group=base file state found_formula=false found_cask=false
-
-  while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-      --cask) type=cask ;;
-      --formula) type=formula ;;
-      --group=*) group="${1#*=}" ;;
-      -g | --group)
-        [[ "$#" -ge 2 ]] || {
-          print_error "$1 needs a group name"
-          return 1
-        }
-        group="$2"
-        shift
-        ;;
-      -*)
-        print_error "Unknown option: $1"
-        return 1
-        ;;
-      *)
-        [[ -z "$name" ]] || {
-          print_error "Add one package at a time"
-          return 1
-        }
-        name="$1"
-        ;;
-    esac
-    shift
-  done
-  [[ -n "$name" ]] || {
-    print_error "Usage: dot package add NAME [--cask|--formula] [--group GROUP]"
-    return 1
-  }
-  file="$(bundle_file "$group")" || return 1
-
-  if [[ -z "$type" ]]; then
-    brew info --formula "$name" >/dev/null 2>&1 && found_formula=true
-    brew info --cask "$name" >/dev/null 2>&1 && found_cask=true
-    if [[ "$found_formula" == true && "$found_cask" == true ]]; then
-      print_error "$name is both a formula and a cask; pass --formula or --cask"
-      return 1
-    elif [[ "$found_formula" == true ]]; then
-      type=formula
-    elif [[ "$found_cask" == true ]]; then
-      type=cask
-    else
-      print_error "No formula or cask named $name"
+  local file state status match group type name identity
+  package_parse add "$@" || return 1
+  file="$(bundle_file "$PACKAGE_GROUP")" || return 1
+  package_prepare || return 1
+  package_available || return 1
+  if match="$(package_find '' "$RESOLVED_TYPE" "$RESOLVED_NAME")"; then
+    IFS=$'\t' read -r group type name identity <<<"$match"
+    if [[ "$group" != "$PACKAGE_GROUP" ]]; then
+      print_error "$RESOLVED_NAME already belongs to $group; remove that declaration before moving it"
       return 1
     fi
   fi
-
-  if package_find "$group" "$name" >/dev/null; then
-    print_info "$name is already in the $group group"
-  else
-    touch "$file" || return 1
-    brew bundle add --file "$file" --no-describe "--$type" "$name" || return 1
+  state="$(bundle_state "$PACKAGE_GROUP")" || return 1
+  if [[ "$state" == unset ]]; then
+    if preference_enabled "$(bundle_pref_key "$PACKAGE_GROUP")" "Enable the $PACKAGE_GROUP bundle on this machine?"; then
+      state=enabled
+    else
+      status=$?
+      [[ "$status" -eq 1 ]] || return 1
+      state=disabled
+    fi
+  fi
+  if [[ -z "$match" ]]; then
+    HOMEBREW_NO_AUTO_UPDATE=1 brew bundle add --file "$file" --no-describe "--$RESOLVED_TYPE" "$RESOLVED_NAME" || return 1
     bundle_sort "$file" || return 1
-    print_success "Added $type $name to the $group group"
+    print_success "Declared $RESOLVED_TYPE $RESOLVED_NAME in $PACKAGE_GROUP"
   fi
-
-  state="$(bundle_state "$group")"
   if [[ "$state" != enabled ]]; then
-    print_info "Not installing: the $group group is $state on this machine"
-    return 0
-  fi
-  package_load_installed || return 1
-  if package_installed "$type" "$name"; then
-    print_success "$name is installed"
-  elif [[ "$type" == cask ]]; then
-    brew install --cask "$name"
+    print_info "$PACKAGE_GROUP is disabled; declaration saved without installation"
+  elif package_installed "$RESOLVED_TYPE" "$RESOLVED_NAME"; then
+    print_success "$RESOLVED_NAME is already installed"
   else
-    brew install "$name"
+    HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_AUTOREMOVE=1 \
+      brew install "--$RESOLVED_TYPE" "$RESOLVED_NAME" || {
+      print_error "Installation failed; the declaration remains in $PACKAGE_GROUP"
+      return 1
+    }
   fi
 }
 
 package_remove() {
-  local name='' only='' group match type entry removed=false
-
-  while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-      --group=*) only="${1#*=}" ;;
-      -g | --group)
-        [[ "$#" -ge 2 ]] || {
-          print_error "$1 needs a group name"
-          return 1
-        }
-        only="$2"
-        shift
-        ;;
-      -*)
-        print_error "Unknown option: $1"
-        return 1
-        ;;
-      *) name="$1" ;;
-    esac
-    shift
-  done
-  [[ -n "$name" ]] || {
-    print_error "Usage: dot package remove NAME [--group GROUP]"
+  local match group type name identity file
+  package_parse remove "$@" || return 1
+  bundle_load || return 1
+  package_resolve || return 1
+  match="$(package_find "$PACKAGE_GROUP" "$RESOLVED_TYPE" "$RESOLVED_NAME")" || {
+    print_error "$PACKAGE_NAME is not declared in the requested bundle"
     return 1
   }
-  package_groups "$only" >/dev/null || return 1
+  IFS=$'\t' read -r group type name identity <<<"$match"
+  file="$(bundle_file "$group")" || return 1
+  HOMEBREW_NO_AUTO_UPDATE=1 brew bundle remove --file "$file" "--$type" "$name" || return 1
+  print_success "Removed $name from $group; installed packages unchanged"
+}
 
-  while IFS= read -r group; do
-    match="$(package_find "$group" "$name")" || continue
-    read -r type entry <<<"$match"
-    brew bundle remove --file "$(bundle_file "$group")" "--$type" "$entry" || return 1
-    print_success "Removed $type $entry from the $group group"
-    removed=true
-  done < <(package_groups "$only")
-
-  if [[ "$removed" != true ]]; then
-    print_warning "$name is not tracked${only:+ in the $only group}"
+# Refuse active services or executables; never stop anything for an uninstall.
+package_refuse_active() {
+  local services processes paths prefix cellar executables labels label status
+  services="$(HOMEBREW_NO_AUTO_UPDATE=1 brew services list --json)" || return 1
+  if ! jq -e --arg name "$RESOLVED_NAME" --arg short "${RESOLVED_NAME##*/}" '
+    if type != "array" then error("Invalid service inventory") else . end
+    | all(.[]; (.name != $name and .name != $short)
+      or (.status == "none" or .status == "stopped"))
+  ' <<<"$services" >/dev/null; then
+    print_error "Cannot uninstall $RESOLVED_NAME: stop its service explicitly first (or repair the service inventory)"
     return 1
   fi
-
-  package_load_installed || return 1
-  if package_installed "$type" "$entry" && confirm "Uninstall $entry from this machine?" n; then
-    if [[ "$type" == cask ]]; then
-      brew uninstall --cask "$entry"
-    else
-      brew uninstall "$entry"
+  processes="$(ps -axo comm=)" || return 1
+  if [[ "$RESOLVED_TYPE" == formula ]]; then
+    prefix="$(brew --prefix)" || return 1
+    cellar="$(brew --cellar "$RESOLVED_NAME")" || return 1
+    paths="$(brew list --formula "$RESOLVED_NAME")" || return 1
+    executables="$(awk '/\/(s?bin)\/[^/]+$/ { sub(/^.*\//, ""); print }' <<<"$paths")" || return 1
+    paths="$cellar/"$'\n'"$prefix/opt/${RESOLVED_NAME##*/}/"
+    while IFS= read -r label; do
+      [[ -n "$label" ]] || continue
+      paths+=$'\n'"$prefix/bin/$label"$'\n'"$prefix/sbin/$label"
+    done <<<"$executables"
+  else
+    paths="$(jq -r --arg name "$RESOLVED_NAME" '
+      .casks[] | select(.full_token == $name) | .artifacts[] | .target? // empty
+    ' <<<"$PACKAGE_INVENTORY")" || return 1
+    if [[ -z "$paths" ]]; then
+      print_error "Cannot identify installed app or executable paths for $RESOLVED_NAME; refusing automatic uninstall"
+      return 1
     fi
+    labels="$(jq -r --arg name "$RESOLVED_NAME" '
+      .casks[] | select(.full_token == $name) | .artifacts[]
+      | .uninstall[]? | .launchctl? // empty | if type == "array" then .[] else . end
+    ' <<<"$PACKAGE_INVENTORY")" || return 1
+    while IFS= read -r label; do
+      [[ -n "$label" ]] || continue
+      if launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 || launchctl print "system/$label" >/dev/null 2>&1; then
+        print_error "Cannot uninstall $RESOLVED_NAME: stop its launch service explicitly first"
+        return 1
+      fi
+    done <<<"$labels"
   fi
+  if awk -v paths="$paths" -v executables="${executables:-}" '
+    BEGIN { count = split(paths, targets, "\n"); bins = split(executables, names, "\n") }
+    {
+      sub(/^[[:space:]]+/, "")
+      for (i = 1; i <= count; i++) {
+        if (targets[i] != "" && ($0 == targets[i] || index($0, targets[i] "/") == 1 ||
+          (substr(targets[i], length(targets[i])) == "/" && index($0, targets[i]) == 1))) active = 1
+      }
+      for (i = 1; i <= bins; i++) if (names[i] != "" && $0 == names[i]) active = 1
+    }
+    END { exit !active }
+  ' <<<"$processes"; then
+    print_error "Cannot uninstall $RESOLVED_NAME: close its active app or command explicitly first"
+    return 1
+  else
+    status=$?
+  fi
+  [[ "$status" -eq 1 ]] || {
+    print_error "Cannot inspect active processes safely"
+    return 1
+  }
+}
+
+package_uninstall() {
+  local match
+  package_parse uninstall "$@" || return 1
+  package_prepare || return 1
+  package_resolve || return 1
+  if match="$(package_find '' "$RESOLVED_TYPE" "$RESOLVED_NAME")"; then
+    print_error "$RESOLVED_NAME is still declared in $(awk -F '\t' '{ print $1 }' <<<"$match"); remove its declaration first"
+    return 1
+  fi
+  package_installed "$RESOLVED_TYPE" "$RESOLVED_NAME" || {
+    print_error "$RESOLVED_NAME is not installed"
+    return 1
+  }
+  package_refuse_active || return 1
+  print_info "Uninstall target: $RESOLVED_TYPE $RESOLVED_NAME (no user-data or dependency cleanup)"
+  confirm "Uninstall this package from this machine?" n || return 0
+  # Recheck after the human confirmation in case an app or service started.
+  package_refuse_active || return 1
+  HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 \
+    brew uninstall "--$RESOLVED_TYPE" "$RESOLVED_NAME"
 }
 
 package_unmanaged() {
@@ -305,23 +429,25 @@ package_unmanaged() {
 }
 
 package_update() {
-  local name="${1:-}"
-
-  if [[ -z "$name" ]]; then
+  package_parse update "$@" || return 1
+  if [[ -z "$PACKAGE_NAME" ]]; then
     brew update || return 1
     homebrew_upgrade
     return
   fi
-
+  # Standalone upgrades do not depend on bundle selection or declaration validity.
+  BREW_NAMES=''
+  PACKAGE_LOADED=false
   package_load_installed || return 1
-  if package_installed formula "$name"; then
-    brew upgrade "$name"
-  elif package_installed cask "$name"; then
-    brew upgrade --cask "$name"
-  else
-    print_error "$name is not installed"
+  package_resolve || return 1
+  package_installed "$RESOLVED_TYPE" "$RESOLVED_NAME" || {
+    print_error "$RESOLVED_NAME is not installed"
     return 1
-  fi
+  }
+  print_info "Upgrade target: $RESOLVED_TYPE $RESOLVED_NAME (all-installed policy)"
+  confirm "Upgrade this installed package?" n || return 0
+  HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 \
+    brew upgrade "--$RESOLVED_TYPE" "$RESOLVED_NAME"
 }
 
 cmd_brew() {
@@ -340,11 +466,20 @@ cmd_brew() {
   homebrew_require || return 1
   case "$action" in
     list) package_list "$@" ;;
-    check) [[ "$#" -eq 0 ]] && package_check ;;
-    install) [[ "$#" -eq 0 ]] && packages_install ;;
+    check | install | unmanaged)
+      [[ "$#" -eq 0 ]] || {
+        print_error "Usage: dot brew $action"
+        return 1
+      }
+      case "$action" in
+        check) package_check ;;
+        install) packages_install ;;
+        unmanaged) package_unmanaged ;;
+      esac
+      ;;
     add) package_add "$@" ;;
     remove) package_remove "$@" ;;
-    unmanaged) [[ "$#" -eq 0 ]] && package_unmanaged ;;
+    uninstall) package_uninstall "$@" ;;
     update) package_update "$@" ;;
     *)
       print_error "Unknown brew action: $action"

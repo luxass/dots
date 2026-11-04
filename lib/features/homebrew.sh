@@ -38,14 +38,18 @@ bundle_state() {
   fi
 }
 
-# bundle_entries FILE: "formula NAME" / "cask NAME" lines from a Brewfile.
+# Validate syntax natively, then retain source names: native bundle list strips
+# cask tap qualifiers. Managed package entries use plain quoted declarations.
 bundle_entries() {
   if [[ ! -f "$1" || ! -r "$1" ]]; then
     print_error "Cannot read Brewfile: $(pretty_path "$1")"
     return 1
   fi
+  HOMEBREW_NO_AUTO_UPDATE=1 brew bundle list --file "$1" --formula >/dev/null || return 1
   awk '
-    /^[[:space:]]*(brew|cask)[[:space:]]/ {
+    /^[[:space:]]*(#|$)/ { next }
+    /^[[:space:]]*tap "[A-Za-z0-9_.+\/-]+"/ { next }
+    {
       if ($0 !~ /^[[:space:]]*(brew|cask) "[A-Za-z0-9@._+\/-]+"[[:space:]]*(#.*)?$/) {
         printf "%s:%d: unsupported package declaration\n", FILENAME, FNR > "/dev/stderr"
         failed = 1
@@ -98,16 +102,16 @@ brew_metadata_index() {
     | (.formulae[] | . as $f
       | if (.name | type) != "string" or (.full_name | type) != "string" then
           error("Invalid formula identity") else . end
-      | (if (.full_name | contains("/")) then (.full_name | split("/") | .[0:-1] | join("/")) + "/" else "" end) as $prefix
-      | ([.name, .full_name] + (.aliases // []) + (.oldnames // [])
+      | (if (.full_name | contains("/")) then (.full_name | split("/") | .[0:-1] | join("/")) + "/" else "homebrew/core/" end) as $prefix
+      | ([.name, .full_name, ($prefix + .name)] + (.aliases // []) + (.oldnames // [])
         + [((.aliases // []) + (.oldnames // []))[] | if contains("/") then . else $prefix + . end])
       | unique[] | ["formula", ., $f.full_name] | @tsv),
       (.casks[] | . as $c
       | if (.token | type) != "string" or (.full_token | type) != "string" then
           error("Invalid cask identity") else . end
-      | (if (.full_token | contains("/")) then (.full_token | split("/") | .[0:-1] | join("/")) + "/" else "" end) as $prefix
-      | ([.token, .full_token] + (.old_tokens // [])
-        + [(.old_tokens // [])[] | $prefix + .])
+      | (if (.full_token | contains("/")) then (.full_token | split("/") | .[0:-1] | join("/")) + "/" else "homebrew/cask/" end) as $prefix
+      | ([.token, .full_token, ($prefix + .token)] + (.old_tokens // [])
+        + [(.old_tokens // [])[] | if contains("/") then . else $prefix + . end])
       | unique[] | ["cask", ., $c.full_token] | @tsv)
   '
 }
@@ -207,37 +211,49 @@ bundle_sort() {
   } | sed '1{/^$/d;}' >"$tmp" && mv "$tmp" "$file"
 }
 
-bundle_satisfied() {
-  brew bundle check --no-upgrade --file "$1" >/dev/null 2>&1
+# Choices and syntax must be valid before runtime or package changes.
+packages_preflight() {
+  homebrew_require || return 1
+  prefs_validate || return 1
+  bundle_read || return 1
+  bundles_resolve || return 1
+  if ! command_exists jq; then
+    # jq is already a declared base dependency. Bootstrap it only for fresh setups,
+    # after all choices and source files have been checked, not during reports.
+    if ! awk -F '\t' '$1 == "base" && $2 == "formula" && $3 == "jq" { found = 1 } END { exit !found }' <<<"$BUNDLE_DECLARATIONS"; then
+      print_error "Metadata validation needs the declared base jq formula"
+      return 1
+    fi
+    print_info "Installing the declared base jq formula for Homebrew metadata"
+    HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_AUTOREMOVE=1 \
+      brew install --formula jq || return 1
+  fi
+  bundle_load
 }
 
-# packages_install: install the base bundle plus every opted-in group.
+# Install missing packages in selected bundles without requesting upgrades.
 packages_install() {
-  local group file default failed=0
-
-  homebrew_require || return 1
-
+  local group state row_group type name identity missing failed=0 file
+  packages_preflight || return 1
+  PACKAGE_LOADED=false
+  package_load_installed || return 1
   for group in "${BUNDLE_GROUPS[@]}"; do
-    file="$(bundle_file "$group")"
-    [[ -f "$file" ]] || continue
-
-    if [[ "$group" != base ]]; then
-      default=n
-      [[ "$group" == fonts ]] && default=y
-      if ! preference_enabled "$(bundle_pref_key "$group")" "Install $group packages on this machine?" "$default"; then
-        print_info "Skipping $group packages"
-        continue
-      fi
-    fi
-
-    if bundle_satisfied "$file"; then
+    state="$(bundle_state "$group")" || return 1
+    [[ "$state" == enabled ]] || continue
+    missing=false
+    while IFS=$'\t' read -r row_group type name identity; do
+      [[ "$row_group" == "$group" ]] || continue
+      if ! package_installed "$type" "$identity"; then missing=true; fi
+    done <<<"$BUNDLE_ROWS"
+    if [[ "$missing" == false ]]; then
       print_success "$group packages are installed"
       continue
     fi
-
-    print_info "Installing $group packages"
-    if ! brew bundle install --no-upgrade --file "$file"; then
-      print_error "Some $group packages failed to install; run 'dot package check'"
+    file="$(bundle_file "$group")" || return 1
+    print_info "Installing missing $group packages (no requested upgrades)"
+    if ! HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_AUTOREMOVE=1 \
+      brew bundle install --no-upgrade --file "$file"; then
+      print_error "Some $group packages failed to install; run 'dot brew check'"
       failed=1
     fi
   done
@@ -259,7 +275,7 @@ homebrew_upgrade() {
     return 0
   fi
 
-  print_info "$count Homebrew updates are available"
+  print_info "$count Homebrew updates are available across all installed packages (including disabled bundles and untracked packages)"
   if [[ -n "$formulae" ]]; then
     print_section "Formulae"
     indent <<<"$formulae"
@@ -275,10 +291,10 @@ homebrew_upgrade() {
     return 0
   fi
   if [[ -n "$formulae" ]]; then
-    brew upgrade --formula --yes || return 1
+    HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew upgrade --formula --yes || return 1
   fi
   if [[ -n "$casks" ]]; then
-    brew upgrade --cask --yes || return 1
+    HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew upgrade --cask --yes || return 1
   fi
 }
 

@@ -13,9 +13,9 @@ ${BOLD}dot config${RESET} - machine-local preferences
   path               Print the preferences file path
 
 ${BOLD}Known keys${RESET}
-  packages.brew.fonts.enabled      Install packages/bundle.fonts
-  packages.brew.work.enabled       Install packages/bundle.work
-  packages.brew.personal.enabled   Install packages/bundle.personal
+  packages.brew.fonts.enabled      Select packages/bundle.fonts
+  packages.brew.work.enabled       Select packages/bundle.work
+  packages.brew.personal.enabled   Select packages/bundle.personal
 
 Bundle choices also have 'dot brew bundle list/enable/disable' commands.
 Both interfaces use the same keys and file. Changes never install or uninstall.

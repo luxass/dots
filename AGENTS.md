@@ -116,6 +116,14 @@ Tool-specific rules:
   `prefix+i` for notifications. Never stop a running Herdr server.
 - Fish: plugins are listed in `fish_plugins` and installed by Fisher outside
   the repo. Never commit plugin files, `fish_variables`, or generated completions.
+- Homebrew: each package belongs to one bundle; base is always enabled.
+  Optional bundles are chosen per machine through the existing
+  `packages.brew.<group>.enabled` preference keys; keep those keys. Enabling or
+  disabling a bundle never installs or uninstalls. `dot brew remove` changes
+  declarations only; `dot brew uninstall` refuses declared packages and active
+  apps or services. Unattended installs fail on unset choices, even with
+  `--yes`. Reports never prompt or change preferences. Never add automatic
+  cleanup or delete user data.
 - Cua Driver: ask before stopping a running daemon and warn that computer-use
   sessions will be interrupted; abort if it does not stop. `dot stow` never
   installs or launches it. The human approves macOS permission dialogs.
@@ -163,10 +171,12 @@ dot secret-scan      # Scan tracked and unignored files for secrets
 dot lint             # shellcheck + shfmt over dot, lib/, .githooks/
 dot hooks            # Install repository Git hooks
 dot config           # Local-only preferences (git-config format)
-dot brew list|check|add|remove|unmanaged
+dot brew list|check|install|unmanaged|update  # Report, install missing, upgrade
+dot brew add|remove|uninstall X     # remove changes the declaration only
+dot brew bundle list|enable|disable # Local bundle choice; never installs
 ```
 
-`-y`/`--yes` answers yes to confirmations.
+`-y`/`--yes` answers yes to confirmations, but never answers unset bundle choices.
 
 ## NOTES
 
@@ -176,5 +186,3 @@ dot brew list|check|add|remove|unmanaged
   plus path; never replace them with whole-file or directory exclusions.
 - `dot stow` backs up anything blocking a managed link to
   `${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/`.
-- Optional package groups are per-machine preferences: fonts default to yes,
-  work to no.

@@ -27,7 +27,7 @@ ${BOLD}MANAGE${RESET}
 
 ${BOLD}OPTIONS${RESET}
   -v, --verbose  Print extra diagnostics
-  -y, --yes      Answer yes to confirmations
+  -y, --yes      Answer yes to confirmations, not unresolved bundle choices
   -h, --help     Show this help
   --version      Show the version
 EOF
