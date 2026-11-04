@@ -27,15 +27,18 @@ PACKAGE_LOADED=false
 package_load_installed() {
   [[ "$PACKAGE_LOADED" == true ]] && return 0
   PACKAGE_FORMULAE="$(brew list --formula --full-name -1 2>/dev/null || true)"
-  PACKAGE_CASKS="$(brew list --cask -1 2>/dev/null || true)"
+  PACKAGE_CASKS="$(brew info --json=v2 --installed --cask | jq -r '.casks[] | [.token, .full_token] | @tsv')" || return 1
   PACKAGE_LOADED=true
 }
 
-# package_installed TYPE NAME: exact match. Formulae are listed by full name,
-# so a tracked tap/x/foo is not satisfied by an unrelated core foo.
+# package_installed TYPE NAME: exact formula name or cask token/full token.
+# Qualified names must match the tap, not just the final path component.
 package_installed() {
   if [[ "$1" == cask ]]; then
-    grep -qxF "$2" <<<"$PACKAGE_CASKS"
+    awk -F '\t' -v name="$2" '
+      $1 == name || $2 == name { found = 1 }
+      END { exit !found }
+    ' <<<"$PACKAGE_CASKS"
   else
     grep -qxF "$2" <<<"$PACKAGE_FORMULAE"
   fi
@@ -117,7 +120,7 @@ package_report() {
 package_list() {
   local group groups
   groups="$(package_groups "${1:-}")" || return 1
-  package_load_installed
+  package_load_installed || return 1
   while IFS= read -r group; do
     package_report "$group" all || true
   done <<<"$groups"
@@ -125,7 +128,7 @@ package_list() {
 
 package_check() {
   local group failed=0
-  package_load_installed
+  package_load_installed || return 1
   echo
   for group in "${BUNDLE_GROUPS[@]}"; do
     package_report "$group" missing || failed=1
@@ -205,7 +208,7 @@ package_add() {
     print_info "Not installing: the $group group is $state on this machine"
     return 0
   fi
-  package_load_installed
+  package_load_installed || return 1
   if package_installed "$type" "$name"; then
     print_success "$name is installed"
   elif [[ "$type" == cask ]]; then
@@ -256,7 +259,7 @@ package_remove() {
     return 1
   fi
 
-  package_load_installed
+  package_load_installed || return 1
   if package_installed "$type" "$entry" && confirm "Uninstall $entry from this machine?" n; then
     if [[ "$type" == cask ]]; then
       brew uninstall --cask "$entry"
@@ -267,7 +270,9 @@ package_remove() {
 }
 
 package_unmanaged() {
-  local group type name tracked_formulae='' tracked_casks='' formulae casks
+  local group type name full_name tracked_formulae='' tracked_casks='' formulae casks
+
+  package_load_installed || return 1
 
   for group in "${BUNDLE_GROUPS[@]}"; do
     while read -r type name; do
@@ -280,7 +285,14 @@ package_unmanaged() {
   done
 
   formulae="$(comm -23 <(brew leaves --installed-on-request | sed 's#.*/##' | sort -u) <(sort -u <<<"$tracked_formulae"))"
-  casks="$(comm -23 <(brew list --cask -1 | sort -u) <(sort -u <<<"$tracked_casks"))"
+  casks="$(
+    while IFS=$'\t' read -r name full_name; do
+      [[ -n "$name" ]] || continue
+      if ! grep -qxF "$name" <<<"$tracked_casks" && ! grep -qxF "$full_name" <<<"$tracked_casks"; then
+        printf '%s\n' "$full_name"
+      fi
+    done <<<"$PACKAGE_CASKS" | sort -u
+  )"
 
   if [[ -z "$formulae$casks" ]]; then
     print_success "Every installed package is tracked"
@@ -308,7 +320,7 @@ package_update() {
     return
   fi
 
-  package_load_installed
+  package_load_installed || return 1
   if package_installed formula "$name"; then
     brew upgrade "$name"
   elif package_installed cask "$name"; then
