@@ -38,14 +38,17 @@ bundle_state() {
   fi
 }
 
-# Validate syntax natively, then retain source names: native bundle list strips
-# cask tap qualifiers. Managed package entries use plain quoted declarations.
+# Keep source names: native bundle list strips cask tap qualifiers. Reports
+# read plain declarations locally; validation also checks syntax with Homebrew.
+
 bundle_entries() {
   if [[ ! -f "$1" || ! -r "$1" ]]; then
     print_error "Cannot read Brewfile: $(pretty_path "$1")"
     return 1
   fi
-  HOMEBREW_NO_AUTO_UPDATE=1 brew bundle list --file "$1" --formula >/dev/null || return 1
+  if [[ "${2:-validate}" != report ]]; then
+    HOMEBREW_NO_AUTO_UPDATE=1 brew bundle list --file "$1" --formula >/dev/null || return 1
+  fi
   awk '
     /^[[:space:]]*(#|$)/ { next }
     /^[[:space:]]*tap "[A-Za-z0-9_.+\/-]+"/ { next }
@@ -79,18 +82,19 @@ bundles_resolve() {
   return "$failed"
 }
 
-# Syntax-only rows: GROUP TYPE DECLARED_NAME. Never hide a failed file read.
+# GROUPS is newline-delimited; omitted means all. Rows: GROUP TYPE NAME.
+# Never hide a failed file read, including on the lightweight reporting path.
 bundle_read() {
-  local group file entries type name
+  local groups="${1:-$(printf '%s\n' "${BUNDLE_GROUPS[@]}")}" group file entries type name
   BUNDLE_DECLARATIONS=''
-  for group in "${BUNDLE_GROUPS[@]}"; do
+  while IFS= read -r group; do
     file="$(bundle_file "$group")" || return 1
-    entries="$(bundle_entries "$file")" || return 1
+    entries="$(bundle_entries "$file" "${2:-validate}")" || return 1
     while read -r type name; do
       [[ -n "$type" ]] || continue
       BUNDLE_DECLARATIONS+="$group"$'\t'"$type"$'\t'"$name"$'\n'
     done <<<"$entries"
-  done
+  done <<<"$groups"
 }
 
 # Index Homebrew identities and aliases: TYPE LOOKUP_NAME CANONICAL_NAME.

@@ -160,6 +160,10 @@ Homebrew packages, including disabled bundles and packages outside the
 Brewfiles. Review and confirm the upgrade preview. There is no automatic
 uninstall, dependency cleanup, or removal of user data.
 
+`list` and `unmanaged` read declarations and installed metadata without full
+catalog validation or a persistent cache. `list GROUP` reads only that bundle.
+`check`, doctor, and package changes perform full bundle validation.
+
 `unmanaged` includes explicitly requested formulae even when another formula
 needs them. It hides dependency-only libraries. Doctor checks all enabled
 bundles and reports invalid or unresolved choices as errors.
