@@ -1,7 +1,7 @@
 # Optional personal-only packages.
 #
 # Add entries with:
-#   dot package add NAME [brew|cask|auto] personal
+#   dot brew add NAME [--cask|--formula] --group personal
 
 brew "cocoapods"
 brew "ffmpeg"

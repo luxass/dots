@@ -28,7 +28,8 @@ dots/
 
 | Task | Location |
 | --- | --- |
-| Add or remove packages | `dot package add/remove ...` first, or edit `packages/bundle*` |
+| Add or remove packages | `dot brew add/remove ...` first, or edit `packages/bundle*` |
+| Change Homebrew behavior | `lib/features/homebrew.sh`, `lib/commands/brew.sh` |
 | Diagnose setup | `dot doctor`, `dot info` |
 | Change setup/update flow | `lib/commands/setup.sh` |
 | Change what a managed thing does | `lib/features/<name>.sh` |
@@ -162,7 +163,7 @@ dot secret-scan      # Scan tracked and unignored files for secrets
 dot lint             # shellcheck + shfmt over dot, lib/, .githooks/
 dot hooks            # Install repository Git hooks
 dot config           # Local-only preferences (git-config format)
-dot package list|check|add|remove|unmanaged
+dot brew list|check|add|remove|unmanaged
 ```
 
 `-y`/`--yes` answers yes to confirmations.

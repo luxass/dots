@@ -89,7 +89,7 @@ dot doctor           # check every feature, including a secret scan
 dot info             # show paths, runtime versions, and git status
 dot secret-scan      # scan tracked and unignored files for secrets
 dot lint             # run shellcheck and shfmt on dot itself
-dot package ...      # Homebrew packages (see below)
+dot brew ...      # Homebrew packages (see below)
 dot config ...       # local-only preferences
 dot hooks            # point Git at .githooks and set up repo filters
 ```
@@ -117,29 +117,50 @@ Stow does not manage them. `dot doctor` checks those links separately.
 
 ## Package Management
 
-The base package list is `packages/bundle`. Fonts live in
-`packages/bundle.fonts`, optional work-only packages in `packages/bundle.work`,
-and personal-only packages (installed only on machines that opt in) in
-`packages/bundle.personal`. `dot init` prompts for optional groups only when
-their local preference is unset. Answers are saved under XDG state so future
-runs know whether fonts, work, or personal packages are enabled or
-intentionally skipped.
+Use `dot brew` for Homebrew packages and bundle choices. A bundle declares
+packages. A local preference selects it for this machine. Homebrew records
+whether each package is installed. The reports show these facts separately,
+including installed packages in disabled bundles.
+
+Base, in `packages/bundle`, is always enabled. Fonts, work, and personal use
+`packages/bundle.fonts`, `packages/bundle.work`, and `packages/bundle.personal`.
+Each package belongs to one bundle. Put packages wanted everywhere in base.
+
+`dot init` asks for explicit optional-bundle choices and saves them in the
+existing local preferences file. Unattended installation stops if a choice
+is unresolved, even with `--yes`. Reports and doctor never prompt or save
+choices. Disabling a bundle never uninstalls its packages.
+
+`dot package` is replaced by `dot brew`, without an alias.
 
 ```sh
-dot package list [GROUP]                   # every package and whether it is installed
-dot package check                          # only what is missing
-dot package add NAME [--cask|--formula] [--group GROUP]
-dot package remove NAME [--group GROUP]
-dot package unmanaged                      # installed but not in any bundle
-dot package update [NAME]
+dot brew list [GROUP]                   # selection and actual installation
+dot brew check                          # missing enabled packages or unresolved choices
+dot brew bundle list
+dot brew bundle enable personal         # selection only
+dot brew bundle disable work            # selection only
+dot brew install                        # missing packages in enabled bundles
+dot brew add NAME [--cask|--formula] [--group GROUP]
+dot brew remove NAME [--cask|--formula] [--group GROUP]
+dot brew uninstall NAME [--cask|--formula]
+dot brew unmanaged                      # undeclared requested tools and installed casks
+dot brew update [NAME] [--cask|--formula]
 ```
 
-`add` detects whether NAME is a formula or a cask (pass `--cask` or
-`--formula` when it is both), writes the entry with `brew bundle add`, keeps the
-Brewfile sorted under its header comment, and installs it when the group is
-enabled on this machine. `remove` uses `brew bundle remove` and then offers to
-uninstall. `brew bundle install` keeps going past a failed package and reports
-it at the end; run `dot package check` afterwards to see what is missing.
+`add` writes an entry through `brew bundle add` and keeps the Brewfile sorted.
+If the target bundle is enabled, it also installs the package. Otherwise, it
+only records the entry. `remove` changes the declaration only. `uninstall`
+refuses packages that any bundle still declares, including disabled bundles.
+If a name identifies both a formula and a cask, specify its type.
+
+`install` does not upgrade existing packages. Updates cover all installed
+Homebrew packages, including disabled bundles and packages outside the
+Brewfiles. Review and confirm the upgrade preview. There is no automatic
+uninstall, dependency cleanup, or removal of user data.
+
+`unmanaged` includes explicitly requested formulae even when another formula
+needs them. It hides dependency-only libraries. Doctor checks all enabled
+bundles and reports invalid or unresolved choices as errors.
 
 ## Local-Only Configuration
 
@@ -805,8 +826,8 @@ dot stow
 Check package drift:
 
 ```sh
-dot package check
-dot package unmanaged
+dot brew check
+dot brew unmanaged
 ```
 
 `dot stow` moves anything in the way of a managed link to

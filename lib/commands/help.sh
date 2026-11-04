@@ -21,7 +21,7 @@ ${BOLD}DIAGNOSTICS${RESET}
   lint           Run shellcheck and shfmt on dot itself
 
 ${BOLD}MANAGE${RESET}
-  package        Homebrew packages ('dot package help')
+  brew           Homebrew packages and bundles ('dot brew help')
   config         Machine-local preferences ('dot config help')
   hooks          Point Git at .githooks and set up repo filters
 
