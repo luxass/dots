@@ -284,10 +284,5 @@ homebrew_upgrade() {
 
 homebrew_check() {
   homebrew_require || return 1
-  if bundle_satisfied "$(bundle_file base)"; then
-    print_success "Base packages are installed"
-  else
-    print_error "Base packages are missing; run 'dot package check'"
-    return 1
-  fi
+  package_check
 }
