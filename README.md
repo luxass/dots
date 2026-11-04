@@ -113,8 +113,7 @@ there is no Git inventory or generated filter.
 
 The shared skills directory and native lock live under `shared/agents/`. The
 skills feature owns their existing explicit directory and lock aliases; GNU
-Stow does not manage them. `dot doctor` checks those links separately. Legacy
-runtime relocation remains for machines that still have files in `home/`.
+Stow does not manage them. `dot doctor` checks those links separately.
 
 ## Package Management
 
@@ -416,10 +415,7 @@ Global CLI installs go through `sfw pnpm add -g`.
 OpenCode v2 is installed from `anomalyco/tap/opencode-v2` through
 `packages/bundle`. `dot update` runs Pi's native self-updater, which detects
 how Pi was installed and updates it directly. Homebrew upgrades use the usual
-package prompt. Before installing the base Brewfile, setup or update removes
-any installed formula or cask listed in `BREW_PACKAGE_REPLACEMENTS` in
-`lib/core/migrations.sh`. This migrates the old `opencode` formula to `opencode-v2`.
-Setup or update also removes the old pnpm-managed OpenCode package if found.
+package prompt.
 
 Socket Firewall can be used by prefixing supported package-manager commands:
 
@@ -491,9 +487,6 @@ Local plugin files and pinned package revisions remain unchanged.
 plugin dependencies. Normal cached-plugin sessions need no special launcher.
 Unrelated npm and pnpm installs keep the five-day policy.
 
-Stow backs up leftover links from the retired private plugin setup. Other local
-plugins are left alone.
-
 ## Pi
 
 Pi (`@earendil-works/pi-coding-agent`, binary `pi`) is installed as a managed
@@ -507,9 +500,7 @@ age rule.
 - Public Pi extensions live under `stow/pi/.pi/agent/extensions/` and are stowed
   to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
 - Auth, trust, sessions, logs, caches, and downloaded packages stay outside
-  the checkout outside selected Stow package contents. The Pi
-  prestow hook relocates older repo-backed state without requiring Pi to exit.
-  Shared Agent Skills live under
+  the checkout and selected Stow packages. Shared Agent Skills live under
   `shared/agents/skills/` and are not duplicated here.
 
 ### Computer use
@@ -759,7 +750,7 @@ The `dot` executable sources every file in `lib/core/`, `lib/features/`, and
 `lib/commands/`, then calls `main`:
 
 - `lib/core/` holds shared plumbing: output, prompts, paths and versions
-  (`paths.sh`), preferences, link helpers, one-time migrations, and dispatch.
+  (`paths.sh`), preferences, link helpers, and dispatch.
 - `lib/features/<name>.sh` owns one managed thing (Homebrew, Stow, pnpm, Pi,
   OpenCode, and so on). A feature defines any of the hooks `<name>_prestow`,
   `<name>_poststow`, `<name>_deps`, `<name>_unstow`, and `<name>_check`, and is

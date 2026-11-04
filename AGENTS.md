@@ -11,7 +11,7 @@ work-only details, and machine-local secrets out of tracked content.
 dots/
 |-- dot                 # CLI entrypoint: sources lib/ and runs main
 |-- lib/
-|   |-- core/           # Output, prompts, paths/versions, prefs, links, dispatch, migrations
+|   |-- core/           # Output, prompts, paths/versions, prefs, links, dispatch
 |   |-- features/       # One file per managed thing, exposing hooks (see CLI DESIGN)
 |   `-- commands/       # CLI surface: `dot foo-bar` runs cmd_foo_bar
 |-- stow/               # 14 native GNU Stow packages; paths mirror $HOME
@@ -71,7 +71,6 @@ dots/
 | Change Pi agent config | `stow/pi/.pi/agent/` (lean: settings, keybindings, notes only) |
 | Change Agent Skills | `sfw pnpx skills` directly; links in `lib/features/skills.sh`, files/lock in `shared/agents/` |
 | Change Claude Code skills link | `lib/features/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
-| Remove a one-time migration | `lib/core/migrations.sh` |
 | Install hooks | `dot hooks` |
 | Scan for secrets | `dot secret-scan` |
 | Lint the CLI | `dot lint` |
@@ -149,9 +148,6 @@ dots/
   `cloak.json`, `settings.json`, `AGENTS.md`, `voice-settings.json`, packaging).
   Git ignores do not affect native Stow selection. Keep auth, trust, sessions,
   logs, caches, and keybindings physically outside the package, under HOME.
-  Pi's prestow hook keeps its HOME directories local and relocates old
-  repo-backed state from legacy `home/` without process checks or requiring sessions
-  to close. Leave sockets in place with a warning, without blocking Stow.
   `settings.json` is tracked and holds preferences
   only. Pi writes to it unprompted, so expect churn from
   `lastChangelogVersion` on upgrade and from any `/settings` edit. Never put
@@ -182,9 +178,7 @@ dots/
   override for CLI-only plugins and checks the server setting before updating.
   `dot stow` bypasses pnpm release age only for local OpenCode plugin deps.
   A pnpm package exception does not override OpenCode's internal npm resolver.
-  The private submodule and its dependency/linking hooks are removed. Stow
-  backs up only leftover symlinks created by the retired setup; it leaves other
-  local plugins alone.
+  Leave unrelated local plugins alone.
 - Rex configuration lives in `stow/rex/.config/rex/`. `dot stow` applies selected
   macOS preferences and reloads valid Lua only when the server is running.
   It never installs, updates, launches, or restarts Rex. Existing app preferences
@@ -204,15 +198,13 @@ dots/
   Herdr Annotate bundles its own TUI. Keep `prefix+m` for pane zoom and
   `prefix+o` for document review; notifications use `prefix+i`. Do not stop
   a running Herdr server to apply plugin changes. Logs, sessions, registries,
-  and other runtime files belong outside the checkout. The one-time prestow
-  relocation skips existing sockets without blocking Stow or stopping the server.
+  and other runtime files belong outside the checkout.
 - Fish plugins are listed in `stow/fish/.config/fish/fish_plugins` and installed by
   Fisher into `fisher_path` (`~/.local/share/fisher`, set in
   `conf.d/fisher.fish`), never into `stow/fish/.config/fish/`. Add plugins to
   `fish_plugins` and run `dot stow`; do not commit plugin files. Fish variables
   and CLI-generated completions stay outside the checkout. OrbStack owns its
-  Docker, kubectl, and orbctl completion links. Runtime relocation does not
-  require closing Fish shells.
+  Docker, kubectl, and orbctl completion links.
 - Neovim may remain installed/tracked as a package, but do not reintroduce
   Neovim configuration unless explicitly requested.
 - After behavior changes, run `dot doctor`.

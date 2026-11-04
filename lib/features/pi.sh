@@ -1,28 +1,6 @@
 # shellcheck shell=bash
 # Pi: public extension dependencies in ~/.pi and updates.
 
-# Only public preferences and customizations belong in the checkout.
-pi_prestow() {
-  local entry name
-
-  local_config_dir .pi || return 1
-  local_config_dir .pi/agent || return 1
-  for entry in "$LEGACY_HOME_DIR/.pi/agent"/* "$LEGACY_HOME_DIR/.pi/agent"/.[!.]* "$LEGACY_HOME_DIR/.pi/agent"/..?*; do
-    [[ -e "$entry" || -L "$entry" ]] || continue
-    name="${entry##*/}"
-    case "$name" in
-      settings.json | mcp.json | cloak.json | AGENTS.md | voice-settings.json | package.json | tsconfig.json | themes | extensions) continue ;;
-    esac
-    local_state_move ".pi/agent/$name" || return 1
-  done
-  local_state_move .pi/todos || return 1
-  if [[ -e "$LEGACY_HOME_DIR/.pi/.pi/todos" || -L "$LEGACY_HOME_DIR/.pi/.pi/todos" ]]; then
-    local_config_dir .pi/.pi || return 1
-    local_state_move .pi/.pi/todos || return 1
-  fi
-  return 0
-}
-
 pi_deps() {
   pnpm_install_deps "$HOME/.pi" "Pi extension"
 }

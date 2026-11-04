@@ -13,7 +13,7 @@ backups/
 Brewfile.lock.json
 packages/failed_packages_*.txt
 
-# Old home/ is only a migration source. Never re-track runtime leftovers.
+# Never re-track runtime leftovers from the retired home/ layout.
 home/
 
 # Secrets and auth state
