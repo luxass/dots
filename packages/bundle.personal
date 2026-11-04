@@ -3,4 +3,11 @@
 # Add entries with:
 #   dot package add NAME [brew|cask|auto] personal
 
+brew "cocoapods"
+brew "ffmpeg"
+brew "swiftlint"
+
+cask "chatgpt"
 cask "discord"
+cask "steam"
+cask "t3-code"
