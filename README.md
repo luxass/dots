@@ -152,8 +152,10 @@ If the target bundle is enabled, it also installs the package. Otherwise, it
 only records the entry. `remove` changes the declaration only. `uninstall`
 refuses packages that any bundle still declares, including disabled bundles.
 If a name identifies both a formula and a cask, specify its type.
+Uninstall refuses active apps and services. Close or stop them explicitly first.
 
-`install` does not upgrade existing packages. Updates cover all installed
+`install` does not request upgrades. Homebrew can still update dependencies
+required by a new package. Updates cover all installed
 Homebrew packages, including disabled bundles and packages outside the
 Brewfiles. Review and confirm the upgrade preview. There is no automatic
 uninstall, dependency cleanup, or removal of user data.
@@ -189,7 +191,18 @@ packages.brew.work.enabled
 packages.brew.personal.enabled
 ```
 
-Unset keys are asked about once, interactively, when `dot` needs them.
+`dot brew bundle enable work` writes the same value as
+`dot config set packages.brew.work.enabled true`. Both use the same file and
+helpers. Existing choices and unrelated preferences remain unchanged.
+
+Unsetting a key or resetting preferences makes the affected choices unresolved.
+The next interactive installation asks again. Unattended installation stops
+with instructions. These settings commands never install or uninstall packages.
+Invalid settings and failed reads or saves are errors, not default choices.
+
+Read-only package reports require jq, which is already in base. On a fresh
+setup, installation bootstraps jq after explicit choices and Brewfile syntax
+checks, then uses native Homebrew metadata for package validation.
 
 ### Application state
 

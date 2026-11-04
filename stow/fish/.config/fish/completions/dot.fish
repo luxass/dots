@@ -1,6 +1,6 @@
 complete -c dot -f
 complete -c dot -s v -l verbose -d 'Print extra diagnostics'
-complete -c dot -s y -l yes -d 'Answer yes to confirmations'
+complete -c dot -s y -l yes -d 'Answer yes to confirmations, not bundle choices'
 complete -c dot -s h -l help -d 'Show help'
 complete -c dot -l version -d 'Show version'
 
