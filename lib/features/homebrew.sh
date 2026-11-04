@@ -25,22 +25,166 @@ bundle_pref_key() { printf 'packages.brew.%s.enabled\n' "$1"; }
 
 # bundle_state GROUP: enabled, disabled, or unset (not chosen on this machine yet).
 bundle_state() {
-  local value
+  local value status
+  bundle_file "$1" >/dev/null || return 2
   if [[ "$1" == base ]]; then
     echo enabled
-  elif ! value="$(prefs_get "$(bundle_pref_key "$1")" 2>/dev/null)"; then
-    echo unset
-  elif [[ "$value" == true ]]; then
-    echo enabled
+  elif value="$(prefs_get "$(bundle_pref_key "$1")")"; then
+    if [[ "$value" == true ]]; then echo enabled; else echo disabled; fi
   else
-    echo disabled
+    status=$?
+    [[ "$status" -eq 1 ]] || return 2
+    echo unset
   fi
 }
 
 # bundle_entries FILE: "formula NAME" / "cask NAME" lines from a Brewfile.
 bundle_entries() {
-  [[ -f "$1" ]] || return 0
-  sed -nE 's/^brew "([^"]+)".*/formula \1/p; s/^cask "([^"]+)".*/cask \1/p' "$1"
+  if [[ ! -f "$1" || ! -r "$1" ]]; then
+    print_error "Cannot read Brewfile: $(pretty_path "$1")"
+    return 1
+  fi
+  awk '
+    /^[[:space:]]*(brew|cask)[[:space:]]/ {
+      if ($0 !~ /^[[:space:]]*(brew|cask) "[A-Za-z0-9@._+\/-]+"[[:space:]]*(#.*)?$/) {
+        printf "%s:%d: unsupported package declaration\n", FILENAME, FNR > "/dev/stderr"
+        failed = 1
+        next
+      }
+      type = $1 == "brew" ? "formula" : "cask"
+      split($0, parts, "\"")
+      print type, parts[2]
+    }
+    END { exit failed }
+  ' "$1"
+}
+
+# Resolve choices before any package/runtime mutation. Report every unresolved key.
+bundles_resolve() {
+  local group state status failed=0
+  for group in "${BUNDLE_GROUPS[@]}"; do
+    state="$(bundle_state "$group")" || return 1
+    [[ "$state" == unset ]] || continue
+    if preference_enabled "$(bundle_pref_key "$group")" "Enable the $group bundle on this machine?"; then
+      :
+    else
+      status=$?
+      [[ "$status" -eq 1 ]] || failed=1
+    fi
+  done
+  return "$failed"
+}
+
+# Syntax-only rows: GROUP TYPE DECLARED_NAME. Never hide a failed file read.
+bundle_read() {
+  local group file entries type name
+  BUNDLE_DECLARATIONS=''
+  for group in "${BUNDLE_GROUPS[@]}"; do
+    file="$(bundle_file "$group")" || return 1
+    entries="$(bundle_entries "$file")" || return 1
+    while read -r type name; do
+      [[ -n "$type" ]] || continue
+      BUNDLE_DECLARATIONS+="$group"$'\t'"$type"$'\t'"$name"$'\n'
+    done <<<"$entries"
+  done
+}
+
+# Index Homebrew identities and aliases: TYPE LOOKUP_NAME CANONICAL_NAME.
+brew_metadata_index() {
+  jq -r '
+    if (.formulae | type) != "array" or (.casks | type) != "array" then
+      error("Invalid Homebrew metadata")
+    else . end
+    | (.formulae[] | . as $f
+      | if (.name | type) != "string" or (.full_name | type) != "string" then
+          error("Invalid formula identity") else . end
+      | (if (.full_name | contains("/")) then (.full_name | split("/") | .[0:-1] | join("/")) + "/" else "" end) as $prefix
+      | ([.name, .full_name] + (.aliases // []) + (.oldnames // [])
+        + [((.aliases // []) + (.oldnames // []))[] | if contains("/") then . else $prefix + . end])
+      | unique[] | ["formula", ., $f.full_name] | @tsv),
+      (.casks[] | . as $c
+      | if (.token | type) != "string" or (.full_token | type) != "string" then
+          error("Invalid cask identity") else . end
+      | (if (.full_token | contains("/")) then (.full_token | split("/") | .[0:-1] | join("/")) + "/" else "" end) as $prefix
+      | ([.token, .full_token] + (.old_tokens // [])
+        + [(.old_tokens // [])[] | $prefix + .])
+      | unique[] | ["cask", ., $c.full_token] | @tsv)
+  '
+}
+
+brew_identity() {
+  awk -F '\t' -v type="$1" -v name="$2" '
+    $1 == type && $2 == name { identities[$3] = 1 }
+    END {
+      for (identity in identities) { result = identity; count++ }
+      if (count == 1) print result
+      else exit (count ? 2 : 1)
+    }
+  ' <<<"$BREW_NAMES"
+}
+
+# Validate all bundles, including disabled ones, against native Homebrew names.
+# BUNDLE_ROWS adds canonical identity as its fourth field.
+bundle_load() {
+  local group type name identity data index old_group old_type old_name old_identity
+  local formulae=() casks=()
+  command_exists jq || {
+    print_error "jq is required to read Homebrew metadata; install the declared jq formula first"
+    return 1
+  }
+  bundle_read || return 1
+  BREW_NAMES=''
+  BUNDLE_ROWS=''
+  while IFS=$'\t' read -r group type name; do
+    [[ -n "$group" ]] || continue
+    if [[ "$type" == formula ]]; then formulae+=("$name"); else casks+=("$name"); fi
+  done <<<"$BUNDLE_DECLARATIONS"
+  for type in formula cask; do
+    if [[ "$type" == formula ]]; then
+      [[ "${#formulae[@]}" -gt 0 ]] || continue
+      data="$(HOMEBREW_NO_AUTO_UPDATE=1 brew info --json=v2 --formula "${formulae[@]}")" || return 1
+    else
+      [[ "${#casks[@]}" -gt 0 ]] || continue
+      data="$(HOMEBREW_NO_AUTO_UPDATE=1 brew info --json=v2 --cask "${casks[@]}")" || return 1
+    fi
+    index="$(brew_metadata_index <<<"$data")" || return 1
+    BREW_NAMES+="$index"$'\n'
+  done
+  while IFS=$'\t' read -r group type name; do
+    [[ -n "$group" ]] || continue
+    identity="$(brew_identity "$type" "$name")" || {
+      print_error "Cannot uniquely resolve $type $name in $(pretty_path "$(bundle_file "$group")")"
+      return 1
+    }
+    while IFS=$'\t' read -r old_group old_type old_name old_identity; do
+      [[ "$old_type" == "$type" && "$old_identity" == "$identity" ]] || continue
+      print_error "Duplicate $type $identity: $(pretty_path "$(bundle_file "$old_group")") ($old_name) and $(pretty_path "$(bundle_file "$group")") ($name)"
+      return 1
+    done <<<"$BUNDLE_ROWS"
+    BUNDLE_ROWS+="$group"$'\t'"$type"$'\t'"$name"$'\t'"$identity"$'\n'
+  done <<<"$BUNDLE_DECLARATIONS"
+}
+
+# Shared by doctor and the package check command. Inventory is loaded by caller.
+bundles_check() {
+  local group state row_group type name identity failed=0
+  for group in "${BUNDLE_GROUPS[@]}"; do
+    state="$(bundle_state "$group")" || return 1
+    if [[ "$state" == unset ]]; then
+      print_error "$group is unset; run 'dot brew bundle enable $group' or 'dot brew bundle disable $group'"
+      failed=1
+    elif [[ "$state" == enabled ]]; then
+      while IFS=$'\t' read -r row_group type name identity; do
+        [[ "$row_group" == "$group" ]] || continue
+        if ! package_installed "$type" "$identity"; then
+          print_error "$group: missing $type $name"
+          failed=1
+        fi
+      done <<<"$BUNDLE_ROWS"
+    fi
+  done
+  [[ "$failed" -ne 0 ]] || print_success "All enabled bundles are installed"
+  return "$failed"
 }
 
 # bundle_sort FILE: keep the leading comment block, then sorted tap, brew,
