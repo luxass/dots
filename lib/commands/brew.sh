@@ -65,6 +65,31 @@ package_prepare() {
   package_load_installed
 }
 
+# Reports need declarations and installed aliases, not full catalog validation.
+# Missing names stay visible as uninstalled; check/doctor validate them fully.
+package_report_prepare() {
+  local group type name identity status
+  bundle_read "${1:-}" report || return 1
+  BREW_NAMES=''
+  PACKAGE_LOADED=false
+  package_load_installed || return 1
+  BUNDLE_ROWS=''
+  while IFS=$'\t' read -r group type name; do
+    [[ -n "$group" ]] || continue
+    if identity="$(brew_identity "$type" "$name")"; then
+      :
+    else
+      status=$?
+      if [[ "$status" -ne 1 ]]; then
+        print_error "Cannot uniquely identify installed $type $name; use a fully qualified name"
+        return 1
+      fi
+      identity="$name"
+    fi
+    BUNDLE_ROWS+="$group"$'\t'"$type"$'\t'"$name"$'\t'"$identity"$'\n'
+  done <<<"$BUNDLE_DECLARATIONS"
+}
+
 # package_groups [GROUP]: one validated group, or all of them.
 package_groups() {
   if [[ -n "${1:-}" ]]; then
@@ -202,7 +227,7 @@ package_list() {
     return 1
   }
   groups="$(package_groups "${1:-}")" || return 1
-  package_prepare || return 1
+  package_report_prepare "$groups" || return 1
   printf '%-10s %-10s %-8s %-42s %s\n' BUNDLE SELECTION TYPE PACKAGE INSTALLED
   while IFS= read -r group; do
     state="$(bundle_state "$group")" || return 1
@@ -408,7 +433,7 @@ package_uninstall() {
 
 package_unmanaged() {
   local type identity requested group row_type name row_identity declared found=false
-  package_prepare || return 1
+  package_report_prepare || return 1
   while IFS=$'\t' read -r type identity requested; do
     [[ "$requested" == true ]] || continue
     declared=false
