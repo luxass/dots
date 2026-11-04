@@ -24,27 +24,43 @@ confirm() {
   esac
 }
 
-# preference_enabled KEY PROMPT [y|n]: read a boolean preference, asking once
-# and saving the answer when it is unset. Non-interactive runs use the default
-# without saving it, so the question is asked on the next interactive run.
-preference_enabled() {
-  local key="$1" prompt="$2" default="${3:-n}" value
+# Bundle choices need explicit answers, unlike ordinary confirmations.
+preference_interactive() { [[ -t 0 && "$DOT_YES" != true ]]; }
 
+preference_ask() {
+  local reply
+  while true; do
+    read -r -p "$1 [y/n]: " reply || return 2
+    case "$reply" in
+      y | Y | yes | YES) return 0 ;;
+      n | N | no | NO) return 1 ;;
+      *) print_info "Answer yes or no" ;;
+    esac
+  done
+}
+
+# preference_enabled KEY PROMPT: 0=enabled, 1=disabled, 2=unresolved/error.
+preference_enabled() {
+  local key="$1" prompt="$2" value status
   if value="$(prefs_get "$key")"; then
     [[ "$value" == true ]]
     return
+  else
+    status=$?
+  fi
+  [[ "$status" -eq 1 ]] || return 2
+  if ! preference_interactive; then
+    print_error "$key is unset; set it explicitly with 'dot config set $key true' or false"
+    return 2
   fi
 
-  if [[ "$DOT_YES" == true || ! -t 0 ]]; then
-    print_info "$key is unset; using default ($default)"
-    [[ "$default" == y ]]
-    return
-  fi
-
-  if confirm "$prompt" "$default"; then
-    prefs_set "$key" true || print_warning "Could not save $key"
+  if preference_ask "$prompt"; then
+    prefs_set "$key" true || return 2
     return 0
+  else
+    status=$?
   fi
-  prefs_set "$key" false || print_warning "Could not save $key"
+  [[ "$status" -eq 1 ]] || return 2
+  prefs_set "$key" false || return 2
   return 1
 }
