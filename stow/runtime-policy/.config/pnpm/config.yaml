@@ -1,7 +1,7 @@
 minimumReleaseAge: 7200
 minimumReleaseAgeStrict: true
 minimumReleaseAgeExclude:
-- '@opencode/*'
+  - '@opencode/*'
 dangerouslyAllowAllBuilds: false
 globalShims:
   node: auto
