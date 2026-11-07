@@ -19,6 +19,7 @@ dots/
 |-- shared/agents/      # Shared skills and the native global skills CLI lock
 |-- packages/           # Brewfiles: bundle (base), bundle.fonts, bundle.personal, bundle.work
 |-- .githooks/          # Tracked repository hooks (pre-push: secret-scan, lint)
+|-- .github/workflows/  # CI: lint, secret scan, Stow link/unlink into an empty HOME
 |-- .mise.toml          # Pinned lint tools for this repo (shellcheck, shfmt)
 `-- .editorconfig       # Shell style, also read by shfmt
 ```

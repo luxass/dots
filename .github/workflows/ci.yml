@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        run: brew install stow mise
+
+      - name: Install pinned lint tools
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mise trust
+          mise install
+
+      - name: Lint
+        run: ./dot lint
+
+      - name: Secret scan
+        run: ./dot secret-scan
+
+      # Link every Stow package into an empty HOME, then unlink it again.
+      # This calls the linking functions directly: `dot stow` also installs
+      # plugin dependencies (Fisher, Herdr, sfw) that this runner does not have.
+      - name: Stow into an empty HOME
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/home"
+          export XDG_STATE_HOME="$HOME/.local/state"
+          mkdir -p "$HOME"
+
+          DOTFILES_DIR="$PWD"
+          for lib in lib/core/*.sh lib/features/*.sh lib/commands/*.sh; do
+            # shellcheck source=/dev/null
+            source "$lib"
+          done
+
+          stow_apply
+          stow_check
+          skills_check
+
+          # --no-folding: no HOME directory may be a link into the checkout.
+          folded="$(find "$HOME" -type l -exec sh -c '[ -d "$1" ]' _ {} \; -print \
+            | grep -v -e '/.agents/skills$' -e '/.claude/skills$' || true)"
+          if [ -n "$folded" ]; then
+            echo "Directory links found; Stow folded a directory:"
+            echo "$folded"
+            exit 1
+          fi
+
+          # Only links into stow/ or shared/agents/ belong to dot; tools such as
+          # mise may add their own state links under the same HOME.
+          stow_remove
+          left="$(find "$HOME" -type l -exec sh -c \
+            'case "$(readlink "$1")" in */stow/* | */shared/agents/*) exit 0 ;; *) exit 1 ;; esac' _ {} \; -print)"
+          if [ -n "$left" ]; then
+            echo "Links left after unstow:"
+            echo "$left"
+            exit 1
+          fi

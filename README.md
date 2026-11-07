@@ -355,6 +355,10 @@ dot hooks
 dot secret-scan
 ```
 
+CI (`.github/workflows/ci.yml`, macOS runner) runs `dot lint` and
+`dot secret-scan`, then links every Stow package into an empty HOME, checks the
+links, and unlinks them again. It does not install plugin dependencies.
+
 `dot hooks` also configures the `pi-settings` clean filter named in
 `.gitattributes`. Pi rewrites `lastChangelogVersion` in
 `stow/pi/.pi/agent/settings.json` on every upgrade; the filter strips that key
