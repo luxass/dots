@@ -2,7 +2,6 @@
 # Repository paths, managed versions, and feature order. Constants only.
 
 readonly STOW_DIR="$DOTFILES_DIR/stow"
-readonly LEGACY_HOME_DIR="$DOTFILES_DIR/home"
 # Native Stow packages. Keep runtime data outside these deployment trees.
 readonly STOW_PACKAGES=(fish git ghostty starship runtime-policy pi opencode gh herdr rex plannotator tinycast claude codex)
 readonly PACKAGES_DIR="$DOTFILES_DIR/packages"

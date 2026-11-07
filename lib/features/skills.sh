@@ -20,9 +20,7 @@ skills_prestow() {
   local agents="$HOME/.agents"
 
   # Keep HOME local while the native skills CLI writes to shared/agents/.
-  if link_points_to "$agents" "$LEGACY_HOME_DIR/.agents"; then
-    rm "$agents" || return 1
-  elif [[ -L "$agents" || (-e "$agents" && ! -d "$agents") ]]; then
+  if [[ -L "$agents" || (-e "$agents" && ! -d "$agents") ]]; then
     backup_path "$agents" || return 1
   fi
   mkdir -p "$agents" "$SKILLS_DIR" || return 1

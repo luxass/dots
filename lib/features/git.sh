@@ -1,15 +1,6 @@
 # shellcheck shell=bash
 # Repository hooks, public Git identity, and secret scanning.
 
-# Retire only the old Stow link; leave independently managed ~/.gitconfig alone.
-git_prestow() {
-  local old="$HOME/.gitconfig"
-  if link_points_to "$old" "$LEGACY_HOME_DIR/.gitconfig"; then
-    backup_path "$old" || return 1
-  fi
-  return 0
-}
-
 # Private starters are created once. Existing local customization is never replaced.
 git_poststow() {
   local dir="$HOME/.config/git"

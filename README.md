@@ -113,8 +113,7 @@ there is no Git inventory or generated filter.
 
 The shared skills directory and native lock live under `shared/agents/`. The
 skills feature owns their existing explicit directory and lock aliases; GNU
-Stow does not manage them. `dot doctor` checks those links separately. Legacy
-runtime relocation remains for machines that still have files in `home/`.
+Stow does not manage them. `dot doctor` checks those links separately.
 
 ## Package Management
 
@@ -507,9 +506,7 @@ age rule.
 - Public Pi extensions live under `stow/pi/.pi/agent/extensions/` and are stowed
   to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
 - Auth, trust, sessions, logs, caches, and downloaded packages stay outside
-  the checkout outside selected Stow package contents. The Pi
-  prestow hook relocates older repo-backed state without requiring Pi to exit.
-  Shared Agent Skills live under
+  the checkout outside selected Stow package contents. Shared Agent Skills live under
   `shared/agents/skills/` and are not duplicated here.
 
 ### Computer use

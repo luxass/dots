@@ -13,9 +13,6 @@ backups/
 Brewfile.lock.json
 packages/failed_packages_*.txt
 
-# Old home/ is only a migration source. Never re-track runtime leftovers.
-home/
-
 # Secrets and auth state
 **/.npmrc
 !stow/runtime-policy/.npmrc

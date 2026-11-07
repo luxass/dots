@@ -49,7 +49,6 @@ stow_backup_conflicts() {
 
 stow_apply() {
   stow_require || return 1
-  migrate_stow_layout || return 1
   run_hook prestow || return 1
   stow_backup_conflicts || return 1
 
