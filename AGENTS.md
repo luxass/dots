@@ -108,10 +108,15 @@ Tool-specific rules:
   of `opencode.jsonc`, not `cli.json`. Never run `opencode service set ...`
   automatically; it stops the background server. Restart OpenCode after
   editing its config or plugins.
-- Rex: configuration only. `dot` never installs, updates, launches, or restarts
-  Rex. Never track generated theme IDs or the imported theme registry.
-  Keep Remote Control unchanged. Do not add a theme shortcut or action, or
-  Neovim or Twitch integration.
+- Rex: `dot init` installs the app only when missing, from the Bleeding Edge
+  appcast, after signature, team ID, bundle ID, and notarization checks.
+  Never replace an existing app; Rex's own updater handles updates. `dot` never
+  launches or restarts Rex. Remote Control stays on: `dot stow` imports missing
+  themes through the `import_*` actions in `init.lua`. It also offers
+  `rex terminfo setup` and, when something is missing, `rex skill setup`.
+  Never track generated theme IDs, the imported theme registry, or Rex's
+  `ssh_config` and `terminfo-hosts`. Do not bind a theme shortcut, or
+  add Neovim or Twitch integration.
 - Herdr: keep `prefix+m` for pane zoom, `prefix+o` for document review, and
   `prefix+i` for notifications. Never stop a running Herdr server.
 - Fish: plugins are listed in `fish_plugins` and installed by Fisher outside

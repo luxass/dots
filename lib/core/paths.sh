@@ -23,6 +23,12 @@ readonly CUA_DRIVER_INSTALL_URL="https://cua.ai/driver/install.sh"
 readonly CUA_DRIVER_APP="/Applications/CuaDriver.app"
 readonly REX_APP_PATH="/Applications/Rex Beta.app"
 readonly REX_INSTALLATION_URL="https://www.superlogical.com/rex/docs/installation"
+# Rex is not in Homebrew. dot installs it once from the Bleeding Edge
+# (snapshot) appcast; after that, the app's own updater keeps it current.
+readonly REX_APPCAST_URL="https://blob.superlogical.com/public/rex-app/snapshot-arm64/appcast.xml"
+readonly REX_DOWNLOAD_PREFIX="https://blob.superlogical.com/public/rex-app/snapshot-arm64/"
+readonly REX_TEAM_ID="AG92C3PT77"
+readonly REX_BUNDLE_ID="com.superlogical.rex"
 readonly REX_BUNDLED_CLI="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex"
 readonly REX_DEFAULTS_DOMAIN="com.superlogical.rex"
 readonly REX_SETTINGS_FILE="$STOW_DIR/rex/.config/rex/macos-defaults.conf"

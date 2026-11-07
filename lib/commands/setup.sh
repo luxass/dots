@@ -38,6 +38,7 @@ cmd_init() {
   run_steps \
     "required|Homebrew|homebrew_require" \
     "required|Homebrew packages|packages_install" \
+    "optional|Rex|rex_install" \
     "required|Link dotfiles|stow_apply" \
     "optional|Fish shell|fish_setup" \
     "required|pnpm, Node.js, and globals|pnpm_setup" \

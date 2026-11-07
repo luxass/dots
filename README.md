@@ -655,28 +655,51 @@ Herdr's own theme selector stays off because its appearance detection can
 report light mode for a dark terminal ([upstream issue #3198](https://github.com/herdrdev/herdr/issues/3198)).
 Terminal colors still follow the host's automatic appearance changes.
 
-Install Rex manually using the [official installation guide](https://www.superlogical.com/rex/docs/installation).
-If Rex is missing, `dot init`, `dot stow`, and `dot update` offer to open
-the guide. Declining skips Rex setup without failing the command.
-Launch Rex once to install its bundled CLI, then run `dot stow`.
-`dot doctor` prints the installation link without prompting or opening it.
-Dots does not install, update, launch, or restart Rex.
+Rex is not in Homebrew. If Rex is missing, `dot init` offers to install it
+from the Bleeding Edge (snapshot) appcast at `REX_APPCAST_URL` in
+`lib/core/paths.sh`. It downloads the newest disk image and installs
+`Rex Beta.app` only after these checks pass:
+
+- The code signature is valid.
+- The team ID is `AG92C3PT77` (Superlogical) and the bundle ID is
+  `com.superlogical.rex`.
+- macOS accepts the app as notarized.
+
+It never replaces an existing app. After that, Rex updates itself, and dots
+does not update, launch, or restart it. Launch Rex once to install its
+bundled CLI, then run `dot stow`. The
+[official installation guide](https://www.superlogical.com/rex/docs/installation)
+is the fallback when you decline the install.
+
 Its tracked configuration lives under `stow/rex/.config/rex/`:
 
-- `init.lua` defines shortcuts.
+- `init.lua` defines shortcuts and two palette actions,
+  `import_catppuccin_macchiato` and `import_catppuccin_latte`.
 - `macos-defaults.conf` defines app preferences and both theme names.
 - `themes/` holds Macchiato and Latte in Ghostty format.
 
-Import both files from `~/.config/rex/themes/` through Rex once on each Mac.
-Run `dot stow` after the imports. It resolves each theme name to the local
-ID that Rex generates. The IDs and imported theme registry stay out of Git.
-If either import is missing, dots leaves app preferences unchanged and prints
-the path to import. No theme shortcut or custom action is needed.
+`dot stow` links the files, reloads Lua when the Rex server is running, and
+writes the app preferences. These include Remote Control, which lets `rex do`
+run app actions. If a theme is not imported yet and Rex is running, `dot stow`
+runs its import action, then selects both themes by the local ID that Rex
+generates. The IDs and the imported theme registry stay out of Git. Rex skips
+a theme file that it already imported. When Rex is not running, run
+`dot stow` again after you launch it, or run the import actions from the palette.
 
-`dot stow` links the files, applies app preferences, and reloads Lua when
-the Rex server is running. Existing app preferences are backed up under the
-local dot backup directory before changes. Relaunch Rex to apply font,
-sidebar, and appearance preferences. Dots leaves Remote Control unchanged.
+Existing app preferences are backed up under the local dot backup directory
+before changes. Relaunch Rex to apply font, sidebar, and appearance preferences.
+
+`dot stow` also asks once to run `rex terminfo setup`. It installs the
+`xterm-rex` terminfo entry in `~/.terminfo`, writes an ssh guard to
+`~/.config/rex/ssh_config`, and adds one `Include` line at the top of
+`~/.ssh/config`. The guard sends `xterm-256color` to hosts that do not have
+the entry. These files stay local. `rex terminfo remove` undoes it.
+
+When Rex reports a missing or outdated agent skill or hook, `dot stow` asks
+to run `rex skill setup`. It writes the skill stub to the shared skills
+folder and a session hook to `~/.claude/settings.json`, which are tracked
+files, so review the diff before you commit. `dot doctor` warns, but does not
+fail, when terminfo or the agent setup is missing.
 
 The prefix remains Ctrl+B. Split, zoom, resize, session, and tab shortcuts
 follow the Herdr configuration. The detach shortcuts close the Rex window,
