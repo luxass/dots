@@ -1,3 +1,8 @@
 # Pi rewrites lastChangelogVersion on every upgrade. The pi-settings clean
 # filter (configured by `dot hooks`) keeps that key out of commits.
 stow/pi/.pi/agent/settings.json filter=pi-settings
+
+# Keep local registry authentication out of the public runtime policy.
+# These filters are required after `dot hooks`; errors block staging.
+stow/runtime-policy/.config/pnpm/config.yaml filter=pnpm-config
+stow/runtime-policy/.npmrc filter=npmrc

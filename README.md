@@ -403,6 +403,17 @@ links, and unlinks them again. It does not install plugin dependencies.
 when Git reads the file, so upgrades no longer show up as changes. Pi keeps
 writing the key locally. `dot doctor` warns when the filter is not configured.
 
+`dot hooks` also configures required clean filters for the pnpm `config.yaml`
+and `.npmrc` files under `stow/runtime-policy/`. They remove authentication
+fields, including registry-scoped credentials and nested YAML fields, from
+Git's copy. They also remove usernames and passwords from HTTP(S) URLs.
+Local authentication and install-security settings stay unchanged. The YAML
+filter normalizes formatting and drops comments in Git's copy. It rejects YAML
+aliases. Both filters use macOS system Ruby and stop staging if filtering fails.
+`dot doctor` warns when either filter is not configured. Run `dot hooks` in each
+checkout before staging these files. Filters do not remove secrets from existing
+commits and do not replace the secret scan.
+
 `dot secret-scan` checks tracked and unignored files for credential assignments,
 private-key markers, and credentials in URLs. Findings show a file, line, and
 category, never the detected value. Execution errors fail the command rather

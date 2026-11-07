@@ -5,6 +5,8 @@
 # Not marked required: if jq is missing or the JSON is mid-edit, Git keeps the
 # content unchanged instead of failing.
 readonly GIT_PI_SETTINGS_CLEAN="jq -j 'del(.lastChangelogVersion)'"
+readonly GIT_PNPM_CONFIG_CLEAN='/usr/bin/ruby lib/filters/runtime-policy.rb yaml'
+readonly GIT_NPMRC_CLEAN='/usr/bin/ruby lib/filters/runtime-policy.rb npmrc'
 
 # Private starters are created once. Existing local customization is never replaced.
 git_poststow() {
@@ -53,6 +55,11 @@ git_install_hooks() {
   print_success "Git hooks path set to .githooks"
   repo_git config filter.pi-settings.clean "$GIT_PI_SETTINGS_CLEAN" || return 1
   print_success "Pi settings filter configured"
+  repo_git config filter.pnpm-config.clean "$GIT_PNPM_CONFIG_CLEAN" || return 1
+  repo_git config filter.pnpm-config.required true || return 1
+  repo_git config filter.npmrc.clean "$GIT_NPMRC_CLEAN" || return 1
+  repo_git config filter.npmrc.required true || return 1
+  print_success "Runtime policy authentication filters configured"
 }
 
 # Match only reviewed documentation examples by exact source line and path.
@@ -186,6 +193,19 @@ git_check() {
   else
     print_warning "Pi settings filter is not configured; run 'dot hooks'"
   fi
+  local filter expected_filter
+  for filter in pnpm-config npmrc; do
+    case "$filter" in
+      pnpm-config) expected_filter="$GIT_PNPM_CONFIG_CLEAN" ;;
+      npmrc) expected_filter="$GIT_NPMRC_CLEAN" ;;
+    esac
+    if [[ "$(repo_git config --get "filter.$filter.clean" || true)" == "$expected_filter" &&
+    "$(repo_git config --bool --get "filter.$filter.required" || true)" == true ]]; then
+      print_success "$filter authentication filter"
+    else
+      print_warning "$filter authentication filter is not configured; run 'dot hooks'"
+    fi
+  done
   if [[ ! -x "$DOTFILES_DIR/.githooks/pre-push" ]]; then
     print_error "pre-push hook is not executable"
     failed=1
