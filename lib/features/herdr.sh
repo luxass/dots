@@ -3,10 +3,7 @@
 
 readonly HERDR_PLUGINS_FILE="$STOW_DIR/herdr/.config/herdr/plugins.txt"
 
-herdr_plugin_sources() {
-  [[ -f "$HERDR_PLUGINS_FILE" ]] || return 0
-  awk '{ sub(/#.*/, ""); gsub(/[[:space:]]/, ""); if (length) print }' "$HERDR_PLUGINS_FILE" | sort -u
-}
+herdr_plugin_sources() { sources_file_entries "$HERDR_PLUGINS_FILE"; }
 
 # Print declared GitHub sources absent from Herdr's user-wide registry.
 # Disabled plugins count as installed; do not silently re-enable them.

@@ -8,10 +8,7 @@ gh_prestow() {
   mkdir -p "$HOME/.config/gh" || return 1
 }
 
-gh_extension_sources() {
-  [[ -f "$GH_EXTENSIONS_FILE" ]] || return 0
-  awk '{ sub(/#.*/, ""); gsub(/[[:space:]]/, ""); if (length) print }' "$GH_EXTENSIONS_FILE" | sort -u
-}
+gh_extension_sources() { sources_file_entries "$GH_EXTENSIONS_FILE"; }
 
 gh_extensions_missing() {
   local registry installed sources

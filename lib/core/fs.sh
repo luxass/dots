@@ -9,6 +9,13 @@ same_path() {
   [[ -e "$1" && -e "$2" ]] && [[ "$(realpath "$1")" == "$(realpath "$2")" ]]
 }
 
+# sources_file_entries FILE: unique entries from a sources list such as
+# extensions.txt or plugins.txt. Comments and whitespace are dropped.
+sources_file_entries() {
+  [[ -f "$1" ]] || return 0
+  awk '{ sub(/#.*/, ""); gsub(/[[:space:]]/, ""); if (length) print }' "$1" | sort -u
+}
+
 # backup_path PATH: move PATH into this run's backup directory.
 backup_path() {
   local target="$1" dest
