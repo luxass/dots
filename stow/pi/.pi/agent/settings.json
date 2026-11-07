@@ -9,7 +9,6 @@
     "npm:@luxass/pi-resources",
     "npm:@plannotator/pi-extension"
   ],
-  "lastChangelogVersion": "1.5.0",
   "theme": "catppuccin-latte/catppuccin-macchiato",
   "defaultProvider": "crow",
   "defaultModel": "gpt-6.1-sol",

@@ -14,7 +14,7 @@ complete -c dot -n __fish_use_subcommand -a secret-scan -d 'Scan for secrets'
 complete -c dot -n __fish_use_subcommand -a lint -d 'Run shellcheck and shfmt on dot'
 complete -c dot -n __fish_use_subcommand -a package -d 'Homebrew packages'
 complete -c dot -n __fish_use_subcommand -a config -d 'Machine-local preferences'
-complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks'
+complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks and set up repo filters'
 complete -c dot -n __fish_use_subcommand -a help -d 'Show help'
 
 set -l package_cmds list check add remove unmanaged update help

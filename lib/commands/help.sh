@@ -23,7 +23,7 @@ ${BOLD}DIAGNOSTICS${RESET}
 ${BOLD}MANAGE${RESET}
   package        Homebrew packages ('dot package help')
   config         Machine-local preferences ('dot config help')
-  hooks          Point Git at .githooks
+  hooks          Point Git at .githooks and set up repo filters
 
 ${BOLD}OPTIONS${RESET}
   -v, --verbose  Print extra diagnostics

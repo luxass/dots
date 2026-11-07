@@ -91,7 +91,7 @@ dot secret-scan      # scan tracked and unignored files for secrets
 dot lint             # run shellcheck and shfmt on dot itself
 dot package ...      # Homebrew packages (see below)
 dot config ...       # local-only preferences
-dot hooks            # point Git at .githooks
+dot hooks            # point Git at .githooks and set up repo filters
 ```
 
 ## Managed Files
@@ -354,6 +354,12 @@ Run this manually with:
 dot hooks
 dot secret-scan
 ```
+
+`dot hooks` also configures the `pi-settings` clean filter named in
+`.gitattributes`. Pi rewrites `lastChangelogVersion` in
+`stow/pi/.pi/agent/settings.json` on every upgrade; the filter strips that key
+when Git reads the file, so upgrades no longer show up as changes. Pi keeps
+writing the key locally. `dot doctor` warns when the filter is not configured.
 
 `dot secret-scan` checks tracked and unignored files for credential assignments,
 private-key markers, and credentials in URLs. Findings show a file, line, and
