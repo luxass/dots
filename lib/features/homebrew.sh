@@ -72,7 +72,6 @@ packages_install() {
   local group file default failed=0
 
   homebrew_require || return 1
-  migrate_brew_replacements || return 1
 
   for group in "${BUNDLE_GROUPS[@]}"; do
     file="$(bundle_file "$group")"

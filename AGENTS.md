@@ -179,9 +179,6 @@ dots/
   override for CLI-only plugins and checks the server setting before updating.
   `dot stow` bypasses pnpm release age only for local OpenCode plugin deps.
   A pnpm package exception does not override OpenCode's internal npm resolver.
-  The private submodule and its dependency/linking hooks are removed. Stow
-  backs up only leftover symlinks created by the retired setup; it leaves other
-  local plugins alone.
 - Rex configuration lives in `stow/rex/.config/rex/`. `dot stow` applies selected
   macOS preferences and reloads valid Lua only when the server is running.
   It never installs, updates, launches, or restarts Rex. Existing app preferences
