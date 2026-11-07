@@ -7,7 +7,8 @@
     "npm:@luxass/pi-personal",
     "npm:@luxass/pi-questions",
     "npm:@luxass/pi-resources",
-    "npm:@plannotator/pi-extension"
+    "npm:@plannotator/pi-extension",
+    "git:github.com/dmmulroy/pi-claude-cli"
   ],
   "theme": "catppuccin-latte/catppuccin-macchiato",
   "defaultProvider": "crow",
