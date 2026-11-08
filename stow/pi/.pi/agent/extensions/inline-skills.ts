@@ -76,7 +76,9 @@ export default function inlineSkills(pi: ExtensionAPI) {
         if (!mention) return current.getSuggestions(lines, line, col, options);
 
         const query = mention.slice(SKILL_PREFIX.length);
-        const matches = fuzzyFilter(getSkills(), query, (skill) => skill.name.slice("skill:".length));
+        const matches = fuzzyFilter(getSkills(), query, (skill) =>
+          skill.name.slice("skill:".length),
+        );
         if (matches.length === 0) return null;
 
         return {
@@ -101,20 +103,26 @@ export default function inlineSkills(pi: ExtensionAPI) {
 
   /**
    * Prepend each known skill mentioned outside code, once, in order of first mention.
+   * All skills share one <skill> block: Pi's chat display folds only one leading block,
+   * so it shows "[skill] github, commit" followed by your text.
    *
    * @example
    * // You type:
    * Use /skill:github, then /skill:commit. Again /skill:github, but not `/skill:commit`.
    *
    * // The model receives:
-   * <skill name="github" location="/Users/me/.agents/skills/github/SKILL.md">
+   * <skill name="github, commit" location="/Users/me/.agents/skills/github/SKILL.md">
+   * # Skill: github
+   * Location: /Users/me/.agents/skills/github/SKILL.md
    * References are relative to /Users/me/.agents/skills/github.
    *
-   * # GitHub
+   * …github instructions…
+   *
+   * ---
+   *
+   * # Skill: commit
    * …
    * </skill>
-   *
-   * <skill name="commit" …>…</skill>
    *
    * Use /skill:github, then /skill:commit. Again /skill:github, but not `/skill:commit`.
    */
@@ -130,22 +138,33 @@ export default function inlineSkills(pi: ExtensionAPI) {
     if (mentioned.size === 0) return;
 
     try {
-      const blocks = await Promise.all(
-        [...mentioned].map(async (skill) => {
+      const skills = [...mentioned];
+      const names = skills.map((skill) => skill.name.slice("skill:".length));
+
+      // One section per skill, so the model still knows where each one came from.
+      const sections = await Promise.all(
+        skills.map(async (skill, index) => {
           const path = skill.sourceInfo.path;
           const instructions = stripFrontmatter(await readFile(path, "utf8")).trim();
           return [
-            `<skill name="${skill.name.slice("skill:".length)}" location="${path}">`,
+            `# Skill: ${names[index]}`,
+            `Location: ${path}`,
             `References are relative to ${dirname(path)}.`,
             "",
             instructions,
-            "</skill>",
           ].join("\n");
         }),
       );
-      // Pi only expands a skill at the very start of the prompt. Our blocks come
+
+      const block = [
+        `<skill name="${names.join(", ")}" location="${skills[0].sourceInfo.path}">`,
+        sections.join("\n\n---\n\n"),
+        "</skill>",
+      ].join("\n");
+
+      // Pi only expands a skill at the very start of the prompt. Our block comes
       // first, so a leading mention is not expanded a second time.
-      return { action: "transform", text: [...blocks, event.text].join("\n\n") };
+      return { action: "transform", text: `${block}\n\n${event.text}` };
     } catch (error) {
       // Do not send the prompt without a skill the user asked for.
       ctx.ui.notify(`Inline skills: could not load a skill: ${String(error)}`, "error");
