@@ -1,6 +1,6 @@
 complete -c dot -f
 complete -c dot -s v -l verbose -d 'Print extra diagnostics'
-complete -c dot -s y -l yes -d 'Answer yes to confirmations'
+complete -c dot -s y -l yes -d 'Answer yes to confirmations, not bundle choices'
 complete -c dot -s h -l help -d 'Show help'
 complete -c dot -l version -d 'Show version'
 
@@ -12,17 +12,19 @@ complete -c dot -n __fish_use_subcommand -a doctor -d 'Check the whole setup'
 complete -c dot -n __fish_use_subcommand -a info -d 'Show paths, runtimes, and repo status'
 complete -c dot -n __fish_use_subcommand -a secret-scan -d 'Scan for secrets'
 complete -c dot -n __fish_use_subcommand -a lint -d 'Run shellcheck and shfmt on dot'
-complete -c dot -n __fish_use_subcommand -a package -d 'Homebrew packages'
+complete -c dot -n __fish_use_subcommand -a brew -d 'Homebrew packages and bundle choices'
 complete -c dot -n __fish_use_subcommand -a config -d 'Machine-local preferences'
-complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks'
+complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks and set up repo filters'
 complete -c dot -n __fish_use_subcommand -a help -d 'Show help'
 
-set -l package_cmds list check add remove unmanaged update help
-complete -c dot -n "__fish_seen_subcommand_from package; and not __fish_seen_subcommand_from $package_cmds" -a "$package_cmds"
-complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from list' -a 'base fonts work personal'
-complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from add remove' -s g -l group -x -a 'base fonts work personal' -d 'Bundle group'
-complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from add' -l cask -d 'Add a cask'
-complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from add' -l formula -d 'Add a formula'
+set -l brew_cmds list check bundle install add remove uninstall unmanaged update help
+complete -c dot -n "__fish_seen_subcommand_from brew; and not __fish_seen_subcommand_from $brew_cmds" -a "$brew_cmds"
+complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from list; and not __fish_seen_subcommand_from bundle' -a 'base fonts work personal'
+complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from bundle; and not __fish_seen_subcommand_from list enable disable help' -a 'list enable disable help'
+complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from bundle; and __fish_seen_subcommand_from enable disable' -a 'fonts work personal'
+complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from add remove' -s g -l group -x -a 'base fonts work personal' -d 'Bundle group'
+complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from add remove uninstall update' -l cask -d 'Select a cask'
+complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from add remove uninstall update' -l formula -d 'Select a formula'
 
 complete -c dot -n '__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from list get set unset reset path help' -a 'list get set unset reset path help'
 complete -c dot -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from get set unset' -a 'packages.brew.fonts.enabled packages.brew.work.enabled packages.brew.personal.enabled'

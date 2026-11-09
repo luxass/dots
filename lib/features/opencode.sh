@@ -1,10 +1,6 @@
 # shellcheck shell=bash
 # Local OpenCode plugin dependencies and native package-plugin updates.
 
-opencode_prestow() {
-  migrate_opencode_private_links
-}
-
 opencode_deps() {
   PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 pnpm_install_deps "$HOME/.config/opencode" "OpenCode plugin"
 }

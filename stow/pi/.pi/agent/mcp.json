@@ -10,6 +10,9 @@
     },
     "executor": {
       "url": "https://mcp.executor.sh/mcp"
+    },
+    "superlogical": {
+      "url": "https://www.superlogical.com/rex/community-mcp"
     }
   }
 }

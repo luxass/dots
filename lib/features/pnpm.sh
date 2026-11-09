@@ -214,7 +214,23 @@ pnpm_check_origins() {
   return "$failed"
 }
 
+# effective_policy_check LABEL EXPECTED COMMAND...: the tool reports EXPECTED.
+# Runs from HOME so project config cannot hide the global policy; environment
+# overrides still count, because they change what installs actually use.
+effective_policy_check() {
+  local label="$1" expected="$2" actual
+  shift 2
+  actual="$(cd "$HOME" && "$@" 2>/dev/null)" || actual=''
+  if [[ "$actual" == "$expected" ]]; then
+    print_success "$label"
+  else
+    print_error "$label is '${actual:-unset}', expected '$expected'; check stow/runtime-policy and your environment"
+    return 1
+  fi
+}
+
 # policy_check FILE PATTERN LABEL: a tracked policy file contains a setting.
+# Only for Bun, which has no command that prints its effective configuration.
 policy_check() {
   if grep -Eq "$2" "$STOW_DIR/runtime-policy/$1" 2>/dev/null; then
     print_success "$3"
@@ -227,12 +243,17 @@ policy_check() {
 pnpm_check() {
   local failed=0
   pnpm_check_origins || failed=1
-  policy_check .npmrc '^ignore-scripts=true$' "npm ignore-scripts" || failed=1
-  policy_check .npmrc '^min-release-age=5$' "npm release age" || failed=1
-  policy_check .config/pnpm/config.yaml '^minimumReleaseAge: 7200$' "pnpm release age" || failed=1
-  policy_check .config/pnpm/config.yaml '^minimumReleaseAgeStrict: true$' "pnpm strict release age" || failed=1
-  policy_check .config/pnpm/config.yaml "^  - '@opencode/\\*'$" "pnpm OpenCode release-age exception" || failed=1
-  policy_check .config/pnpm/config.yaml '^dangerouslyAllowAllBuilds: false$' "pnpm build approval" || failed=1
+  effective_policy_check "npm ignore-scripts" true npm config get ignore-scripts || failed=1
+  effective_policy_check "npm release age" 5 npm config get min-release-age || failed=1
+  effective_policy_check "pnpm release age" 7200 pnpm config get minimumReleaseAge || failed=1
+  effective_policy_check "pnpm strict release age" true pnpm config get minimumReleaseAgeStrict || failed=1
+  effective_policy_check "pnpm build approval" false pnpm config get dangerouslyAllowAllBuilds || failed=1
+  if (cd "$HOME" && pnpm config get minimumReleaseAgeExclude 2>/dev/null) | jq -e 'index("@opencode/*") != null' >/dev/null 2>&1; then
+    print_success "pnpm OpenCode release-age exception"
+  else
+    print_error "pnpm OpenCode release-age exception is not in effect; check stow/runtime-policy"
+    failed=1
+  fi
   policy_check .bunfig.toml '^ignoreScripts = true$' "Bun ignoreScripts" || failed=1
   policy_check .bunfig.toml '^minimumReleaseAge = 432000$' "Bun release age" || failed=1
   return "$failed"

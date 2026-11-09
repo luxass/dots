@@ -3,25 +3,7 @@
 
 readonly HERDR_PLUGINS_FILE="$STOW_DIR/herdr/.config/herdr/plugins.txt"
 
-herdr_prestow() {
-  local entry rel
-
-  local_config_dir .config || return 1
-  local_config_dir .config/herdr || return 1
-  for entry in "$LEGACY_HOME_DIR/.config/herdr"/*.log "$LEGACY_HOME_DIR/.config/herdr"/*.sock "$LEGACY_HOME_DIR/.config/herdr"/*.sock.* \
-    "$LEGACY_HOME_DIR/.config/herdr"/session.json "$LEGACY_HOME_DIR/.config/herdr"/session-history.json \
-    "$LEGACY_HOME_DIR/.config/herdr"/release-notes.json "$LEGACY_HOME_DIR/.config/herdr"/session-snapshots \
-    "$LEGACY_HOME_DIR/.config/herdr"/plugins "$LEGACY_HOME_DIR/.config/herdr"/plugins.json "$LEGACY_HOME_DIR/.config/herdr"/.plugins.lock; do
-    rel=".config/herdr/${entry##*/}"
-    local_state_move "$rel" || return 1
-  done
-  return 0
-}
-
-herdr_plugin_sources() {
-  [[ -f "$HERDR_PLUGINS_FILE" ]] || return 0
-  awk '{ sub(/#.*/, ""); gsub(/[[:space:]]/, ""); if (length) print }' "$HERDR_PLUGINS_FILE" | sort -u
-}
+herdr_plugin_sources() { sources_file_entries "$HERDR_PLUGINS_FILE"; }
 
 # Print declared GitHub sources absent from Herdr's user-wide registry.
 # Disabled plugins count as installed; do not silently re-enable them.

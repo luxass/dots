@@ -1,10 +1,13 @@
 # Optional work-specific packages.
 #
 # Add entries with:
-#   dot package add NAME [brew|cask|auto] work
+#   dot brew add NAME [--cask|--formula] --group work
 
 brew "helm"
 brew "k9s"
 brew "kind"
 
 cask "git-credential-manager"
+brew "kubernetes-cli"
+
+cask "slack"

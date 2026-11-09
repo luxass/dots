@@ -1,14 +1,10 @@
 # shellcheck shell=bash
 # Repository hooks, public Git identity, and secret scanning.
 
-# Retire only the old Stow link; leave independently managed ~/.gitconfig alone.
-git_prestow() {
-  local old="$HOME/.gitconfig"
-  if link_points_to "$old" "$LEGACY_HOME_DIR/.gitconfig"; then
-    backup_path "$old" || return 1
-  fi
-  return 0
-}
+# Strips Pi's self-updated key on commit. -j keeps Pi's missing final newline.
+# Not marked required: if jq is missing or the JSON is mid-edit, Git keeps the
+# content unchanged instead of failing.
+readonly GIT_PI_SETTINGS_CLEAN="jq -j 'del(.lastChangelogVersion)'"
 
 # Private starters are created once. Existing local customization is never replaced.
 git_poststow() {
@@ -55,6 +51,8 @@ git_install_hooks() {
   }
   repo_git config core.hooksPath .githooks || return 1
   print_success "Git hooks path set to .githooks"
+  repo_git config filter.pi-settings.clean "$GIT_PI_SETTINGS_CLEAN" || return 1
+  print_success "Pi settings filter configured"
 }
 
 # Match only reviewed documentation examples by exact source line and path.
@@ -182,6 +180,11 @@ git_check() {
     print_success "Git hooks path"
   else
     print_warning "Git hooks path is not .githooks; run 'dot hooks'"
+  fi
+  if [[ "$(repo_git config --get filter.pi-settings.clean || true)" == "$GIT_PI_SETTINGS_CLEAN" ]]; then
+    print_success "Pi settings filter"
+  else
+    print_warning "Pi settings filter is not configured; run 'dot hooks'"
   fi
   if [[ ! -x "$DOTFILES_DIR/.githooks/pre-push" ]]; then
     print_error "pre-push hook is not executable"

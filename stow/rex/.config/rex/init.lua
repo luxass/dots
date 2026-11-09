@@ -59,5 +59,22 @@ rex.bind(P .. "v", "client.find.open")
 -- and scrollback editing are not mapped. Do not claim feature parity.
 -- Leave Ctrl+H/J/K/L and Shift+Enter to terminal applications.
 
--- Appearance follows macOS. The theme pair is managed by macos-defaults.conf,
--- not by a shortcut or a Lua action.
+-- Appearance follows macOS. macos-defaults.conf selects the theme pair.
+-- These palette actions import the tracked theme files; 'dot stow' runs them
+-- through 'rex do' when a theme is missing. No shortcut is bound to them.
+for _, theme in ipairs({
+  { file = "catppuccin-macchiato", title = "Catppuccin Macchiato" },
+  { file = "catppuccin-latte", title = "Catppuccin Latte" },
+}) do
+  rex.action({
+    name = "import_" .. (theme.file:gsub("%-", "_")),
+    title = "Import " .. theme.title .. " Theme",
+    category = "Appearance",
+    keywords = "theme catppuccin dotfiles import",
+    run = function()
+      rex.client.queue("client.theme.import", {
+        path = os.getenv("HOME") .. "/.config/rex/themes/" .. theme.file,
+      })
+    end,
+  })
+end

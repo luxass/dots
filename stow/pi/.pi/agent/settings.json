@@ -7,9 +7,10 @@
     "npm:@luxass/pi-personal",
     "npm:@luxass/pi-questions",
     "npm:@luxass/pi-resources",
-    "npm:@plannotator/pi-extension"
+    "npm:@luxass/pi-cost-explorer",
+    "npm:@plannotator/pi-extension",
+    "git:github.com/dmmulroy/pi-claude-cli"
   ],
-  "lastChangelogVersion": "1.5.0",
   "theme": "catppuccin-latte/catppuccin-macchiato",
   "defaultProvider": "crow",
   "defaultModel": "gpt-6.1-sol",

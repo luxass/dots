@@ -33,10 +33,12 @@ install_deps() { run_hook deps; }
 cmd_init() {
   no_args "$@" || return 1
   print_header "Setting up dotfiles"
+  packages_preflight || return 1
   # Dotfiles are linked before pnpm is installed so its install policy applies.
   run_steps \
     "required|Homebrew|homebrew_require" \
-    "optional|Homebrew packages|packages_install" \
+    "required|Homebrew packages|packages_install" \
+    "optional|Rex|rex_install" \
     "required|Link dotfiles|stow_apply" \
     "optional|Fish shell|fish_setup" \
     "required|pnpm, Node.js, and globals|pnpm_setup" \
@@ -68,7 +70,7 @@ cmd_update() {
   no_args "$@" || return 1
   print_header "Updating dotfiles"
   update_repo || return 1
-  homebrew_require || return 1
+  packages_preflight || return 1
 
   print_section "Runtimes"
   pnpm_update || failed=1

@@ -253,6 +253,15 @@
       "skillFolderHash": "229cf71d61810fb3fe25771705478985640d93a0",
       "installedAt": "2026-10-20T04:44:49.014Z",
       "updatedAt": "2026-10-20T04:44:49.014Z"
+    },
+    "write-discoverable-code": {
+      "source": "luxass/agent-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/luxass/agent-skills.git",
+      "skillPath": "skills/write-discoverable-code/SKILL.md",
+      "skillFolderHash": "ab28147ea14d9c559b1b6cb83ae37cb3bf0410cc",
+      "installedAt": "2026-11-09T02:32:37.576Z",
+      "updatedAt": "2026-11-09T02:32:37.576Z"
     }
   },
   "dismissed": {

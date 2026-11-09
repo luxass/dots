@@ -4,22 +4,6 @@
 
 readonly FISH_PLUGINS_FILE="$HOME/.config/fish/fish_plugins"
 
-fish_prestow() {
-  local name rel
-
-  local_config_dir .config || return 1
-  local_config_dir .config/fish || return 1
-  local_config_dir .config/fish/completions || return 1
-  local_state_move .config/fish/fish_variables || return 1
-  for name in copilot grok pi docker kubectl orbctl; do
-    rel=".config/fish/completions/$name.fish"
-    # Do not relocate configuration that now belongs to the Fish package.
-    [[ -e "$STOW_DIR/fish/$rel" || -L "$STOW_DIR/fish/$rel" ]] && continue
-    local_state_move "$rel" || return 1
-  done
-  return 0
-}
-
 fish_setup() {
   local fish login_shell
 

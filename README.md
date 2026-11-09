@@ -89,9 +89,9 @@ dot doctor           # check every feature, including a secret scan
 dot info             # show paths, runtime versions, and git status
 dot secret-scan      # scan tracked and unignored files for secrets
 dot lint             # run shellcheck and shfmt on dot itself
-dot package ...      # Homebrew packages (see below)
+dot brew ...      # Homebrew packages (see below)
 dot config ...       # local-only preferences
-dot hooks            # point Git at .githooks
+dot hooks            # point Git at .githooks and set up repo filters
 ```
 
 ## Managed Files
@@ -113,34 +113,60 @@ there is no Git inventory or generated filter.
 
 The shared skills directory and native lock live under `shared/agents/`. The
 skills feature owns their existing explicit directory and lock aliases; GNU
-Stow does not manage them. `dot doctor` checks those links separately. Legacy
-runtime relocation remains for machines that still have files in `home/`.
+Stow does not manage them. `dot doctor` checks those links separately.
 
 ## Package Management
 
-The base package list is `packages/bundle`. Fonts live in
-`packages/bundle.fonts`, optional work-only packages in `packages/bundle.work`,
-and personal-only packages (installed only on machines that opt in) in
-`packages/bundle.personal`. `dot init` prompts for optional groups only when
-their local preference is unset. Answers are saved under XDG state so future
-runs know whether fonts, work, or personal packages are enabled or
-intentionally skipped.
+Use `dot brew` for Homebrew packages and bundle choices. A bundle declares
+packages. A local preference selects it for this machine. Homebrew records
+whether each package is installed. The reports show these facts separately,
+including installed packages in disabled bundles.
+
+Base, in `packages/bundle`, is always enabled. Fonts, work, and personal use
+`packages/bundle.fonts`, `packages/bundle.work`, and `packages/bundle.personal`.
+Each package belongs to one bundle. Put packages wanted everywhere in base.
+
+`dot init` asks for explicit optional-bundle choices and saves them in the
+existing local preferences file. Unattended installation stops if a choice
+is unresolved, even with `--yes`. Reports and doctor never prompt or save
+choices. Disabling a bundle never uninstalls its packages.
+
+`dot package` is replaced by `dot brew`, without an alias.
 
 ```sh
-dot package list [GROUP]                   # every package and whether it is installed
-dot package check                          # only what is missing
-dot package add NAME [--cask|--formula] [--group GROUP]
-dot package remove NAME [--group GROUP]
-dot package unmanaged                      # installed but not in any bundle
-dot package update [NAME]
+dot brew list [GROUP]                   # selection and actual installation
+dot brew check                          # missing enabled packages or unresolved choices
+dot brew bundle list
+dot brew bundle enable personal         # selection only
+dot brew bundle disable work            # selection only
+dot brew install                        # missing packages in enabled bundles
+dot brew add NAME [--cask|--formula] [--group GROUP]
+dot brew remove NAME [--cask|--formula] [--group GROUP]
+dot brew uninstall NAME [--cask|--formula]
+dot brew unmanaged                      # undeclared requested tools and installed casks
+dot brew update [NAME] [--cask|--formula]
 ```
 
-`add` detects whether NAME is a formula or a cask (pass `--cask` or
-`--formula` when it is both), writes the entry with `brew bundle add`, keeps the
-Brewfile sorted under its header comment, and installs it when the group is
-enabled on this machine. `remove` uses `brew bundle remove` and then offers to
-uninstall. `brew bundle install` keeps going past a failed package and reports
-it at the end; run `dot package check` afterwards to see what is missing.
+`add` writes an entry through `brew bundle add` and keeps the Brewfile sorted.
+If the target bundle is enabled, it also installs the package. Otherwise, it
+only records the entry. `remove` changes the declaration only. `uninstall`
+refuses packages that any bundle still declares, including disabled bundles.
+If a name identifies both a formula and a cask, specify its type.
+Uninstall refuses active apps and services. Close or stop them explicitly first.
+
+`install` does not request upgrades. Homebrew can still update dependencies
+required by a new package. Updates cover all installed
+Homebrew packages, including disabled bundles and packages outside the
+Brewfiles. Review and confirm the upgrade preview. There is no automatic
+uninstall, dependency cleanup, or removal of user data.
+
+`list` and `unmanaged` read declarations and installed metadata without full
+catalog validation or a persistent cache. `list GROUP` reads only that bundle.
+`check`, doctor, and package changes perform full bundle validation.
+
+`unmanaged` includes explicitly requested formulae even when another formula
+needs them. It hides dependency-only libraries. Doctor checks all enabled
+bundles and reports invalid or unresolved choices as errors.
 
 ## Local-Only Configuration
 
@@ -169,7 +195,18 @@ packages.brew.work.enabled
 packages.brew.personal.enabled
 ```
 
-Unset keys are asked about once, interactively, when `dot` needs them.
+`dot brew bundle enable work` writes the same value as
+`dot config set packages.brew.work.enabled true`. Both use the same file and
+helpers. Existing choices and unrelated preferences remain unchanged.
+
+Unsetting a key or resetting preferences makes the affected choices unresolved.
+The next interactive installation asks again. Unattended installation stops
+with instructions. These settings commands never install or uninstall packages.
+Invalid settings and failed reads or saves are errors, not default choices.
+
+Read-only package reports require jq, which is already in base. On a fresh
+setup, installation bootstraps jq after explicit choices and Brewfile syntax
+checks, then uses native Homebrew metadata for package validation.
 
 ### Application state
 
@@ -356,6 +393,16 @@ dot hooks
 dot secret-scan
 ```
 
+CI (`.github/workflows/ci.yml`, macOS runner) runs `dot lint` and
+`dot secret-scan`, then links every Stow package into an empty HOME, checks the
+links, and unlinks them again. It does not install plugin dependencies.
+
+`dot hooks` also configures the `pi-settings` clean filter named in
+`.gitattributes`. Pi rewrites `lastChangelogVersion` in
+`stow/pi/.pi/agent/settings.json` on every upgrade; the filter strips that key
+when Git reads the file, so upgrades no longer show up as changes. Pi keeps
+writing the key locally. `dot doctor` warns when the filter is not configured.
+
 `dot secret-scan` checks tracked and unignored files for credential assignments,
 private-key markers, and credentials in URLs. Findings show a file, line, and
 category, never the detected value. Execution errors fail the command rather
@@ -416,10 +463,8 @@ Global CLI installs go through `sfw pnpm add -g`.
 OpenCode v2 is installed from `anomalyco/tap/opencode-v2` through
 `packages/bundle`. `dot update` runs Pi's native self-updater, which detects
 how Pi was installed and updates it directly. Homebrew upgrades use the usual
-package prompt. Before installing the base Brewfile, setup or update removes
-any installed formula or cask listed in `BREW_PACKAGE_REPLACEMENTS` in
-`lib/core/migrations.sh`. This migrates the old `opencode` formula to `opencode-v2`.
-Setup or update also removes the old pnpm-managed OpenCode package if found.
+package prompt. Setup or update also removes the old pnpm-managed OpenCode
+package (`@opencode/cli`) if it is still installed.
 
 Socket Firewall can be used by prefixing supported package-manager commands:
 
@@ -507,9 +552,7 @@ age rule.
 - Public Pi extensions live under `stow/pi/.pi/agent/extensions/` and are stowed
   to `~/.pi/agent/extensions/`. Pi discovers them automatically at startup.
 - Auth, trust, sessions, logs, caches, and downloaded packages stay outside
-  the checkout outside selected Stow package contents. The Pi
-  prestow hook relocates older repo-backed state without requiring Pi to exit.
-  Shared Agent Skills live under
+  the checkout outside selected Stow package contents. Shared Agent Skills live under
   `shared/agents/skills/` and are not duplicated here.
 
 ### Computer use
@@ -601,28 +644,51 @@ Herdr's own theme selector stays off because its appearance detection can
 report light mode for a dark terminal ([upstream issue #3198](https://github.com/herdrdev/herdr/issues/3198)).
 Terminal colors still follow the host's automatic appearance changes.
 
-Install Rex manually using the [official installation guide](https://www.superlogical.com/rex/docs/installation).
-If Rex is missing, `dot init`, `dot stow`, and `dot update` offer to open
-the guide. Declining skips Rex setup without failing the command.
-Launch Rex once to install its bundled CLI, then run `dot stow`.
-`dot doctor` prints the installation link without prompting or opening it.
-Dots does not install, update, launch, or restart Rex.
+Rex is not in Homebrew. If Rex is missing, `dot init` offers to install it
+from the Bleeding Edge (snapshot) appcast at `REX_APPCAST_URL` in
+`lib/core/paths.sh`. It downloads the newest disk image and installs
+`Rex Beta.app` only after these checks pass:
+
+- The code signature is valid.
+- The team ID is `AG92C3PT77` (Superlogical) and the bundle ID is
+  `com.superlogical.rex`.
+- macOS accepts the app as notarized.
+
+It never replaces an existing app. After that, Rex updates itself, and dots
+does not update, launch, or restart it. Launch Rex once to install its
+bundled CLI, then run `dot stow`. The
+[official installation guide](https://www.superlogical.com/rex/docs/installation)
+is the fallback when you decline the install.
+
 Its tracked configuration lives under `stow/rex/.config/rex/`:
 
-- `init.lua` defines shortcuts.
+- `init.lua` defines shortcuts and two palette actions,
+  `import_catppuccin_macchiato` and `import_catppuccin_latte`.
 - `macos-defaults.conf` defines app preferences and both theme names.
 - `themes/` holds Macchiato and Latte in Ghostty format.
 
-Import both files from `~/.config/rex/themes/` through Rex once on each Mac.
-Run `dot stow` after the imports. It resolves each theme name to the local
-ID that Rex generates. The IDs and imported theme registry stay out of Git.
-If either import is missing, dots leaves app preferences unchanged and prints
-the path to import. No theme shortcut or custom action is needed.
+`dot stow` links the files, reloads Lua when the Rex server is running, and
+writes the app preferences. These include Remote Control, which lets `rex do`
+run app actions. If a theme is not imported yet and Rex is running, `dot stow`
+runs its import action, then selects both themes by the local ID that Rex
+generates. The IDs and the imported theme registry stay out of Git. Rex skips
+a theme file that it already imported. When Rex is not running, run
+`dot stow` again after you launch it, or run the import actions from the palette.
 
-`dot stow` links the files, applies app preferences, and reloads Lua when
-the Rex server is running. Existing app preferences are backed up under the
-local dot backup directory before changes. Relaunch Rex to apply font,
-sidebar, and appearance preferences. Dots leaves Remote Control unchanged.
+Existing app preferences are backed up under the local dot backup directory
+before changes. Relaunch Rex to apply font, sidebar, and appearance preferences.
+
+`dot stow` also asks once to run `rex terminfo setup`. It installs the
+`xterm-rex` terminfo entry in `~/.terminfo`, writes an ssh guard to
+`~/.config/rex/ssh_config`, and adds one `Include` line at the top of
+`~/.ssh/config`. The guard sends `xterm-256color` to hosts that do not have
+the entry. These files stay local. `rex terminfo remove` undoes it.
+
+When Rex reports a missing or outdated agent skill or hook, `dot stow` asks
+to run `rex skill setup`. It writes the skill stub to the shared skills
+folder and a session hook to `~/.claude/settings.json`, which are tracked
+files, so review the diff before you commit. `dot doctor` warns, but does not
+fail, when terminfo or the agent setup is missing.
 
 The prefix remains Ctrl+B. Split, zoom, resize, session, and tab shortcuts
 follow the Herdr configuration. The detach shortcuts close the Rex window,
@@ -800,8 +866,8 @@ dot stow
 Check package drift:
 
 ```sh
-dot package check
-dot package unmanaged
+dot brew check
+dot brew unmanaged
 ```
 
 `dot stow` moves anything in the way of a managed link to

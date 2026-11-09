@@ -4,6 +4,7 @@ Personal macOS development environment managed with GNU Stow and the `dot` CLI.
 
 This repo is public-facing. Keep tokens, auth files, shell histories,
 work-only details, and machine-local secrets out of tracked content.
+`README.md` has the user-facing details; this file holds the rules.
 
 ## STRUCTURE
 
@@ -14,67 +15,38 @@ dots/
 |   |-- core/           # Output, prompts, paths/versions, prefs, links, dispatch, migrations
 |   |-- features/       # One file per managed thing, exposing hooks (see CLI DESIGN)
 |   `-- commands/       # CLI surface: `dot foo-bar` runs cmd_foo_bar
-|-- stow/               # 14 native GNU Stow packages; paths mirror $HOME
-|   |-- fish/           # .config/fish
-|   |-- git/            # .config/git and dot-gitignore
-|   |-- ghostty/        # .config/ghostty
-|   |-- starship/       # .config/starship.toml
-|   |-- runtime-policy/ # .npmrc, .bunfig.toml, .config/pnpm/config.yaml
-|   |-- pi/             # .pi
-|   |-- opencode/       # .config/opencode
-|   |-- gh/             # .config/gh
-|   |-- herdr/          # .config/herdr
-|   |-- rex/            # .config/rex
-|   |-- plannotator/    # .plannotator and .config/plannotator-tui
-|   |-- tinycast/       # Tinycast configuration
-|   |-- claude/         # Claude configuration
-|   `-- codex/          # Ignore policy only; Codex config stays local
+|-- stow/               # Native GNU Stow packages (STOW_PACKAGES); paths mirror $HOME
 |-- shared/agents/      # Shared skills and the native global skills CLI lock
-|-- packages/
-|   |-- bundle          # Base Brewfile
-|   |-- bundle.fonts    # Optional font casks
-|   |-- bundle.personal # Optional personal-only Brewfile
-|   `-- bundle.work     # Optional work-only Brewfile
+|-- packages/           # Brewfiles: bundle (base), bundle.fonts, bundle.personal, bundle.work
 |-- .githooks/          # Tracked repository hooks (pre-push: secret-scan, lint)
-|-- .editorconfig       # Shell style, also read by shfmt
+|-- .github/workflows/  # CI: lint, secret scan, Stow link/unlink into an empty HOME
 |-- .mise.toml          # Pinned lint tools for this repo (shellcheck, shfmt)
-|-- .shellcheckrc       # shellcheck settings for dot
-|-- AGENTS.md           # Agent instructions
-`-- README.md           # User-facing setup and command docs
+`-- .editorconfig       # Shell style, also read by shfmt
 ```
 
 ## WHERE TO LOOK
 
 | Task | Location |
 | --- | --- |
-| Add or remove packages | `dot package add/remove ...` first, or edit `packages/bundle*` |
+| Add or remove packages | `dot brew add/remove ...` first, or edit `packages/bundle*` |
+| Change Homebrew behavior | `lib/features/homebrew.sh`, `lib/commands/brew.sh` |
 | Diagnose setup | `dot doctor`, `dot info` |
 | Change setup/update flow | `lib/commands/setup.sh` |
 | Change what a managed thing does | `lib/features/<name>.sh` |
 | Add a managed thing | new `lib/features/<name>.sh` + `FEATURES` in `lib/core/paths.sh` |
 | Add a command | `cmd_<name>` in `lib/commands/`, plus `cmd_help` and `dot.fish` completions |
 | Change paths or managed versions | `lib/core/paths.sh` |
-| Change Homebrew behavior | `lib/features/homebrew.sh`, `lib/commands/package.sh` |
 | Change symlink/Stow behavior | `lib/features/stow.sh`, `lib/core/fs.sh` |
-| Add a personal CLI tool | Put its managed files under the appropriate `stow/<package>/` HOME-relative path, then `dot stow` |
-| Change runtime tools | `lib/features/pnpm.sh`, `stow/runtime-policy/.npmrc`, `stow/runtime-policy/.config/pnpm/config.yaml`, `stow/runtime-policy/.bunfig.toml`, `stow/fish/.config/fish/conf.d/` |
-| Change GitHub CLI config/extensions | `stow/gh/.config/gh/`, `lib/features/gh.sh` (never track `hosts.yml`) |
-| Change Git defaults | `stow/git/.config/git/config` for public config only |
-| Change public Git identity | `stow/git/.config/git/config` |
-| Change shell startup | `stow/fish/.config/fish/` |
-| Change prompt | `stow/starship/.config/starship.toml` |
-| Change terminal | `stow/ghostty/.config/ghostty/config` |
-| Change Rex configuration | `stow/rex/.config/rex/`, `lib/features/rex.sh` (configuration only; app installed separately) |
-| Change Herdr plugins | `stow/herdr/.config/herdr/plugins.txt`, `lib/features/herdr.sh`; shortcuts in `stow/herdr/.config/herdr/config.toml` |
+| Change runtime tools and install policy | `lib/features/pnpm.sh`, `stow/runtime-policy/`, `stow/fish/.config/fish/conf.d/` |
+| Change Git defaults and public identity | `stow/git/.config/git/config` (public config only) |
+| Change GitHub CLI config/extensions | `stow/gh/.config/gh/`, `lib/features/gh.sh` |
+| Change shell, prompt, terminal | `stow/fish/`, `stow/starship/`, `stow/ghostty/` |
+| Change Rex configuration | `stow/rex/.config/rex/`, `lib/features/rex.sh` |
+| Change Herdr plugins/shortcuts | `stow/herdr/.config/herdr/plugins.txt`, `config.toml`, `lib/features/herdr.sh` |
 | Change OpenCode config/plugins | `stow/opencode/.config/opencode/`, `lib/features/opencode.sh` |
-| Change OpenCode voice plugin | `stow/opencode/.config/opencode/opencode.jsonc` (`@luxass/opencode-voice`, v2 `plugins` array) |
-| Change Pi agent config | `stow/pi/.pi/agent/` (lean: settings, keybindings, notes only) |
-| Change Agent Skills | `sfw pnpx skills` directly; links in `lib/features/skills.sh`, files/lock in `shared/agents/` |
-| Change Claude Code skills link | `lib/features/skills.sh` (`~/.claude/skills` -> `~/.agents/skills`) |
+| Change Pi agent config | `stow/pi/.pi/agent/` (settings, extensions, themes, notes) |
+| Change Agent Skills | `sfw pnpx skills` directly; links in `lib/features/skills.sh` |
 | Remove a one-time migration | `lib/core/migrations.sh` |
-| Install hooks | `dot hooks` |
-| Scan for secrets | `dot secret-scan` |
-| Lint the CLI | `dot lint` |
 
 ## CLI DESIGN
 
@@ -89,255 +61,133 @@ dots/
 - Use `print_*` helpers (warnings/errors go to stderr) and `pretty_path` for
   displayed paths; use `ensure_link`/`check_link` for managed symlinks and
   `backup_path` before replacing anything.
-- `dot lint` (shellcheck + shfmt with `.editorconfig`) must pass. The tools
-  are pinned in the repo's `.mise.toml`, not the Brewfile, and `dot lint` runs
-  them with `mise exec` from the repo so hooks and other directories work.
-  Each machine needs `mise trust` in the repo once.
+- `dot lint` (shellcheck + shfmt) must pass. The tools are pinned in
+  `.mise.toml` and run through `mise exec`; each machine needs `mise trust` once.
+- After behavior changes, run `dot doctor`.
 
 ## CONVENTIONS
 
-- macOS-only unless a user explicitly asks for another platform.
-- Prefer the existing `dot` CLI over ad hoc commands for setup, package checks,
-  symlink checks, and diagnostics.
-- Use native GNU Stow packages under `stow/`; each package's paths mirror
-  `$HOME`, and `dot-*` names map to hidden names through `--dotfiles`. `dot`
-  selects all packages in `STOW_PACKAGES` from `lib/core/paths.sh`, rooted at
-  `STOW_DIR`, and uses `--no-folding`. Users run `dot stow` and `dot unstow`
-  without package arguments. Everything inside a selected package is eligible
-  except shared `.stow-local-ignore` rules for `node_modules`, `.DS_Store`,
-  and private Git customization paths (`.config/git/local.conf` and `extras/`).
-  The root ignore file is exposed through relative per-package symlinks and
-  overrides Stow's built-in exclusions, allowing `.gitignore` and README files
-  to deploy. There is no Git inventory or generated filter, and local stowing
-  does not require `git add`. Do not stage files on the user's behalf unless
-  asked. Use the Dot CLI, not bare Stow. Shared skills and their native lock
-  live under `shared/agents/` and remain owned by the skills feature's explicit
-  directory and lock aliases, outside GNU Stow.
-- Public personal Git defaults live in `stow/git/.config/git/config`. It includes
-  `~/.config/git/local.conf` last. Work identities and conditional includes belong
-  in that user-owned file and `~/.config/git/extras/`, outside the checkout.
-  The Git poststow hook creates comment-only starters without replacing existing
-  files. Keep the work name, email, and signing key together in each profile.
-  Doctor validates public defaults separately from effective local identity;
-  legitimate work overrides are not errors and their values are not printed.
-  Reserve the corresponding source paths in both Git and Stow ignores, and
-  exclude them from `stow_sources` so backup handling never moves private files.
-  Never track private keys, tokens, credentials, or work-only identity.
-- These dots target Apple Silicon. Git uses Homebrew’s `ca-certificates`
-  bundle at `/opt/homebrew/etc/ca-certificates/cert.pem`, configured directly
-  in `stow/git/.config/git/config`. `dot doctor` checks the bundle and global setting.
-  Do not add configuration-writing hooks, modify Apple’s system certificate
-  bundle, or disable TLS verification.
-- Codex is installed as a Homebrew cask, but its config is not managed. The
-  live `~/.codex/config.toml` is local state and must not be stowed or
-  tracked; `stow/codex/.codex/` only holds an ignore policy.
-- GitHub CLI preferences and aliases live in `stow/gh/.config/gh/config.yml`.
-  Extension sources live in `extensions.txt`; init/stow installs missing sources
-  through `sfw gh extension install`, and update offers scoped native upgrades.
-  Never track or stow `hosts.yml`, credentials, or extension downloads.
-  The gh prestow hook keeps its directory local so authentication stays outside Git.
-- Keep package policy public and token-free. `stow/runtime-policy/.npmrc`, pnpm config, and
-  Bun config should contain install policy, not registry auth.
-- Keep OpenCode config public-safe. Do not track auth, trust, cache, or local
-  provider secret files. `dot stow` installs TypeScript plugin dependencies with
-  `sfw pnpm install` in `~/.config/opencode/`; `dot doctor` verifies them.
-- `stow/opencode/.config/opencode/node_modules/` may exist locally for editor/type
-  resolution. The shared Stow ignore rules exclude it from linking. Keep
-  `pnpm-lock.yaml` tracked.
-- Keep Pi config public-safe. Git blanket-ignores `stow/pi/.pi/agent/` state
-  with an allow-list for customization (`themes/`, `extensions/`, `mcp.json`,
-  `cloak.json`, `settings.json`, `AGENTS.md`, `voice-settings.json`, packaging).
-  Git ignores do not affect native Stow selection. Keep auth, trust, sessions,
-  logs, caches, and keybindings physically outside the package, under HOME.
-  Pi's prestow hook keeps its HOME directories local and relocates old
-  repo-backed state from legacy `home/` without process checks or requiring sessions
-  to close. Leave sockets in place with a warning, without blocking Stow.
-  `settings.json` is tracked and holds preferences
-  only. Pi writes to it unprompted, so expect churn from
-  `lastChangelogVersion` on upgrade and from any `/settings` edit. Never put
-  an `httpProxy` URL with a password in it: `dot secret-scan` now rejects
-  credentials embedded in a URL, but a proxy belongs in the environment.
-  Local dev checkouts of Pi packages are absolute-ish paths that do not
-  resolve elsewhere; re-add them with `pi install` per machine rather than
-  committing them.
-  `stow/pi/.pi/package.json` provides extension dependencies (editor completion,
-  types) via `sfw pnpm install` in `~/.pi` during `dot stow`;
-  `dot doctor` verifies them. `stow/pi/.pi/node_modules/` is ignored by Git and
-  Stow; keep `pnpm-lock.yaml` tracked. The `pi` binary itself is a managed
-  pnpm global (`PNPM_GLOBAL_PACKAGES` in `lib/core/paths.sh`).
-- This setup uses OpenCode v2. Register `@luxass/opencode-voice` once in the
-  plural `plugins` array in `opencode.jsonc`. OpenCode loads its terminal UI
-  component locally; its server component is a no-op. Do not also register it
-  in `cli.json`. CLI configuration is an alternative, not the only valid route.
-  Restart OpenCode and run `/voice setup`; use API transcription because local
-  transcription is currently unsupported on Bun. Keep credentials in the
-  environment. OpenCode's internal npm resolver reads the global npm age policy.
-  Server package installs and updates run in its background server. Configure
-  that server once with `opencode service set env NPM_CONFIG_MIN_RELEASE_AGE 0`
-  using the managed Homebrew binary, after closing active OpenCode sessions.
-  The setter stops the server; never run it automatically during an update.
-  Keep `service.json` and per-channel service configuration local and ignored
-  by Git and Stow because they can contain passwords and private remote URLs.
-  `dot update` offers native OpenCode plugin updates with a command-scoped npm
-  override for CLI-only plugins and checks the server setting before updating.
-  `dot stow` bypasses pnpm release age only for local OpenCode plugin deps.
-  A pnpm package exception does not override OpenCode's internal npm resolver.
-  The private submodule and its dependency/linking hooks are removed. Stow
-  backs up only leftover symlinks created by the retired setup; it leaves other
-  local plugins alone.
-- Rex configuration lives in `stow/rex/.config/rex/`. `dot stow` applies selected
-  macOS preferences and reloads valid Lua only when the server is running.
-  It never installs, updates, launches, or restarts Rex. Existing app preferences
-  are backed up outside Git before changes. Keep Remote Control unchanged.
-  Rex follows macOS appearance with Macchiato/Latte after both theme files
-  are imported once through the app. Resolve their generated IDs locally from
-  the theme names in macos-defaults.conf. Never track IDs or the imported
-  registry. If an import is missing, leave app preferences unchanged and print
-  the missing path. Do not add a theme shortcut or action. Generated SSH
-  configuration and other Rex state stay local and are ignored by Git and
-  Stow. Do not add Neovim or Twitch integration.
-- Herdr plugins are listed in `stow/herdr/.config/herdr/plugins.txt`. `dot init` and
-  `dot stow` install missing sources through `sfw herdr plugin install`;
-  `dot update` offers scoped native updates. Do not track or stow Herdr
-  `plugins/`, `plugins.json`, or `.plugins.lock`: they contain downloaded
-  code, machine-local paths, and potentially private plugin configuration.
-  Herdr Annotate bundles its own TUI. Keep `prefix+m` for pane zoom and
-  `prefix+o` for document review; notifications use `prefix+i`. Do not stop
-  a running Herdr server to apply plugin changes. Logs, sessions, registries,
-  and other runtime files belong outside the checkout. The one-time prestow
-  relocation skips existing sockets without blocking Stow or stopping the server.
-- Fish plugins are listed in `stow/fish/.config/fish/fish_plugins` and installed by
-  Fisher into `fisher_path` (`~/.local/share/fisher`, set in
-  `conf.d/fisher.fish`), never into `stow/fish/.config/fish/`. Add plugins to
-  `fish_plugins` and run `dot stow`; do not commit plugin files. Fish variables
-  and CLI-generated completions stay outside the checkout. OrbStack owns its
-  Docker, kubectl, and orbctl completion links. Runtime relocation does not
-  require closing Fish shells.
-- Neovim may remain installed/tracked as a package, but do not reintroduce
-  Neovim configuration unless explicitly requested.
-- After behavior changes, run `dot doctor`.
+General:
+
+- macOS on Apple Silicon only, unless explicitly asked otherwise.
+- Prefer the `dot` CLI over ad hoc commands, and never run bare Stow.
+- Do not stage or commit files on the user's behalf unless asked.
+
+Stow:
+
+- Each `stow/<package>/` mirrors `$HOME`; `dot-*` names become hidden files.
+  `dot` stows every package in `STOW_PACKAGES` with `--dotfiles --no-folding`.
+- Everything inside a package deploys except the shared `.stow-local-ignore`
+  rules (`node_modules`, `.DS_Store`, private Git paths). Git ignores do not
+  affect Stow selection, so keep runtime state physically outside packages.
+- Shared skills and their lock are linked by `lib/features/skills.sh`, not Stow.
+
+Secrets and local state:
+
+- Never track or stow auth, credentials, sessions, logs, caches, sockets, or
+  downloaded plugin code. This covers gh `hosts.yml`, OpenCode `service*.json`,
+  Herdr `plugins/`, `plugins.json`, `.plugins.lock`, and Rex state.
+- Git: public defaults only in `stow/git/.config/git/config`, which includes
+  `~/.config/git/local.conf` last. Work identities live in that file and
+  `~/.config/git/extras/`; keep work name, email, and signing key together.
+  Keep those paths in both Git and Stow ignores and out of `stow_sources`.
+  Never print local identity values in diagnostics.
+- Git uses Homebrew's `ca-certificates` bundle. Never modify Apple's system
+  bundle or disable TLS verification.
+- Runtime policy files (`.npmrc`, pnpm, Bun) hold install policy, never auth.
+  Release-age overrides stay scoped to one command; never relax the policy globally.
+- Codex config (`~/.codex/config.toml`) is local; `stow/codex/` is ignore policy only.
+
+Tool-specific rules:
+
+- Pi: Git allow-lists customization under `stow/pi/.pi/agent/`. Pi rewrites
+  `settings.json` unprompted; expect churn. Never put credentials (such as a
+  proxy URL with a password) in it. Do not commit local dev package paths;
+  re-add them per machine with `pi install`.
+- OpenCode v2: register `@luxass/opencode-voice` once, in the `plugins` array
+  of `opencode.jsonc`, not `cli.json`. Never run `opencode service set ...`
+  automatically; it stops the background server. Restart OpenCode after
+  editing its config or plugins.
+- Rex: `dot init` installs the app only when missing, from the Bleeding Edge
+  appcast, after signature, team ID, bundle ID, and notarization checks.
+  Never replace an existing app; Rex's own updater handles updates. `dot` never
+  launches or restarts Rex. Remote Control stays on: `dot stow` imports missing
+  themes through the `import_*` actions in `init.lua`. It also offers
+  `rex terminfo setup` and, when something is missing, `rex skill setup`.
+  Never track generated theme IDs, the imported theme registry, or Rex's
+  `ssh_config` and `terminfo-hosts`. Do not bind a theme shortcut, or
+  add Neovim or Twitch integration.
+- Herdr: keep `prefix+m` for pane zoom, `prefix+o` for document review, and
+  `prefix+i` for notifications. Never stop a running Herdr server.
+- Fish: plugins are listed in `fish_plugins` and installed by Fisher outside
+  the repo. Never commit plugin files, `fish_variables`, or generated completions.
+- Homebrew: each package belongs to one bundle; base is always enabled.
+  Optional bundles are chosen per machine through the existing
+  `packages.brew.<group>.enabled` preference keys; keep those keys. Enabling or
+  disabling a bundle never installs or uninstalls. `dot brew remove` changes
+  declarations only; `dot brew uninstall` refuses declared packages and active
+  apps or services. Unattended installs fail on unset choices, even with
+  `--yes`. Reports never prompt or change preferences. Never add automatic
+  cleanup or delete user data.
+- Cua Driver: ask before stopping a running daemon and warn that computer-use
+  sessions will be interrupted; abort if it does not stop. `dot stow` never
+  installs or launches it. The human approves macOS permission dialogs.
+- mise: never pin global runtime versions in the repo. Node.js stays managed by
+  pnpm unless explicitly migrated.
+
+Skills:
+
+- Manage shared skills with `sfw pnpx skills add/list/update/remove -g`.
+  There is no `dot skills` command.
+- The native lock is tracked at `shared/agents/.skill-lock.json`. Never clear
+  it during stow, and keep credentials and machine-local paths out of it.
+- Edit only locally maintained skills. Before adapting an imported skill,
+  remove its lock entry without deleting the files.
+- Exception: `cua-driver` keeps its lock entry. Local edits stay limited to
+  `LOCAL.md` and the read-first note in `SKILL.md`; restore both after updates.
+- Commit or stash skill edits before CLI updates. Record upstream SHAs in
+  import/update commit messages when known.
 
 ## ANTI-PATTERNS
 
-- Editing generated symlink targets in `$HOME` instead of files under `stow/`.
+- Editing symlink targets in `$HOME` instead of files under `stow/`.
 - Adding tokens, auth files, shell histories, private keys, private Git identity,
   or machine-local secrets to tracked files.
 - Printing or exposing sensitive local auth content while debugging.
-- Reintroducing removed configs or tools such as tmux, skhd, lazygit, wezterm,
-  Neovim config, or custom alias/function files unless explicitly requested.
-- Hardcoding absolute user paths when `$HOME`, repo-relative paths, or existing
-  helper variables are available.
-- Adding Linux-specific setup paths unless requested.
-- Adding casks to `packages/bundle.work`; keep work-only casks out unless the
-  user explicitly asks for them.
-- Creating nested git repositories or unmanaged dependency installs inside
+- Reintroducing removed tools or configs (tmux, skhd, lazygit, wezterm, Neovim
+  config, custom alias/function files) unless explicitly requested.
+- Hardcoding absolute user paths instead of `$HOME`, repo-relative paths, or
+  existing helper variables.
+- Adding Linux-specific setup, or casks in `packages/bundle.work`, unless asked.
+- Creating nested Git repositories or unmanaged dependency installs inside
   stowed config directories.
-- Running package-manager installs without Socket Firewall. Use `sfw pnpm install`,
-  `sfw npm install`, or another `sfw ...` wrapper as appropriate. The standalone
-  pnpm and Socket Firewall bootstrap steps are the exceptions.
+- Running package-manager installs without Socket Firewall (`sfw pnpm install`,
+  `sfw npm install`, ...). Only the standalone pnpm and `sfw` bootstraps are exempt.
 
 ## COMMANDS
 
 ```sh
 dot init             # Install packages, link dotfiles, set up runtimes and hooks
-dot update           # Pull changes, offer pnpm/Homebrew/Pi upgrades, relink
-dot stow             # Link selected native Stow packages and install plugin dependencies
-dot unstow           # Remove symlinks using GNU Stow
-dot doctor           # Run diagnostics and secret scan
-dot info             # Show repo paths, runtime tools, and git status
+dot update           # Pull changes, offer upgrades, relink
+dot stow / unstow    # Link or remove all Stow packages
+dot doctor           # Diagnostics and secret scan (--verbose for details)
+dot info             # Repo paths, runtime tools, git status
 dot secret-scan      # Scan tracked and unignored files for secrets
-dot lint             # shellcheck + shfmt (pinned in .mise.toml) over dot, lib/, .githooks/
+dot lint             # shellcheck + shfmt over dot, lib/, .githooks/
 dot hooks            # Install repository Git hooks
-dot config           # Manage local-only preferences (git-config format)
-dot package list     # List managed packages per group
-dot package check    # Show missing packages
-dot package add X    # Track and install a package (--cask, --group GROUP)
-dot package unmanaged # Installed packages no bundle tracks
-sfw pnpx skills add U -g --skill N  # Import a shared global skill
-sfw pnpx skills list -g            # List shared global skills and provenance
-sfw pnpx skills update -g          # Update tracked upstream imports
-sfw pnpx skills remove N -g        # Remove a skill and its global lock entry
+dot config           # Local-only preferences (git-config format)
+dot brew list|check|install|unmanaged|update  # Report, install missing, upgrade
+dot brew add|remove|uninstall X     # remove changes the declaration only
+dot brew bundle list|enable|disable # Local bundle choice; never installs
 ```
 
-Use `dot --verbose doctor` when diagnostics need more detail. `-y`/`--yes`
-answers yes to confirmations.
-
-## KEY CONFIGS
-
-| Tool | Entry | Notes |
-| --- | --- | --- |
-| Fish | `stow/fish/.config/fish/` | Primary shell startup and environment |
-| Git | `stow/git/.config/git/config` | Public config and public identity only |
-| Ghostty | `stow/ghostty/.config/ghostty/config` | Terminal settings |
-| Starship | `stow/starship/.config/starship.toml` | Prompt |
-| Homebrew | `packages/bundle*` | Base, fonts, personal, and optional work bundles |
-| npm | `stow/runtime-policy/.npmrc` | Install policy, no auth |
-| pnpm | `stow/runtime-policy/.config/pnpm/config.yaml` | Security policy and runtime behavior |
-| Bun | `stow/runtime-policy/.bunfig.toml` | Install policy |
-| OpenCode | `stow/opencode/.config/opencode/` | Global config and local TypeScript plugins |
+`-y`/`--yes` answers yes to confirmations, but never answers unset bundle choices.
 
 ## NOTES
 
-- The tracked pre-push hook runs `dot secret-scan` and `dot lint`.
-  The scanner reports paths, line numbers, and categories without values.
-  It fails on execution errors. It does not scan ignored files, submodules,
-  or Git history, and it is not a complete secret detector. Exact reviewed
-  documentation examples live in `.secret-scan-allowlist`, using a source-line
-  SHA-256 plus its repository-relative path. Never replace those exceptions
-  with whole-file or directory exclusions.
+- The pre-push hook runs `dot secret-scan` and `dot lint`. The scanner never
+  prints values and skips ignored files, submodules, and history. Reviewed
+  exceptions live in `.secret-scan-allowlist` as an exact source-line SHA-256
+  plus path; never replace them with whole-file or directory exclusions.
 - `dot stow` backs up anything blocking a managed link to
-  `${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/`. The old
-  repo-local `backups/` directory is no longer written.
-- mise is installed from the base Homebrew bundle and activated in Fish through
-  `stow/fish/.config/fish/conf.d/mise.fish`. Do not pin global runtime versions in
-  the repo; project runtime selections belong in each project's `.mise.toml`.
-  Node.js currently remains managed by pnpm unless explicitly migrated.
-- `dot init` stows package-manager policy before installing standalone pnpm and
-  pnpm-managed runtime tools, so install policy is active during setup.
-- Managed pnpm globals currently include Socket Firewall (`sfw`), npm 12,
-  Pi (`pi`), `cf`, and `coderabbit`. `lib/features/cua.sh` installs Cua Driver
-  through its official stable installer during `dot init` and offers native
-  updates during `dot update`. Ask before stopping a running daemon for an
-  update and warn that connected computer-use sessions will be interrupted.
-  Abort if the daemon does not stop or restarts immediately. `dot init` and
-  successful updates offer `cua-driver permissions grant`; the human approves
-  macOS dialogs. `dot stow` never installs or launches Cua Driver.
-  Native Pi MCP configuration lives in
-  `stow/pi/.pi/agent/mcp.json` (`computer` server). The upstream Cua skill pack in
-  `shared/agents/skills/cua-driver/` is imported through `sfw pnpx skills` and
-  tracked in the native skills lock. A read-first note in `SKILL.md` loads its
-  locally maintained `LOCAL.md`. Preserve both additions manually after skills
-  CLI updates. This pack is an exception to the imported-skill editing rule:
-  retain its lock entry and keep local edits limited to `LOCAL.md` and that
-  note. `dot doctor` checks the CLI, app
-  signature, daemon, and permissions without starting the daemon or prompting.
-  OpenCode v2 (`opencode`) is installed through
-  the `anomalyco/tap/opencode-v2` Homebrew formula. `dot update` runs Pi's native
-  self-updater and handles OpenCode binary updates through Homebrew. It also
-  offers native OpenCode package-plugin updates after linking the dotfiles.
-- OpenCode local plugins are tracked under `stow/opencode/.config/opencode/plugins/`.
-  Restart OpenCode after editing config or plugins.
-- Optional package groups are controlled by local-only preferences under
-  `${XDG_STATE_HOME:-$HOME/.local/state}/dot/preferences`: fonts default to yes
-  when first prompted, work packages default to no.
-- Shared skills live in `shared/agents/skills/`. Manage them directly with
-  `sfw pnpx skills add/list/update/remove` and opt into global scope with `-g`.
-  There is no `dot skills` command or scope-forcing wrapper. Project installs
-  in other repositories remain project-local.
-- The shared skills directory and native lock use explicit links owned by
-  `lib/features/skills.sh`, not GNU Stow. Preserve these directory links so
-  native imports and updates write to the shared repository. The native global
-  lock is tracked at `shared/agents/.skill-lock.json`.
-  `dot stow` links both `~/.agents/.skill-lock.json` and
-  `${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-lock.json` to it. Never
-  clear this inventory during stow or restore the archived stale records.
-  Keep credentials, private sources, and machine-local paths out of the lock.
-- Only locally maintained skills should be edited directly. Keep them out of
-  the global lock so native upstream updates leave them alone. Before adapting
-  an imported skill, remove its lock entry without deleting the files. There is
-  no separate local inventory. Commit or stash skill edits before CLI updates,
-  then review and commit the resulting diff.
-- Record upstream source SHAs in import/update commit messages when known;
-  the CLI maintains upstream/path/hash provenance in its native global lock.
-- `dot stow` also links `~/.claude/skills` to `~/.agents/skills` so Claude Code
-  shares the same skills; `dot doctor` checks this link.
+  `${XDG_STATE_HOME:-$HOME/.local/state}/dot/backups/<timestamp>/`.
