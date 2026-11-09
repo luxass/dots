@@ -6,3 +6,5 @@
 brew "helm"
 brew "k9s"
 brew "kind"
+
+cask "git-credential-manager"
