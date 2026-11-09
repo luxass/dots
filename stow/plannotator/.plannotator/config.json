@@ -21,5 +21,6 @@
   "conventionalComments": true,
   "packageChanges": {
     "lookup": true
-  }
+  },
+  "urlHost": "plannotator.localhost"
 }
