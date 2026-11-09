@@ -6,8 +6,8 @@
 brew "helm"
 brew "k9s"
 brew "kind"
+brew "kubernetes-cli"
 
 cask "git-credential-manager"
-brew "kubernetes-cli"
 
 cask "slack"
