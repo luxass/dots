@@ -3,6 +3,7 @@
 # Add entries with:
 #   dot brew add NAME [--cask|--formula] --group personal
 
+brew "cloudflared"
 brew "cocoapods"
 brew "ffmpeg"
 brew "swiftlint"
