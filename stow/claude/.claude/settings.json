@@ -4,7 +4,6 @@
     "commit": "",
     "pr": ""
   },
-  "tui": "fullscreen",
   "hooks": {
     "SessionStart": [
       {
@@ -27,5 +26,7 @@
         ]
       }
     ]
-  }
+  },
+  "tui": "fullscreen",
+  "theme": "light-daltonized"
 }
