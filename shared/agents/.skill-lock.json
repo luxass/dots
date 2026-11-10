@@ -262,6 +262,16 @@
       "skillFolderHash": "ab28147ea14d9c559b1b6cb83ae37cb3bf0410cc",
       "installedAt": "2026-11-09T02:32:37.576Z",
       "updatedAt": "2026-11-09T02:32:37.576Z"
+    },
+    "wrenlo": {
+      "source": "luxass/wrenlo",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/luxass/wrenlo.git",
+      "ref": "ef25c9620c2da486b2303bc2eec298719b14b73f",
+      "skillPath": "skills/wrenlo/SKILL.md",
+      "skillFolderHash": "6bb06513ff80888b90cd41275b6b9c4a1fb6018d",
+      "installedAt": "2026-11-10T02:18:58.109Z",
+      "updatedAt": "2026-11-10T02:18:58.109Z"
     }
   },
   "dismissed": {
