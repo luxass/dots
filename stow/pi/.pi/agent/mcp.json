@@ -3,7 +3,9 @@
     "computer": {
       "command": "cua-driver",
       "args": [
-        "mcp"
+        "mcp",
+        "--grant",
+        "existing-profile"
       ],
       "exposure": "codemode",
       "description": "Operate browsers and native desktop apps with Cua Driver: inspect windows, view screenshots, click, type, scroll, and verify results."
