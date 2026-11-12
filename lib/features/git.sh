@@ -6,6 +6,10 @@
 # content unchanged instead of failing.
 readonly GIT_PI_SETTINGS_CLEAN="jq -j 'del(.lastChangelogVersion)'"
 
+# Agent picker history is local preference, not skill provenance. Match the
+# native lock's missing final newline; leave the on-disk lock untouched.
+readonly GIT_SKILLS_LOCK_CLEAN="jq -j 'del(.lastSelectedAgents)'"
+
 # Private starters are created once. Existing local customization is never replaced.
 git_poststow() {
   local dir="$HOME/.config/git"
@@ -53,6 +57,8 @@ git_install_hooks() {
   print_success "Git hooks path set to .githooks"
   repo_git config filter.pi-settings.clean "$GIT_PI_SETTINGS_CLEAN" || return 1
   print_success "Pi settings filter configured"
+  repo_git config filter.skills-lock.clean "$GIT_SKILLS_LOCK_CLEAN" || return 1
+  print_success "Skills lock filter configured"
 }
 
 # Match only reviewed documentation examples by exact source line and path.
@@ -185,6 +191,11 @@ git_check() {
     print_success "Pi settings filter"
   else
     print_warning "Pi settings filter is not configured; run 'dot hooks'"
+  fi
+  if [[ "$(repo_git config --get filter.skills-lock.clean || true)" == "$GIT_SKILLS_LOCK_CLEAN" ]]; then
+    print_success "Skills lock filter"
+  else
+    print_warning "Skills lock filter is not configured; run 'dot hooks'"
   fi
   if [[ ! -x "$DOTFILES_DIR/.githooks/pre-push" ]]; then
     print_error "pre-push hook is not executable"

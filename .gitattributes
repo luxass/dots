@@ -1,3 +1,6 @@
 # Pi rewrites lastChangelogVersion on every upgrade. The pi-settings clean
 # filter (configured by `dot hooks`) keeps that key out of commits.
 stow/pi/.pi/agent/settings.json filter=pi-settings
+
+# Keep the skills CLI's agent picker history out of commits (dot hooks).
+shared/agents/.skill-lock.json filter=skills-lock
