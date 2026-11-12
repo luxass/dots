@@ -48,8 +48,28 @@ cua_setup() {
   cua_offer_permissions || return 1
 }
 
+# Offer to stop the daemon left running by update or permission setup.
+cua_offer_stop_after_update() {
+  cua-driver status >/dev/null 2>&1 || return 0
+
+  print_warning "Stopping Cua Driver after update interrupts connected computer-use sessions"
+  if ! confirm "Stop the Cua Driver daemon so Pi can start it with its existing-profile grant?" n; then
+    print_warning "Cua Driver is still running; Pi cannot apply its existing-profile grant until the daemon stops"
+    return 0
+  fi
+  cua-driver stop || {
+    print_error "Could not stop the Cua Driver daemon after update"
+    return 1
+  }
+  if cua-driver status >/dev/null 2>&1; then
+    print_error "Cua Driver daemon is still running or restarted; close computer-use sessions before reconnecting Pi"
+    return 1
+  fi
+  print_success "Cua Driver daemon stopped; Pi can start it with its existing-profile grant"
+}
+
 cua_update() {
-  local state available daemon_running=false
+  local state available daemon_running=false failed=0
 
   cua_export_path
   if ! command_exists cua-driver; then
@@ -98,7 +118,9 @@ cua_update() {
   cua-driver --version || return 1
   print_success "Cua Driver updated"
   print_info "Reconnect Pi's computer server after updating"
-  cua_offer_permissions || return 1
+  cua_offer_permissions || failed=1
+  cua_offer_stop_after_update || return 1
+  return "$failed"
 }
 
 cua_check() {
