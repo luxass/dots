@@ -2,6 +2,38 @@ import { Buffer } from "node:buffer";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
+/** Largest small JSON response (receipts, errors, metadata), in bytes. */
+export const MAX_SMALL_JSON_BYTES = 16 * 1024;
+
+/** Largest JSON response (artifact lists and file sets), in bytes. */
+export const MAX_JSON_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Sent on every request so server logs show which client and version asked.
+ * WRENLO_USER_AGENT_SUFFIX adds a marker, for example to tell test runs apart.
+ */
+export const USER_AGENT = [
+  "wrenlo-skill/1",
+  "node/" + process.versions.node,
+  process.env.WRENLO_USER_AGENT_SUFFIX ?? "",
+]
+  .join(" ")
+  .trim();
+
+/** Agents by a variable each sets in the commands it runs. */
+const KNOWN_AGENTS = { PI_CODING_AGENT: "Pi", CLAUDECODE: "Claude Code", GEMINI_CLI: "Gemini CLI" };
+
+/**
+ * The agent running this helper, sent with every request so Wrenlo can say which agent made a
+ * change. WRENLO_AGENT names it; otherwise agents are recognized by a variable they set.
+ */
+export const AGENT = [
+  process.env.WRENLO_AGENT?.trim() ?? "",
+  ...Object.entries(KNOWN_AGENTS).flatMap(([variable, name]) =>
+    variable in process.env ? [name] : [],
+  ),
+].find((name) => /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$/u.test(name));
+
 /** The helper's own path, printed in messages so an agent can run the next command as is. */
 export const HELPER = fileURLToPath(new URL("wrenlo.mjs", import.meta.url));
 
@@ -36,7 +68,12 @@ export async function request(target, path, { method = "GET", body, timeout = 20
     /** @type {RequestInit} */
     const init = {
       method,
-      headers: { "Content-Type": "application/json", ...(await target.headers()) },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
+        ...(AGENT !== undefined && { "Wrenlo-Agent": AGENT }),
+        ...(await target.headers()),
+      },
       redirect: "manual",
       signal: AbortSignal.timeout(timeout),
     };
@@ -91,7 +128,7 @@ export async function request(target, path, { method = "GET", body, timeout = 20
 async function errorMessage(response) {
   try {
     /** @type {{error?: string}} */
-    const body = await resultJson(response, 16 * 1024);
+    const body = await resultJson(response, MAX_SMALL_JSON_BYTES);
 
     return body.error;
   } catch {
@@ -135,7 +172,7 @@ export async function responseBytes(response, limit) {
  * @param {number} [limit]
  * @returns {Promise<T>}
  */
-export async function resultJson(response, limit = 8 * 1024 * 1024) {
+export async function resultJson(response, limit = MAX_JSON_BYTES) {
   if (
     response.headers.get("Content-Type")?.split(";")[0]?.trim().toLowerCase() !== "application/json"
   ) {
@@ -162,7 +199,7 @@ export async function confirmRevision(target, { id, saveId, path, method, body }
     try {
       const response = await request(target, path, { method, body });
       /** @type {{id: string, saveId: string, revision: number, created: boolean, format: string, title: string, url: string}} */
-      const receipt = await resultJson(response, 16 * 1024);
+      const receipt = await resultJson(response, MAX_SMALL_JSON_BYTES);
 
       // Matching IDs prove this receipt belongs to this exact request, so a retry is safe.
       if (receipt.id !== id || receipt.saveId !== saveId)

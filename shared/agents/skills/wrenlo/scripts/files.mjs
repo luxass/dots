@@ -5,7 +5,8 @@ import { basename, join, relative, sep } from "node:path";
 
 import { SafeError } from "./transport.mjs";
 
-const LIMIT = 1024 * 1024;
+/** The server's MAX_FILE_BYTES (src/lib/artifact.ts); the helper cannot import app code. */
+export const MAX_FILE_BYTES = 1024 * 1024;
 
 /** File extensions for each file format. The first is the default. */
 export const FORMATS = {
@@ -44,7 +45,7 @@ export async function readFile(path) {
     handle = await open(path, "r");
 
     if (!(await handle.stat()).isFile()) throw new SafeError(path + " is not a regular file.");
-    const buffer = Buffer.alloc(LIMIT + 1);
+    const buffer = Buffer.alloc(MAX_FILE_BYTES + 1);
     let length = 0;
 
     while (length < buffer.length) {
@@ -54,7 +55,7 @@ export async function readFile(path) {
       length += bytesRead;
     }
 
-    if (length > LIMIT) throw new SafeError(path + " is larger than 1 MiB.");
+    if (length > MAX_FILE_BYTES) throw new SafeError(path + " is larger than 1 MiB.");
     const body = buffer.subarray(0, length);
     let content;
 

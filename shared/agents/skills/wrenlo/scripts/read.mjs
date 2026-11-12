@@ -1,8 +1,14 @@
 import { writeFile } from "node:fs/promises";
 
-import { gitContext, repositoryIdentity } from "./files.mjs";
+import { gitContext, MAX_FILE_BYTES, repositoryIdentity } from "./files.mjs";
 import { code, positive } from "./ids.mjs";
-import { request, responseBytes, resultJson, SafeError } from "./transport.mjs";
+import {
+  MAX_SMALL_JSON_BYTES,
+  request,
+  responseBytes,
+  resultJson,
+  SafeError,
+} from "./transport.mjs";
 
 /** @typedef {import("./transport.mjs").Target} Target */
 /** @typedef {import("./options.mjs").Values} Values */
@@ -26,7 +32,10 @@ export async function check(target) {
 
     try {
       /** @type {{ skillSource?: string | null }} */
-      const advertised = await resultJson(await request(target, "/api/v1/capabilities"), 16 * 1024);
+      const advertised = await resultJson(
+        await request(target, "/api/v1/capabilities"),
+        MAX_SMALL_JSON_BYTES,
+      );
 
       source = advertised.skillSource ?? "";
     } catch {
@@ -140,7 +149,7 @@ export async function read(target, command, positionals, values) {
 
   if (response.headers.get("Content-Disposition")?.startsWith("attachment") !== true)
     throw new SafeError("The server did not return an artifact file.");
-  const bytes = await responseBytes(response, 1024 * 1024);
+  const bytes = await responseBytes(response, MAX_FILE_BYTES);
 
   try {
     await writeFile(values.output, bytes, { flag: "wx" });

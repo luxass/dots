@@ -7,20 +7,11 @@ import {
   readSettings,
   readTokens,
   resolveDestination,
+  serviceTokenHeaders,
   tokenFile,
   writeSettings,
 } from "./settings.mjs";
 import { SafeError } from "./transport.mjs";
-
-/** Both service token variables, or null. A service token wins over a browser sign-in. */
-function serviceToken() {
-  const id = process.env.WRENLO_ACCESS_CLIENT_ID?.trim();
-  const secret = process.env.WRENLO_ACCESS_CLIENT_SECRET?.trim();
-
-  return id !== undefined && id !== "" && secret !== undefined && secret !== ""
-    ? { "CF-Access-Client-Id": id, "CF-Access-Client-Secret": secret }
-    : null;
-}
 
 /**
  * The destination for this command and how its requests authenticate.
@@ -33,7 +24,7 @@ export async function connect(option) {
 
   if (local) return { ...base, signIn: "local", headers: () => Promise.resolve({}) };
 
-  const service = serviceToken();
+  const service = serviceTokenHeaders();
 
   if (service !== null)
     return { ...base, signIn: "service token", headers: () => Promise.resolve(service) };

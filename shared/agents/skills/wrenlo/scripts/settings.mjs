@@ -126,6 +126,19 @@ export async function readTokens(origin) {
 }
 
 /**
+ * Access service token headers from WRENLO_ACCESS_CLIENT_ID and WRENLO_ACCESS_CLIENT_SECRET, or
+ * null unless both are set. A service token wins over a browser sign-in.
+ */
+export function serviceTokenHeaders() {
+  const id = process.env.WRENLO_ACCESS_CLIENT_ID?.trim() ?? "";
+  const secret = process.env.WRENLO_ACCESS_CLIENT_SECRET?.trim() ?? "";
+
+  return id !== "" && secret !== ""
+    ? { "CF-Access-Client-Id": id, "CF-Access-Client-Secret": secret }
+    : null;
+}
+
+/**
  * The Wrenlo this command talks to, and why. First match wins: --origin, WRENLO_ORIGIN, this
  * project's choice, the only saved instance, the default. Never a file or an artifact.
  * @param {string | undefined} option
@@ -193,10 +206,7 @@ export async function listInstances() {
   const settings = await readSettings();
   const project = await projectRoot();
 
-  const service = [
-    process.env.WRENLO_ACCESS_CLIENT_ID,
-    process.env.WRENLO_ACCESS_CLIENT_SECRET,
-  ].every((value) => (value?.trim() ?? "") !== "");
+  const service = serviceTokenHeaders() !== null;
 
   let current = null;
 

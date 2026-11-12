@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 
 import { tokenFile, writePrivate } from "./settings.mjs";
-import { HELPER, resultJson, SafeError } from "./transport.mjs";
+import { AGENT, HELPER, resultJson, SafeError, USER_AGENT } from "./transport.mjs";
 
 /** @param {URL} origin */
 export function signInMessage(origin) {
@@ -24,17 +24,23 @@ const NO_BROWSER_SIGN_IN =
  * @returns {Promise<T>}
  */
 async function oauth(url, failure, body) {
+  const form = body instanceof URLSearchParams;
+
   /** @type {RequestInit} */
-  const init = { redirect: "manual", signal: AbortSignal.timeout(20_000) };
+  const init = {
+    redirect: "manual",
+    signal: AbortSignal.timeout(20_000),
+    headers: {
+      "User-Agent": USER_AGENT,
+      Accept: "application/json",
+      ...(body !== undefined && {
+        "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json",
+      }),
+    },
+  };
 
   if (body !== undefined) {
-    const form = body instanceof URLSearchParams;
-
     init.method = "POST";
-    init.headers = {
-      "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json",
-      Accept: "application/json",
-    };
     init.body = form ? body.toString() : JSON.stringify(body);
   }
 
@@ -166,7 +172,8 @@ export async function signIn(origin) {
     const redirect = `http://127.0.0.1:${String(port)}/callback`;
 
     const client = await oauth(register, failure, {
-      client_name: "Wrenlo agent helper",
+      // Shown when the person approves the sign-in.
+      client_name: AGENT === undefined ? "Wrenlo agent helper" : AGENT + " (Wrenlo)",
       redirect_uris: [redirect],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],

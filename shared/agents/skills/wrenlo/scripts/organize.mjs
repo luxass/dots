@@ -1,6 +1,6 @@
 import { metadata } from "./files.mjs";
 import { code, positive, withFreshCode } from "./ids.mjs";
-import { request, resultJson, SafeError } from "./transport.mjs";
+import { MAX_SMALL_JSON_BYTES, request, resultJson, SafeError } from "./transport.mjs";
 
 /** @typedef {import("./transport.mjs").Target} Target */
 /** @typedef {import("./options.mjs").Values} Values */
@@ -15,7 +15,10 @@ import { request, resultJson, SafeError } from "./transport.mjs";
  * @returns {Promise<unknown>}
  */
 async function send(target, path, method, body) {
-  return resultJson(await request(target, path, { method, body: JSON.stringify(body) }), 16 * 1024);
+  return resultJson(
+    await request(target, path, { method, body: JSON.stringify(body) }),
+    MAX_SMALL_JSON_BYTES,
+  );
 }
 
 const LIFECYCLE = new Map([
