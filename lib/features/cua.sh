@@ -24,7 +24,6 @@ cua_setup() {
   if command_exists cua-driver; then
     print_success "Cua Driver is already installed"
     cua_offer_permissions || return 1
-    cua_offer_service_start || return 1
     return 0
   fi
 
@@ -47,87 +46,10 @@ cua_setup() {
   fi
   print_success "Cua Driver installed"
   cua_offer_permissions || return 1
-  cua_offer_service_start || return 1
-}
-
-# Check registration without starting the managed launchd service.
-cua_service_loaded() {
-  launchctl print "gui/$(id -u)/$CUA_DRIVER_SERVICE_LABEL" >/dev/null 2>&1
-}
-
-# Unload KeepAlive before stopping Cua; callers must obtain stop approval first.
-cua_service_stop() {
-  local attempt=0
-
-  if cua_service_loaded; then
-    launchctl bootout "gui/$(id -u)/$CUA_DRIVER_SERVICE_LABEL" || {
-      print_error "Could not unload the Cua Driver service; stop canceled"
-      return 1
-    }
-    # bootout can return before the old process releases its socket.
-    while cua-driver status >/dev/null 2>&1 && [[ "$attempt" -lt 50 ]]; do
-      sleep 0.1
-      attempt=$((attempt + 1))
-    done
-  elif cua-driver status >/dev/null 2>&1; then
-    cua-driver stop || {
-      print_error "Could not stop the Cua Driver daemon"
-      return 1
-    }
-  fi
-  if cua_service_loaded || cua-driver status >/dev/null 2>&1; then
-    print_error "Cua Driver is still running or restarted; close computer-use sessions before retrying"
-    return 1
-  fi
-}
-
-# Start the signed daemon with its grant; MCP clients connect without grants.
-cua_service_start() {
-  local attempt=0
-
-  if ! cua_service_loaded; then
-    launchctl bootstrap "gui/$(id -u)" "$CUA_DRIVER_SERVICE_PLIST" || {
-      print_error "Could not load the Cua Driver service"
-      return 1
-    }
-  fi
-  while [[ "$attempt" -lt 100 ]]; do
-    if cua-driver status >/dev/null 2>&1; then
-      print_success "Cua Driver service is running with existing-profile access"
-      return 0
-    fi
-    sleep 0.1
-    attempt=$((attempt + 1))
-  done
-  print_error "Cua Driver service did not become ready; inspect it with launchctl print gui/$(id -u)/$CUA_DRIVER_SERVICE_LABEL"
-  return 1
-}
-
-# Permission onboarding can leave an unmanaged daemon; replace it only on approval.
-cua_offer_service_start() {
-  if cua_service_loaded && cua-driver status >/dev/null 2>&1; then
-    return 0
-  fi
-  print_info "The macOS service starts Cua Driver at login with existing-profile access and restarts it after crashes"
-  print_warning "Starting the service stops any existing Cua daemon and interrupts connected computer-use sessions"
-  if ! confirm "Start the managed Cua Driver service with the existing-profile grant?" n; then
-    print_warning "Cua Driver service was not started; existing-profile access is not guaranteed"
-    return 0
-  fi
-  cua_service_stop || return 1
-  cua_service_start || return 1
-}
-
-# Stop the login service before removing its managed plist.
-cua_unstow() {
-  cua_service_loaded || return 0
-  print_warning "Unloading Cua Driver interrupts connected computer-use sessions"
-  confirm "Stop the Cua Driver service before unlinking dotfiles?" n || return 1
-  cua_service_stop || return 1
 }
 
 cua_update() {
-  local state available daemon_running=false failed=0
+  local state available daemon_running=false
 
   cua_export_path
   if ! command_exists cua-driver; then
@@ -151,15 +73,22 @@ cua_update() {
     return 0
   fi
 
-  if cua_service_loaded || cua-driver status >/dev/null 2>&1; then
+  if cua-driver status >/dev/null 2>&1; then
     daemon_running=true
-    print_warning "Updating Cua Driver stops its service and interrupts connected computer-use sessions"
-    confirm "Stop Cua Driver, update, and restart its service with existing-profile access? Reconnect Pi afterward." n || return 0
+    print_warning "Updating Cua Driver stops its daemon and interrupts connected computer-use sessions"
+    confirm "Stop the Cua Driver daemon and update? Reconnect Pi afterward." n || return 0
   else
     confirm "Update Cua Driver using its native installer?" n || return 0
   fi
   if [[ "$daemon_running" == true ]]; then
-    cua_service_stop || return 1
+    cua-driver stop || {
+      print_error "Could not stop the Cua Driver daemon; update canceled"
+      return 1
+    }
+    if cua-driver status >/dev/null 2>&1; then
+      print_error "Cua Driver daemon is still running or restarted; close computer-use sessions before retrying"
+      return 1
+    fi
   fi
   CUA_DRIVER_RS_NO_MODIFY_PATH=1 cua-driver update --apply || {
     print_error "Cua Driver update failed; inspect 'cua-driver --version' before retrying"
@@ -169,16 +98,7 @@ cua_update() {
   cua-driver --version || return 1
   print_success "Cua Driver updated"
   print_info "Reconnect Pi's computer server after updating"
-  cua_offer_permissions || failed=1
-  if [[ "$daemon_running" == true ]]; then
-    # The update confirmation approved the service restart, including stopping
-    # any temporary daemon left behind by permission onboarding.
-    cua_service_stop || return 1
-    cua_service_start || return 1
-  else
-    cua_offer_service_start || return 1
-  fi
-  return "$failed"
+  cua_offer_permissions || return 1
 }
 
 cua_check() {
@@ -200,15 +120,9 @@ cua_check() {
     print_success "Cua Driver signed app"
   fi
 
-  if cua_service_loaded; then
-    print_success "Cua Driver launchd service"
-  else
-    print_warning "Cua Driver launchd service is not loaded; run 'dot init' to set it up"
-  fi
-
   # Guard the permissions query: it can start a temporary daemon when stopped.
   if ! cua-driver status >/dev/null 2>&1; then
-    print_warning "Cua Driver daemon is stopped or unreachable; run 'dot init' to start its managed service"
+    print_warning "Cua Driver daemon is stopped or unreachable; connect Pi's computer server to start it"
     print_warning "macOS permissions are unknown while the daemon is unavailable"
     return "$failed"
   fi

@@ -22,10 +22,10 @@ precedence when an example disagrees with the running driver.
 
 ## Browser and desktop
 
-Use the user's running Chrome when requested. Do not silently substitute an
-isolated browser or copy their profile. Ask if the account or profile is
-ambiguous. Browser preparation, remote debugging, and existing-profile grants
-are separate setup decisions, not automatic recovery steps.
+Do not attach browser tools to personal browser profiles or enable remote
+debugging for them. Native app and window control remains available. Use a
+driver-owned browser only when requested; do not substitute one silently or
+copy a personal profile.
 
 Prefer background input and keep the agent cursor visible. Ask before visible
 foreground or desktop takeover unless the user already authorized it for this

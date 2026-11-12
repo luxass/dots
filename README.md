@@ -560,9 +560,8 @@ age rule.
 `stow/pi/.pi/agent/mcp.json` declares Cua Driver as the `computer` server through
 [Pi's native MCP support](https://pi.dev/docs/latest/mcp). No MCP adapter
 extension is needed. Tools use `codemode` exposure and the
-`mcp__computer__` prefix. Pi starts the driver with standard permissions and
-`--grant existing-profile` to allow existing-browser-profile access, without
-bypassing other approvals. This startup grant requires a stopped daemon.
+`mcp__computer__` prefix. Pi runs `cua-driver mcp` with standard permissions,
+without startup grants or approval bypasses.
 
 `dot init` installs Cua Driver through its official stable
 [macOS installer](https://cua.ai/docs/cua-driver/quickstart). The installer
@@ -590,12 +589,8 @@ restarts immediately, the update fails without running the installer.
 Reconnect Pi afterward. The native updater preserves the selected release
 channel. A replacement signing identity can require permission grants again,
 so dots also offers the permission flow after an update. Declining that offer
-leaves the installation intact. Permission setup can start the daemon without
-Pi's existing-profile grant. After setup, dots offers to stop the daemon so
-Pi can start it with that grant. This stop also interrupts connected
-computer-use sessions. If you decline, dots leaves the daemon running and
-warns that Pi cannot apply its startup grant. `--yes` accepts these offers,
-but cannot approve macOS dialogs for you.
+leaves the installation intact. `--yes` accepts these offers, but cannot approve
+macOS dialogs for you.
 
 `dot doctor` checks the CLI, app signature, daemon, and permissions without
 starting the daemon or opening permission prompts. A stopped daemon produces
