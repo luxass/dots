@@ -1,4 +1,4 @@
-if command -q eza
+if status is-interactive; and command -q eza
     alias ls='eza --group-directories-first'
     alias ll='eza --long --group --git --group-directories-first'
     alias la='eza --all --group-directories-first'
