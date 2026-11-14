@@ -8,8 +8,20 @@ Edit those source files rather than their linked HOME paths.
 
 Dot init installs Fish, adds it to /etc/shells if needed, and sets it as the login shell.
 Restart the terminal afterward. Keep the repository on PATH with fish_add_path ~/dots.
-Mise activates automatically. Use mise use inside a project for project runtimes.
+Mise activates in all shells so scripts can use project runtimes.
+[conf.d/mise.fish](../../stow/fish/.config/fish/conf.d/mise.fish) disables Homebrew's
+vendor activation to avoid running mise twice. Use mise use inside a project for project runtimes.
 Node.js remains managed by [pnpm](pnpm.md), not mise.
+
+Prompt setup, tool hooks, aliases, generated completions, and plugin startup scripts
+load only in interactive shells. Environment variables, runtime paths, and Fisher
+function paths remain available in noninteractive shells.
+
+Starship's left and right prompt renderers use a process-local Git override:
+`core.fsmonitor=false`. This lets Starship use its internal gitoxide status engine
+instead of external Git when filesystem monitoring is enabled. The wrapper appends
+the override to existing Git environment settings. Normal Git commands keep their
+configured filesystem monitoring, and Starship keeps its status indicators.
 
 ## Manage plugins
 
