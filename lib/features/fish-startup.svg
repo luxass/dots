@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="590" viewBox="0 0 1000 590" role="img" aria-labelledby="title description">
+  <title id="title">Fish startup performance before and after optimization</title>
+  <desc id="description">Grouped horizontal bars share a zero-based scale from 0 to 120 milliseconds. Interactive startup drops from 72.7 to 51.7 milliseconds. Noninteractive startup drops from 69.9 to 28.4 milliseconds. Startup plus prompt hooks and rendering drops from 109.8 to 87.6 milliseconds. Lower is better.</desc>
+  <rect width="1000" height="590" rx="16" fill="#ffffff"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="#172033">
+    <text x="40" y="52" font-size="26" font-weight="700">Fish startup: before vs. after</text>
+    <text x="40" y="81" font-size="15" fill="#526174">Median time in the dots repository · milliseconds · lower is better</text>
+
+    <rect x="40" y="106" width="14" height="14" rx="3" fill="#64748b"/>
+    <text x="63" y="118" font-size="14">Before</text>
+    <rect x="153" y="106" width="14" height="14" rx="3" fill="#0d9488"/>
+    <text x="176" y="118" font-size="14">After</text>
+
+    <g stroke="#e2e8f0" stroke-width="1">
+      <path d="M280 150V451 M370 150V451 M460 150V451 M550 150V451 M640 150V451 M730 150V451 M820 150V451"/>
+    </g>
+    <path d="M280 150V451" stroke="#94a3b8" stroke-width="1"/>
+
+    <text x="40" y="185" font-size="17" font-weight="600">Interactive startup</text>
+    <text x="40" y="210" font-size="14" fill="#0f766e">29% less startup time</text>
+    <rect x="280" y="165" width="327.15" height="22" rx="3" fill="#64748b"/>
+    <rect x="280" y="197" width="232.65" height="22" rx="3" fill="#0d9488"/>
+    <text x="617.15" y="181" font-size="14">72.7 ms</text>
+    <text x="522.65" y="213" font-size="14" font-weight="600">51.7 ms</text>
+
+    <text x="40" y="295" font-size="17" font-weight="600">Noninteractive startup</text>
+    <text x="40" y="320" font-size="14" fill="#0f766e">59% less startup time</text>
+    <rect x="280" y="275" width="314.55" height="22" rx="3" fill="#64748b"/>
+    <rect x="280" y="307" width="127.8" height="22" rx="3" fill="#0d9488"/>
+    <text x="604.55" y="291" font-size="14">69.9 ms</text>
+    <text x="417.8" y="323" font-size="14" font-weight="600">28.4 ms</text>
+
+    <text x="40" y="405" font-size="17" font-weight="600">Startup + prompt</text>
+    <text x="40" y="430" font-size="14" fill="#0f766e">20% less total time</text>
+    <rect x="280" y="385" width="494.1" height="22" rx="3" fill="#64748b"/>
+    <rect x="280" y="417" width="394.2" height="22" rx="3" fill="#0d9488"/>
+    <text x="784.1" y="401" font-size="14">109.8 ms</text>
+    <text x="684.2" y="433" font-size="14" font-weight="600">87.6 ms</text>
+
+    <g font-size="13" fill="#526174" text-anchor="middle">
+      <text x="280" y="475">0</text>
+      <text x="370" y="475">20</text>
+      <text x="460" y="475">40</text>
+      <text x="550" y="475">60</text>
+      <text x="640" y="475">80</text>
+      <text x="730" y="475">100</text>
+      <text x="820" y="475">120</text>
+      <text x="550" y="504" font-size="14">Elapsed time (ms)</text>
+    </g>
+
+    <text x="40" y="543" font-size="13" fill="#526174">Before: 10 measured runs. After: 20 measured runs. Three warm-up runs excluded per case.</text>
+    <text x="40" y="565" font-size="13" fill="#526174">Separate local benchmark sessions. Excludes terminal-app startup. Timings vary with system load.</text>
+  </g>
+</svg>
