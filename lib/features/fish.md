@@ -17,6 +17,12 @@ Prompt setup, tool hooks, aliases, generated completions, and plugin startup scr
 load only in interactive shells. Environment variables, runtime paths, and Fisher
 function paths remain available in noninteractive shells.
 
+Starship's left and right prompt renderers use a process-local Git override:
+`core.fsmonitor=false`. This lets Starship use its internal gitoxide status engine
+instead of external Git when filesystem monitoring is enabled. The wrapper appends
+the override to existing Git environment settings. Normal Git commands keep their
+configured filesystem monitoring, and Starship keeps its status indicators.
+
 ## Manage plugins
 
 Declare Fisher plugins in [fish_plugins](../../stow/fish/.config/fish/fish_plugins).
