@@ -1,38 +1,60 @@
 # HTML artifact components
 
-Wrenlo injects a theme stylesheet and a small component script into every HTML artifact before your own code. They work offline inside the sandbox. Your own CSS overrides them.
+Wrenlo adds its artifact kit to every HTML artifact, before your own code: the app's design tokens, the app's font (Inter), element styles, and a few components. Your artifact looks like Wrenlo without any CSS of its own. Everything works offline inside the sandbox, and your own CSS always wins.
 
 Write a full document or just body content. A fragment without `<html>` is wrapped automatically.
 
-A multi-file artifact can split its page into files. `<link rel="stylesheet">`, `<script src>`, `<script type="module">` with relative imports, `<img src>` to `.svg` files, CSS `url()` to `.svg` files, and links to sibling `.html` pages are inlined from the same revision. `fetch()` stays blocked, so keep data in a JavaScript module. See `examples/dashboard/`.
+A multi-file artifact can split its page into files. `<link rel="stylesheet">`, `<script src>`, `<script type="module">` with relative imports, `<img src>` to `.svg` files, CSS `url()` to `.svg` files, and links to sibling `.html` pages are inlined from the same revision. `fetch()` stays blocked, so keep data in a JavaScript module. See `examples/dashboard/`. `examples/style-guide.html` shows everything below.
 
-## Theme tokens
+## Plain HTML
 
-Use these CSS variables instead of hard-coded colors. They switch with light and dark mode.
+Plain elements already have the app's look, so write semantic HTML first and add CSS only for what is special about your page.
 
-| Token                                                      | Meaning                     |
-| ---------------------------------------------------------- | --------------------------- |
-| `--wr-bg`, `--wr-surface`                                  | Page and card backgrounds   |
-| `--wr-text`, `--wr-muted`                                  | Main and secondary text     |
-| `--wr-border`                                              | Borders and grid lines      |
-| `--wr-accent`, `--wr-accent-text`                          | Accent color and text on it |
-| `--wr-success`, `--wr-warning`, `--wr-danger`, `--wr-info` | Status colors               |
-| `--wr-chart-1` … `--wr-chart-6`                            | Chart series colors         |
-| `--wr-font`, `--wr-mono`, `--wr-radius`                    | Fonts and corner radius     |
+- **Text:** 14 px Inter. `h1` to `h4` are 24, 20, 16, and 14 px, like Markdown files in Wrenlo. Headings and paragraphs have no margins; space them with `wr-stack`.
+- **Links, `code`, `pre`, `kbd`, `blockquote`, `hr`, and lists** look as they do in the app.
+- **Tables** have hairline rows, a quiet header, and a hover color, like the app's lists. Wrap one in `<wr-table>` to make it sortable.
+- **Buttons** are soft violet, in the app's sizes. `data-variant="primary"` is solid violet; `"ghost"` and `"danger"` are the other styles. Use `class="wr-button"` to make a link look like a button.
+- **Fields:** text inputs, `select`, and `textarea` are 32 px tall, with the accent focus ring and a red border once the person entered something invalid. Radios, checkboxes, and sliders use the accent.
+- **Labels:** `<label>Name <input></label>` puts the text above a field that fills the line. A label around a radio or checkbox puts the control before its text. `<small>` in a label is a hint.
+- **Forms** stack their parts 16 px apart. A `fieldset` is a panel with a semibold `legend`; a disabled one is dimmed.
 
-## Layout classes
+## Design tokens
 
-| Class                                 | Effect                                           |
-| ------------------------------------- | ------------------------------------------------ |
-| `wr-page`                             | Centered page with comfortable padding           |
-| `wr-stack`                            | Vertical stack with 16px gaps                    |
-| `wr-row`                              | Wrapping horizontal row                          |
-| `wr-grid`                             | Responsive grid of equal columns (14rem minimum) |
-| `wr-card`                             | Bordered surface                                 |
-| `wr-table`                            | Styled `<table>`                                 |
-| `wr-badge`                            | Small pill label                                 |
-| `wr-button`, `data-variant="primary"` | Button styles                                    |
-| `wr-muted`                            | Secondary text color                             |
+Use these CSS variables instead of hard-coded values. They come from the app's own theme, and colors switch with light and dark mode.
+
+| Token                                                                                                        | Meaning                                |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| `--wr-color-bg`, `--wr-color-panel`                                                                          | Page and panel backgrounds             |
+| `--wr-color-hover`, `--wr-color-selected`                                                                    | Hover and selected backgrounds         |
+| `--wr-color-text`, `--wr-color-secondary`, `--wr-color-faint`                                                | Main, secondary, and faint text        |
+| `--wr-color-hairline`, `--wr-color-input`                                                                    | Borders and field borders              |
+| `--wr-color-accent`, `--wr-color-accent-soft`                                                                | Accent and its soft background         |
+| `--wr-color-success`, `--wr-color-warning`, `--wr-color-danger`, `--wr-color-danger-soft`, `--wr-color-info` | Status colors                          |
+| `--wr-color-markdown`, `--wr-color-html`, `--wr-color-svg`, `--wr-color-mermaid`                             | Wrenlo's format colors                 |
+| `--wr-chart-1` … `--wr-chart-6`                                                                              | Chart series colors                    |
+| `--wr-space-2`, `-4`, `-8`, `-12`, `-16`, `-20`, `-24`, `-32`, `-40`, `-48`                                  | Spacing, in pixels                     |
+| `--wr-radius-control`, `--wr-radius-panel`, `--wr-radius-pill`                                               | 6 px, 10 px, and round corners         |
+| `--wr-text-xs`, `-sm`, `-md`, `-lg`, `-xl`                                                                   | 12, 13, 14, 16, and 20 px text         |
+| `--wr-weight-regular`, `-medium`, `-semibold`, `--wr-leading-base`                                           | Font weights and line height           |
+| `--wr-font-sans`, `--wr-font-mono`                                                                           | Inter and the monospace font           |
+| `--wr-shadow-popover`, `--wr-shadow-dialog`                                                                  | Shadows                                |
+| `--wr-size-row`, `-control`, `-button`, `-button-small`, `-chip`, `-icon`, `-icon-small`, `-reading`         | 36, 32, 28, 24, 20, 16, 14, and 720 px |
+
+The first names (`--wr-bg`, `--wr-surface`, `--wr-text`, `--wr-muted`, `--wr-border`, `--wr-accent`, `--wr-radius`, `--wr-font`, `--wr-mono`, and the status colors) still work.
+
+## Classes
+
+| Class        | Effect                                                        |
+| ------------ | ------------------------------------------------------------- |
+| `wr-page`    | Centered page with comfortable padding                        |
+| `wr-stack`   | Vertical stack with 16 px gaps                                |
+| `wr-row`     | Wrapping horizontal row with 12 px gaps                       |
+| `wr-grid`    | Responsive grid of equal columns (14rem minimum)              |
+| `wr-card`    | Panel with a hairline border                                  |
+| `wr-choices` | Option cards for a radio or checkbox group (see Send answers) |
+| `wr-badge`   | Small pill label                                              |
+| `wr-button`  | A link that looks like a button                               |
+| `wr-muted`   | Secondary text color                                          |
 
 ## Components
 
@@ -89,7 +111,7 @@ Arrow keys, Home, and End move between tabs.
 <wr-callout tone="warning" heading="Slow builds">Builds take longer on Mondays.</wr-callout>
 ```
 
-`tone` is `info` (default), `success`, `warning`, or `danger`.
+A note with a bar and a title row in the tone's color, like GitHub's alerts. `tone` is `info` (default), `success`, `warning`, or `danger`, and picks the icon. Without `heading`, the title is the tone's name: Note, Success, Warning, or Danger.
 
 ### `<wr-progress>`
 
@@ -123,6 +145,52 @@ Wrap a table with a `<thead>` to make its columns sortable. Numbers sort numeric
   </table>
 </wr-table>
 ```
+
+## Send answers
+
+A form with `data-wrenlo-submit` sends its answers to the agent when the person submits it in Wrenlo. Wrenlo shows them in its own dialog first, and nothing is sent until the person presses Send. Name each form with up to 64 letters, digits, `-`, or `_`, and give each form on a page its own name.
+
+```html
+<form data-wrenlo-submit="db-choice">
+  <fieldset class="wr-choices">
+    <legend>Which database?</legend>
+    <label
+      ><input type="radio" name="engine" value="d1" required /> D1
+      <small>Built in, no setup</small></label
+    >
+    <label
+      ><input type="radio" name="engine" value="postgres" /> Postgres
+      <small>Hosted elsewhere</small></label
+    >
+  </fieldset>
+  <label>Replicas <input type="number" name="replicas" min="1" max="5" /></label>
+  <label><input type="checkbox" name="backups" /> Daily backups</label>
+  <label>Anything else? <textarea name="notes" maxlength="500"></textarea></label>
+  <button>Send to agent</button>
+</form>
+```
+
+The form as saved is the schema. Wrenlo checks the answers against its fields and sends typed values: `{ "engine": "postgres", "replicas": 2, "backups": true }`.
+
+| Field                                | Answer                                                   |
+| ------------------------------------ | -------------------------------------------------------- |
+| Radio group                          | One of its values, as a string                           |
+| One checkbox                         | `true` or `false`                                        |
+| Several checkboxes with one name     | A list of the checked values, possibly empty             |
+| `<select>`                           | One option value; a list with `multiple`                 |
+| `number`, `range`                    | A number, within `min` and `max`                         |
+| `email`, `url`                       | A string in that format                                  |
+| Other inputs, `<textarea>`, `hidden` | A string, within `minlength`, `maxlength`, and `pattern` |
+
+- An empty field is left out, so an optional question the person skipped has no key. `required` makes a field required.
+- Disabled fields, including those in a disabled `<fieldset>`, are never required. To ask a follow-up only sometimes, disable it in the HTML and enable it from a script.
+- Only fields inside the form element count. Buttons, file inputs, and fields with a `form` attribute send nothing.
+- Scripts may fill fields, including `hidden` ones, before the person submits. A form that a script creates after the page loads cannot send: Wrenlo reads the form from the saved file.
+- If your own submit handler calls `preventDefault()`, Wrenlo leaves that submission alone.
+- Limits: 50 fields, 2000 characters per answer, and 16 KiB in total.
+- **Looks:** the form's submit button is primary unless it sets `data-variant`. `wr-choices` on a `fieldset` turns each `<label>` with a radio or checkbox into a card; a `<small>` in it is the card's second line.
+
+After a send, the form resets to the values in your HTML, like a normal form, and has `data-wrenlo-state="sent"` until the person types again. Its fields fire `input` and `change` after the reset, so your scripts update. Unsent answers survive a reload in the same browser. On share pages and outside Wrenlo, forms cannot send and say so.
 
 ## Complete example
 

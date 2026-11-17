@@ -43,6 +43,8 @@ node "$SKILL_DIR/scripts/wrenlo.mjs" check
 | `.mmd`                                    | A Mermaid diagram; a front-matter `title` becomes the artifact title |
 | `.css` `.js` `.mjs` `.json` `.txt` `.csv` | Text, and sibling files for HTML pages                               |
 
+**Diagrams** are drawn when you save. Wrenlo draws flowcharts and sequence, state, class, ER, and XY charts (`xychart-beta`); other types, such as pie, gantt, or mindmap, show only their source. Put spaces around arrows (`a --> b`, not `a-->b`), and avoid `click`. When the receipt lists `diagramProblems`, fix each named diagram and line, then save again. `read` lists the same problems under `diagrams`.
+
 For HTML, read [references/components.md](references/components.md) first: its theme and components need no setup and follow light and dark mode.
 
 - Use one file, or save a directory and link sibling files (stylesheets, scripts, relative `import`s, SVG images, links between pages). Wrenlo inlines them from the same revision.
@@ -96,6 +98,22 @@ node "$SKILL_DIR/scripts/wrenlo.mjs" notes resolve NOTE_CODE --reply "Added the 
 - `notes list` shows open threads; `--state resolved|all` shows the others. Quotes are rendered text, so match them by meaning.
 - **The loop:** save a revision that addresses the notes, then resolve each with a reply naming the revision. Reply without resolving when you need an answer. Never resolve a note you didn't address.
 - `notes add ARTIFACT_CODE --body … [--quote …] [--file …]` leaves your own note.
+
+## Answers from the user
+
+When you need choices or details from the user, you can ask with a form in an HTML artifact: `<form data-wrenlo-submit="NAME">` with normal fields (see "Send answers" in `references/components.md`). The user fills it in and sends it from Wrenlo, and you get the answers as typed JSON.
+
+```sh
+node "$SKILL_DIR/scripts/wrenlo.mjs" submissions wait ARTIFACT_CODE
+node "$SKILL_DIR/scripts/wrenlo.mjs" submissions list
+node "$SKILL_DIR/scripts/wrenlo.mjs" submissions pickup SUBMISSION_CODE
+```
+
+- **The loop:** save the form, give the user its `url`, then run `submissions wait`. It checks every 3 seconds and returns as soon as answers arrive. It marks them picked up and prints them oldest first, each with its `form`, `revision`, and `answers`.
+- `wait` gives up after 600 seconds, or `--timeout` (at most 3600). On `"timedOut": true`, tell the user and offer to wait again. If your shell stops long commands, pass a `--timeout` below its limit.
+- When you continue earlier work, run `submissions list`: the answers no agent picked up yet, for every artifact or for one code. `--state picked-up|all` shows the others. Run `pickup` for each one you act on, so the user sees that you have them.
+- Answers record the revision the user saw. Answers to an older revision answer that revision's questions.
+- Only the user can send answers. Never fill in or send a form yourself.
 
 ## Share, lifecycle, and folders
 

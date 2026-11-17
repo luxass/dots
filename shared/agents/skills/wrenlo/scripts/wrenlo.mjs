@@ -5,6 +5,7 @@ import { artifactDetails, folder, notes } from "./organize.mjs";
 import { check, files, read, resume, search } from "./read.mjs";
 import { restore, save } from "./save.mjs";
 import { chooseInstance, listInstances } from "./settings.mjs";
+import { submissions } from "./submissions.mjs";
 import { SafeError } from "./transport.mjs";
 
 /**
@@ -51,6 +52,9 @@ async function run({ command, values, positionals }) {
       if (command.startsWith("folder ")) return folder(target, command, positionals, values);
 
       if (command.startsWith("notes ")) return notes(target, command, positionals, values);
+
+      if (command.startsWith("submissions "))
+        return submissions(target, command, positionals, values);
 
       return artifactDetails(target, command, positionals, values);
   }

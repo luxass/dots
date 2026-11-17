@@ -31,6 +31,9 @@ Commands:
   notes reply <note-code> --body text
   notes resolve <note-code> [--reply text]
   notes reopen <note-code>
+  submissions list [artifact-code] [--state waiting|picked-up|all] [--page number]
+  submissions wait [artifact-code] [--timeout seconds]
+  submissions pickup <submission-code>
 Without --origin, the address comes from WRENLO_ORIGIN, this project's choice, the only saved instance, or the default.
 Loopback addresses are local instances and send no credentials. Others use the WRENLO_ACCESS_CLIENT_ID and WRENLO_ACCESS_CLIENT_SECRET service token when both are set, otherwise the browser sign-in from login.
 Omitted metadata is preserved. Only save and restore-revision retry mutations automatically, using the same IDs and serialized request.`;
@@ -39,8 +42,8 @@ const METADATA = ["title", "project", "repository", "tag", "clear-tags"];
 
 /**
  * Each command's options and its number of positional arguments, the command included.
- * Save and rm take more paths after their minimum.
- * @type {Map<string, { options: string[], positionals: number, more?: boolean }>}
+ * Save and rm take more paths after their minimum; `optional` allows one more.
+ * @type {Map<string, { options: string[], positionals: number, more?: boolean, optional?: boolean }>}
  */
 const COMMANDS = new Map([
   ["login", { options: [], positionals: 2 }],
@@ -86,11 +89,14 @@ const COMMANDS = new Map([
   ["notes reply", { options: ["body"], positionals: 3 }],
   ["notes resolve", { options: ["reply"], positionals: 3 }],
   ["notes reopen", { options: [], positionals: 3 }],
+  ["submissions list", { options: ["state", "page"], positionals: 2, optional: true }],
+  ["submissions wait", { options: ["timeout"], positionals: 2, optional: true }],
+  ["submissions pickup", { options: [], positionals: 3 }],
 ]);
 
 /**
  * Parses and checks the command line. Returns the command name, with its subcommand for
- * `folder` and `notes`, such as "folder create".
+ * `folder`, `notes`, and `submissions`, such as "folder create".
  */
 export function parseOptions() {
   let parsed;
@@ -128,6 +134,7 @@ export function parseOptions() {
         quote: { type: "string" },
         state: { type: "string" },
         reply: { type: "string" },
+        timeout: { type: "string" },
       },
     });
   } catch {
@@ -137,8 +144,9 @@ export function parseOptions() {
   const { values, positionals } = parsed;
   const first = positionals[0] ?? "";
 
-  const command =
-    first === "folder" || first === "notes" ? first + " " + (positionals[1] ?? "") : first;
+  const command = ["folder", "notes", "submissions"].includes(first)
+    ? first + " " + (positionals[1] ?? "")
+    : first;
 
   const spec = COMMANDS.get(command);
 
@@ -147,9 +155,8 @@ export function parseOptions() {
   if (
     spec === undefined ||
     Object.keys(values).some((name) => !["origin", ...spec.options].includes(name)) ||
-    (spec.more === true
-      ? positionals.length < spec.positionals
-      : positionals.length !== spec.positionals)
+    positionals.length < spec.positionals ||
+    (spec.more !== true && positionals.length > spec.positionals + (spec.optional === true ? 1 : 0))
   )
     throw new SafeError(USAGE);
 

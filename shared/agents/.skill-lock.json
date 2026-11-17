@@ -267,11 +267,11 @@
       "source": "luxass/wrenlo",
       "sourceType": "github",
       "sourceUrl": "https://github.com/luxass/wrenlo.git",
-      "ref": "3cd7af8b0a4ace0f6a179620ee350d9efddb09e4",
+      "ref": "edf001e7790196e6a8296143aeee137eebdaa264",
       "skillPath": "skills/wrenlo/SKILL.md",
-      "skillFolderHash": "e5b3fcd0b7c840284405159fd9861c869cc180dd",
+      "skillFolderHash": "8b4f40c68fa720b283cd83f240147c63c9c2f8cd",
       "installedAt": "2026-11-10T02:18:58.109Z",
-      "updatedAt": "2026-11-12T04:30:38.670Z"
+      "updatedAt": "2026-11-14T05:29:35.344Z"
     },
     "security-audit": {
       "source": "cloudflare/security-audit-skill",
