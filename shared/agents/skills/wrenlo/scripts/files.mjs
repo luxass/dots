@@ -5,7 +5,7 @@ import { basename, join, relative, sep } from "node:path";
 
 import { SafeError } from "./transport.mjs";
 
-/** The server's MAX_FILE_BYTES (src/lib/artifact.ts); the helper cannot import app code. */
+/** The server's MAX_FILE_BYTES (src/lib/artifacts/artifact.ts); the helper cannot import app code. */
 export const MAX_FILE_BYTES = 1024 * 1024;
 
 /** File extensions for each file format. The first is the default. */

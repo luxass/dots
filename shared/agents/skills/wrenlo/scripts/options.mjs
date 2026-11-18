@@ -27,7 +27,7 @@ Commands:
   folder move <code> --parent-id code|root
   folder remove <code>
   notes list <artifact-code> [--state open|resolved|all]
-  notes add <artifact-code> --body text [--file path] [--quote text] [--revision number]
+  notes add <artifact-code> --body text [--file path] [--lines n|n-m | --quote text] [--revision number]
   notes reply <note-code> --body text
   notes resolve <note-code> [--reply text]
   notes reopen <note-code>
@@ -85,7 +85,7 @@ const COMMANDS = new Map([
   ["folder move", { options: ["parent-id"], positionals: 3 }],
   ["folder remove", { options: [], positionals: 3 }],
   ["notes list", { options: ["state"], positionals: 3 }],
-  ["notes add", { options: ["body", "quote", "revision", "file"], positionals: 3 }],
+  ["notes add", { options: ["body", "quote", "lines", "revision", "file"], positionals: 3 }],
   ["notes reply", { options: ["body"], positionals: 3 }],
   ["notes resolve", { options: ["reply"], positionals: 3 }],
   ["notes reopen", { options: [], positionals: 3 }],
@@ -132,6 +132,7 @@ export function parseOptions() {
         list: { type: "boolean" },
         body: { type: "string" },
         quote: { type: "string" },
+        lines: { type: "string" },
         state: { type: "string" },
         reply: { type: "string" },
         timeout: { type: "string" },

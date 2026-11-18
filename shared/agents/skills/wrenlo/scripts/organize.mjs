@@ -97,6 +97,22 @@ export async function folder(target, command, positionals, values) {
 }
 
 /**
+ * Reads `--lines 13` or `--lines 13-18`: lines of the file in the note's revision, from 1.
+ * @param {string} value
+ * @returns {{ start: number, end: number }}
+ */
+function noteLines(value) {
+  const match = /^(\d+)(?:-(\d+))?$/u.exec(value);
+  const start = Number(match?.[1]);
+  const end = Number(match?.[2] ?? match?.[1]);
+
+  if (!match || start < 1 || end < start || !Number.isSafeInteger(end))
+    throw new SafeError("Use --lines with a line or a range, such as 13 or 13-18.");
+
+  return { start, end };
+}
+
+/**
  * `notes list|add|reply|resolve|reopen`.
  * @param {Target} target
  * @param {string} command
@@ -137,7 +153,12 @@ export async function notes(target, command, positionals, values) {
     const body = { body: values.body };
 
     if (command === "notes add") {
+      if (values.lines !== undefined && values.quote !== undefined)
+        throw new SafeError("Use --lines or --quote, not both.");
+
       if (values.quote !== undefined) body.quote = values.quote;
+
+      if (values.lines !== undefined) body.lines = noteLines(values.lines);
 
       if (values.file !== undefined) body.path = values.file;
 

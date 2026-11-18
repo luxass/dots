@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Service review</title>
+  <main class="wr-page wr-stack wr-gap-24">
+    <header class="wr-row wr-between">
+      <div class="wr-stack wr-gap-4">
+        <h1>Service review</h1>
+        <p class="wr-muted">A sample report for the last seven days.</p>
+      </div>
+      <button type="button" id="open-help">About this report</button>
+    </header>
+
+    <section class="wr-grid wr-grid-4" aria-label="Summary">
+      <div class="wr-card"><wr-stat label="Services" value="3"></wr-stat></div>
+      <div class="wr-card" data-tone="warning">
+        <wr-stat label="Needs review" value="1"></wr-stat>
+      </div>
+      <div class="wr-card" data-tone="success">
+        <wr-stat label="Healthy" value="1"></wr-stat>
+      </div>
+      <div class="wr-card" data-tone="danger">
+        <wr-stat label="Blocked" value="1"></wr-stat>
+      </div>
+    </section>
+
+    <section class="wr-stack wr-gap-8" aria-labelledby="categories-title">
+      <h2 id="categories-title">Categories</h2>
+      <div class="wr-grid wr-grid-4" role="group" aria-label="Filter by status" id="filters">
+        <button type="button" class="wr-filter" aria-pressed="true" data-filter="all">
+          <span class="wr-row wr-between"><span>All services</span><strong>3</strong></span>
+          <small class="wr-muted">Every status</small>
+        </button>
+        <button
+          type="button"
+          class="wr-filter"
+          data-tone="warning"
+          aria-pressed="false"
+          data-filter="warning"
+        >
+          <span class="wr-row wr-between"><span>Needs review</span><strong>1</strong></span>
+          <wr-progress label="Services" value="1" max="3"></wr-progress>
+        </button>
+        <button
+          type="button"
+          class="wr-filter"
+          data-tone="success"
+          aria-pressed="false"
+          data-filter="success"
+        >
+          <span class="wr-row wr-between"><span>Healthy</span><strong>1</strong></span>
+          <wr-progress label="Services" value="1" max="3"></wr-progress>
+        </button>
+        <button
+          type="button"
+          class="wr-filter"
+          data-tone="danger"
+          aria-pressed="false"
+          data-filter="danger"
+        >
+          <span class="wr-row wr-between"><span>Blocked</span><strong>1</strong></span>
+          <wr-progress label="Services" value="1" max="3"></wr-progress>
+        </button>
+      </div>
+    </section>
+
+    <section class="wr-stack" aria-labelledby="services-title">
+      <h2 id="services-title">Services</h2>
+      <div class="wr-toolbar" role="group" aria-label="Search services">
+        <label class="wr-grow"
+          >Search <input type="search" id="search" placeholder="Service or owner"
+        /></label>
+        <button type="button" id="clear-filters">Clear filters</button>
+      </div>
+      <p class="wr-muted" role="status" id="result-count">3 services shown</p>
+      <div class="wr-stack wr-gap-8" id="services">
+        <details class="wr-card wr-disclosure" data-tone="warning" open>
+          <summary>
+            <span class="wr-grow">API</span>
+            <span class="wr-badge" data-tone="warning">Needs review</span>
+          </summary>
+          <div class="wr-grid wr-grid-2">
+            <div class="wr-stack wr-gap-8">
+              <h3>Build latency</h3>
+              <p>Builds take longer on Mondays. Owner: Morgan.</p>
+            </div>
+            <div class="wr-stack wr-gap-8">
+              <h3>Next step</h3>
+              <p>Compare the slow build with the last successful build.</p>
+            </div>
+          </div>
+        </details>
+        <details class="wr-card wr-disclosure" data-tone="success">
+          <summary>
+            <span class="wr-grow">Jobs</span>
+            <span class="wr-badge" data-tone="success">Healthy</span>
+          </summary>
+          <div class="wr-stack wr-gap-8">
+            <p>No failed jobs this week. Owner: Sam.</p>
+            <wr-progress label="Checks passed" value="7" max="7"></wr-progress>
+          </div>
+        </details>
+        <details class="wr-card wr-disclosure" data-tone="danger">
+          <summary>
+            <span class="wr-grow">Web</span>
+            <span class="wr-badge" data-tone="danger">Blocked</span>
+          </summary>
+          <div class="wr-stack wr-gap-8">
+            <p>The latest deploy failed its smoke check. Owner: Alex.</p>
+            <wr-callout tone="danger" heading="Action needed"
+              >Review the failed check before the next deploy.</wr-callout
+            >
+          </div>
+        </details>
+      </div>
+      <div class="wr-card wr-empty" id="empty" hidden>
+        <h3>No matching services</h3>
+        <p>Try another category or clear the search.</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="report-help" aria-labelledby="help-title">
+    <form method="dialog">
+      <h2 id="help-title">About this report</h2>
+      <p>This starter uses sample data. Replace it with your report before saving.</p>
+      <p>All layout and component styles come from Wrenlo. This file contains no CSS.</p>
+      <div class="wr-actions"><button autofocus>Close</button></div>
+    </form>
+  </dialog>
+
+  <script>
+    const search = document.getElementById("search");
+    const filters = [...document.querySelectorAll("#filters button")];
+    const services = [...document.querySelectorAll("#services details")];
+    let category = "all";
+
+    function filterServices() {
+      const query = search.value.trim().toLowerCase();
+      let shown = 0;
+
+      for (const service of services) {
+        service.hidden =
+          (category !== "all" && service.dataset.tone !== category) ||
+          !service.textContent.toLowerCase().includes(query);
+        if (!service.hidden) shown++;
+      }
+
+      document.getElementById("result-count").textContent =
+        `${shown} ${shown === 1 ? "service" : "services"} shown`;
+      document.getElementById("empty").hidden = shown !== 0;
+
+      for (const button of filters) {
+        button.setAttribute("aria-pressed", String(button.dataset.filter === category));
+      }
+    }
+
+    for (const button of filters) {
+      button.addEventListener("click", () => {
+        category = button.dataset.filter;
+        filterServices();
+      });
+    }
+
+    search.addEventListener("input", filterServices);
+    document.getElementById("clear-filters").addEventListener("click", () => {
+      category = "all";
+      search.value = "";
+      filterServices();
+    });
+    document.getElementById("open-help").addEventListener("click", () => {
+      document.getElementById("report-help").showModal();
+    });
+  </script>
+</html>

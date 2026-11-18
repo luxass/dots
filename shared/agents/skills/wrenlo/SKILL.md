@@ -45,7 +45,13 @@ node "$SKILL_DIR/scripts/wrenlo.mjs" check
 
 **Diagrams** are drawn when you save. Wrenlo draws flowcharts and sequence, state, class, ER, and XY charts (`xychart-beta`); other types, such as pie, gantt, or mindmap, show only their source. Put spaces around arrows (`a --> b`, not `a-->b`), and avoid `click`. When the receipt lists `diagramProblems`, fix each named diagram and line, then save again. `read` lists the same problems under `diagrams`.
 
-For HTML, read [references/components.md](references/components.md) first: its theme and components need no setup and follow light and dark mode.
+For HTML, read [references/components.md](references/components.md) first. Use kit controls and theme tokens by default. Custom CSS can define the page's composition and subject-specific visuals. Keep familiar controls consistent without forcing every artifact into the same layout. The kit follows light and dark mode without setup.
+
+Choose the experience before the layout. Use a document for reading, a dashboard for monitoring, and an interactive explanation when changing a parameter reveals how something works. Add controls only when they help the person understand or do something.
+
+For layouts, read [references/layout.md](references/layout.md). Start from [templates/dashboard.html](templates/dashboard.html) when its structure fits. For simulations, timelines, and visual explanations, choose a layout suited to the subject instead.
+
+For sliders, simulations, configurable diagrams, and other interactive explanations, read [references/interactivity.md](references/interactivity.md) before writing the page.
 
 - Use one file, or save a directory and link sibling files (stylesheets, scripts, relative `import`s, SVG images, links between pages). Wrenlo inlines them from the same revision.
 - Nothing loads from the network: CDNs, web fonts, remote images, `fetch()`, and forms are blocked, including `fetch()` of sibling files. Put data in a `.js` module or inline JSON.
@@ -87,7 +93,7 @@ node "$SKILL_DIR/scripts/wrenlo.mjs" download ARTIFACT_CODE --output ./deploy-ti
 
 ## Notes from the user
 
-The user leaves notes on files, sometimes quoting rendered text. Check them before revising, and answer them when done.
+The user leaves notes on files, sometimes quoting rendered text or pointing at lines. Check them before revising, and answer them when done.
 
 ```sh
 node "$SKILL_DIR/scripts/wrenlo.mjs" notes list ARTIFACT_CODE
@@ -95,9 +101,9 @@ node "$SKILL_DIR/scripts/wrenlo.mjs" notes reply NOTE_CODE --body "Which deploy 
 node "$SKILL_DIR/scripts/wrenlo.mjs" notes resolve NOTE_CODE --reply "Added the owner in revision 4."
 ```
 
-- `notes list` shows open threads; `--state resolved|all` shows the others. Quotes are rendered text, so match them by meaning.
+- `notes list` shows open threads; `--state resolved|all` shows the others. Quotes are rendered text, so match them by meaning. A thread with `lines` (`{ start, end }`) is about those lines of the file in the thread's `revision`, counted from 1; its `quote` holds their text, which finds them in later revisions.
 - **The loop:** save a revision that addresses the notes, then resolve each with a reply naming the revision. Reply without resolving when you need an answer. Never resolve a note you didn't address.
-- `notes add ARTIFACT_CODE --body … [--quote …] [--file …]` leaves your own note.
+- `notes add ARTIFACT_CODE --body … [--lines 13-18 | --quote …] [--file …] [--revision …]` leaves your own note. `--lines` takes one line or a range in that revision's file.
 
 ## Answers from the user
 
