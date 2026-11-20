@@ -31,7 +31,33 @@ end
 
 rex.bind(P .. "\\", "pane.split", { direction = "right" })
 rex.bind(P .. "enter", "pane.split", { direction = "down" })
-rex.bind(P .. "x", "pane.close")
+-- Match Herdr: closing the last pane closes its tab.
+rex.action({
+  name = "close_pane_or_tab",
+  title = "Close Pane (or Tab if Last Pane)",
+  category = "Panes",
+  run = function(ctx)
+    local view = rex.session.view({})
+    for _, window in ipairs((view and view.windows) or {}) do
+      local pane_count = 0
+      local contains_pane = false
+      for _, layer in ipairs(window.layers or {}) do
+        for _, block in ipairs(layer.blocks or {}) do
+          pane_count = pane_count + 1
+          contains_pane = contains_pane or block.block_id == ctx.block_id
+        end
+      end
+      if contains_pane then
+        local action = pane_count == 1 and "client.tab.close" or "pane.close"
+        rex.client.queue(action, {})
+        return
+      end
+    end
+    -- Keep regular pane closing if Rex cannot identify the initiating pane.
+    rex.client.queue("pane.close", {})
+  end,
+})
+rex.bind(P .. "x", "close_pane_or_tab")
 rex.bind(P .. "m", "pane.zoom")
 rex.bind(P .. "tab", "pane.focus_next")
 rex.bind(P .. "shift+tab", "pane.focus_previous")

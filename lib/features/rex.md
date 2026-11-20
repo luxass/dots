@@ -36,6 +36,7 @@ Review the diff before committing. Doctor warns, rather than fails, for missing 
 ## Change shortcuts
 
 The prefix is Ctrl+B. Split, zoom, resize, session, and tab shortcuts follow Herdr.
+Prefix+x closes the focused pane. If it is the last pane, it closes the tab.
 Detach shortcuts close the window, not the server. Prefix+v opens Find.
 Herdr Annotate and agent/worktree navigation have no mapped equivalents.
 Do not bind a theme shortcut or add Neovim or Twitch integration.
