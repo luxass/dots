@@ -1,5 +1,30 @@
-if status is-interactive; and command -q starship
-    starship init fish | source
+if status is-interactive; and set -l starship_bin (command -s starship)
+    set -l starship_cache "$__fish_cache_dir/starship_init.fish"
+    # The generated script embeds the command path. The resolved Homebrew path
+    # also includes the Cellar version, so upgrades invalidate the cache.
+    set -l starship_cache_key "# starship-init: $starship_bin "(path resolve -- "$starship_bin")
+    set -l starship_cached_key
+    if test -r "$starship_cache"
+        read starship_cached_key <"$starship_cache"
+    end
+    if test "$starship_cached_key" != "$starship_cache_key"
+        if mkdir -p -- "$__fish_cache_dir"; and set -l starship_tmp (mktemp "$starship_cache.XXXXXX")
+            # Publish only complete output, even when multiple shells start together.
+            if begin
+                printf '%s\n' "$starship_cache_key"
+                command "$starship_bin" init fish --print-full-init
+            end >"$starship_tmp"; and mv -f -- "$starship_tmp" "$starship_cache"
+                set starship_cached_key "$starship_cache_key"
+            else
+                rm -f -- "$starship_tmp"
+            end
+        end
+    end
+    if test "$starship_cached_key" = "$starship_cache_key"
+        source "$starship_cache"
+    else
+        command "$starship_bin" init fish | source
+    end
 
     # Starship 1.27.0 forces external Git when core.fsmonitor=true:
     # https://github.com/starship/starship/blob/v1.27.0/src/context/git_repo.rs#L61-L74
@@ -20,7 +45,7 @@ if status is-interactive; and command -q starship
     end
 
     # Keep Starship's exit-status capture, flags, and transient prompts intact.
-    set -l starship_render_command (string escape -- (command -s starship))' prompt'
+    set -l starship_render_command (string escape -- "$starship_bin")' prompt'
     functions fish_prompt fish_right_prompt |
         string replace --all -- "$starship_render_command" "__starship_prompt_without_fsmonitor $starship_render_command" |
         source
