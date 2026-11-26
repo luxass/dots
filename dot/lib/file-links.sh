@@ -16,6 +16,45 @@ sources_file_entries() {
   awk '{ sub(/#.*/, ""); gsub(/[[:space:]]/, ""); if (length) print }' "$1" | sort -u
 }
 
+# lexical_path PATH: print absolute PATH with ".", "..", and repeated slashes
+# removed, without reading the disk, so it also works for missing files.
+lexical_path() {
+  local part components=() parts=() count=0 index result=""
+
+  IFS=/ read -r -a components <<<"$1"
+  for part in ${components[@]+"${components[@]}"}; do
+    case "$part" in
+      '' | .) ;;
+      ..)
+        if [[ "$count" -gt 0 ]]; then
+          count=$((count - 1))
+        fi
+        ;;
+      *)
+        parts[count]="$part"
+        count=$((count + 1))
+        ;;
+    esac
+  done
+  for ((index = 0; index < count; index++)); do
+    result+="/${parts[index]}"
+  done
+  printf '%s\n' "${result:-/}"
+}
+
+# link_points_into_repo LINK: LINK's target, resolved lexically, is inside the
+# repository. The target does not need to exist.
+link_points_into_repo() {
+  local value target
+
+  value="$(readlink "$1")" || return 1
+  case "$value" in
+    /*) target="$value" ;;
+    *) target="$(dirname "$1")/$value" ;;
+  esac
+  [[ "$(lexical_path "$target")" == "$DOTFILES_DIR"/* ]]
+}
+
 # backup_path PATH: move PATH into this run's backup directory.
 backup_path() {
   local target="$1" dest

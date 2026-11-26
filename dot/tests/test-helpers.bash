@@ -46,6 +46,17 @@ reset_components_for_test() {
   DOT_SKIP_COMPONENTS=""
 }
 
+# relative_path_to_root DIR: print one "../" per component of DIR, so that
+# "$(relative_path_to_root DIR)${target#/}" is a relative link from DIR to target.
+relative_path_to_root() {
+  local dir="$1" up=""
+  while [[ "$dir" != / ]]; do
+    up+="../"
+    dir="$(dirname "$dir")"
+  done
+  printf '%s\n' "$up"
+}
+
 # assert_fails COMMAND...: fail the test when the command succeeds. A bare
 # `! command` never fails a bats test, because errexit ignores negated commands.
 assert_fails() {
