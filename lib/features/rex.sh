@@ -12,7 +12,24 @@ rex_cli() {
   fi
 }
 
-rex_app_running() { pgrep -qf "$REX_APP_PATH/Contents/MacOS/"; }
+# Print each installed Rex app, one path per line, regardless of its name.
+rex_installed_apps() {
+  local app
+
+  for app in /Applications/*.app "$HOME"/Applications/*.app; do
+    [[ -d "$app" ]] || continue
+    [[ "$(plutil -extract CFBundleIdentifier raw -o - "$app/Contents/Info.plist" 2>/dev/null)" == "$REX_BUNDLE_ID" ]] || continue
+    printf '%s\n' "$app"
+  done
+}
+
+# Launch Services returns an empty result when no Rex app is running.
+rex_app_running() {
+  local app
+
+  app="$(lsappinfo find "bundleID=$REX_BUNDLE_ID" 2>/dev/null)" || return 1
+  [[ -n "$app" ]]
+}
 
 # Print "BUILD URL" for the newest appcast entry with a download.
 rex_latest_release() {
@@ -62,9 +79,9 @@ rex_install_dmg() {
   elif ! hdiutil attach -nobrowse -readonly -noautoopen -quiet -mountpoint "$work/mount" "$work/rex.dmg"; then
     print_error "Failed to open the Rex disk image"
   else
-    app="$work/mount/${REX_APP_PATH##*/}"
+    app="$work/mount/${dest##*/}"
     if [[ ! -d "$app" ]]; then
-      print_error "The Rex disk image has no ${REX_APP_PATH##*/}"
+      print_error "The Rex disk image has no ${dest##*/}"
     elif ! rex_verify_app "$app"; then
       print_error "Rex failed signature, notarization, or team checks; not installing"
     elif ditto "$app" "$dest.new" && mv "$dest.new" "$dest"; then
@@ -81,10 +98,12 @@ rex_install_dmg() {
 
 # Install Rex when it is missing. Existing installs update themselves.
 rex_install() {
-  local release build url
+  local apps app release build url
 
-  if [[ -d "$REX_APP_PATH" ]]; then
-    print_success "Rex is installed (build $(defaults read "$REX_APP_PATH/Contents/Info" CFBundleVersion 2>/dev/null || echo unknown))"
+  apps="$(rex_installed_apps)"
+  if [[ -n "$apps" ]]; then
+    read -r app <<<"$apps"
+    print_success "Rex is installed (build $(defaults read "$app/Contents/Info" CFBundleVersion 2>/dev/null || echo unknown))"
     return 0
   fi
   confirm "Install Rex (Bleeding Edge) from Superlogical?" y || {
@@ -97,7 +116,7 @@ rex_install() {
   }
   read -r build url <<<"$release"
   print_info "Installing Rex build $build"
-  rex_install_dmg "$url" "$REX_APP_PATH" || return 1
+  rex_install_dmg "$url" "$REX_INSTALL_PATH" || return 1
   print_success "Rex build $build installed"
   print_info "Launch Rex once to install its CLI, then run 'dot stow'"
 }
@@ -344,7 +363,7 @@ rex_setup_agents() {
 rex_poststow() {
   local cli
 
-  if [[ ! -d "$REX_APP_PATH" ]]; then
+  if [[ -z "$(rex_installed_apps)" ]]; then
     print_info "Rex is not installed; run 'dot init' to install it"
     return 0
   fi
@@ -370,11 +389,16 @@ rex_poststow() {
 }
 
 rex_check() {
-  local cli
+  local apps cli
 
-  if [[ ! -d "$REX_APP_PATH" ]]; then
+  apps="$(rex_installed_apps)"
+  if [[ -z "$apps" ]]; then
     print_warning "Rex is not installed; run 'dot init' to install it"
     return 0
+  fi
+  if [[ "$apps" == *$'\n'* ]]; then
+    print_warning "Multiple copies of Rex are installed:"
+    printf '%s\n' "$apps" >&2
   fi
   if ! cli="$(rex_cli)"; then
     print_error "Rex CLI is missing; launch Rex once, then run 'dot stow'"

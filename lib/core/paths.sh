@@ -21,7 +21,7 @@ readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-24}"
 readonly NPM_RUNTIME_VERSION="${NPM_RUNTIME_VERSION:-12}"
 readonly CUA_DRIVER_INSTALL_URL="https://cua.ai/driver/install.sh"
 readonly CUA_DRIVER_APP="/Applications/CuaDriver.app"
-readonly REX_APP_PATH="/Applications/Rex Beta.app"
+readonly REX_INSTALL_PATH="/Applications/Rex Beta.app"
 readonly REX_INSTALLATION_URL="https://www.superlogical.com/rex/docs/installation"
 # Rex is not in Homebrew. dot installs it once from the Bleeding Edge
 # (snapshot) appcast; after that, the app's own updater keeps it current.

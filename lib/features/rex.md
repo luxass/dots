@@ -3,7 +3,9 @@
 Rex is not installed through Homebrew. Dot init offers a missing-app installation from
 the Bleeding Edge appcast defined in [paths.sh](../core/paths.sh).
 It validates the signature, team ID, bundle ID, and notarization before installing.
-It never replaces an existing app. Rex updates itself. Dot never launches or restarts it.
+Dot looks for Rex by its bundle ID, the identifier inside the app, in `/Applications`
+and `~/Applications`. The app name does not matter. Dot doctor warns if it finds more than one copy.
+Dot never replaces an existing app. Rex updates itself. Dot never launches or restarts it.
 The [official guide](https://www.superlogical.com/rex/docs/installation) is the fallback.
 
 ## Link configuration and themes
