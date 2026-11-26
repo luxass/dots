@@ -1,13 +1,10 @@
-# Optional work-specific packages.
+# Work-only formulas. dot init asks before installing them.
+# Casks belong in packages/bundle.
 #
 # Add entries with:
-#   dot brew add NAME [--cask|--formula] --group work
+#   dot package add NAME brew work
 
 brew "helm"
 brew "k9s"
 brew "kind"
 brew "kubernetes-cli"
-
-cask "git-credential-manager"
-
-cask "slack"

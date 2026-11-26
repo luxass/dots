@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# dot: set up, update, and check this Mac from the dotfiles repository.
+# This file finds the repository, loads dot/lib/dot-lib.sh, and runs dot_main
+# (dot/lib/dot-main.sh). Sourcing it loads every function and runs nothing,
+# which the bats tests use. Runs on the macOS system Bash (3.2). See dot/README.md.
+
+# Load once per shell, even when sourced again.
+if [[ -z "${DOT_LIB_LOADED:-}" ]]; then
+  # realpath follows the dot link in ~/.local/bin back to dot/bin.
+  DOT_ROOT="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/.." && pwd)"
+  DOTFILES_DIR="$(cd "$DOT_ROOT/.." && pwd)"
+  readonly DOT_ROOT DOTFILES_DIR
+
+  # shellcheck source=../lib/dot-lib.sh
+  source "$DOT_ROOT/lib/dot-lib.sh"
+  DOT_LIB_LOADED=1
+fi
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  set -euo pipefail
+  dot_main "$@"
+fi

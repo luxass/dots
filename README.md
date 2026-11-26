@@ -4,25 +4,21 @@ Personal dotfiles for macOS on Apple Silicon, managed with GNU Stow and the `dot
 
 ## Setup
 
-Clone the repository and run setup:
+Install [Homebrew](https://brew.sh) first. Then clone the repository, run setup,
+and put `dot` on PATH:
 
 ```fish
 git clone git@github.com:luxass/dots.git ~/dots
 cd ~/dots
-./dot init
+./dot/bin/dot init
+./dot/bin/dot link
 ```
 
-Setup installs packages, links configuration, and sets up runtimes and hooks.
-Choose which optional Homebrew bundles to enable when prompted.
-`--yes` does not answer unset bundle choices.
+Setup installs packages, links configuration, and sets up runtimes and hooks,
+one component at a time. It asks whether to install the work packages.
+`dot link` creates `~/.local/bin/dot`, and Fish puts `~/.local/bin` on PATH.
 
 Restart the terminal after setup changes the login shell to Fish.
-If `dot` is not on PATH, run this once in Fish:
-
-```fish
-fish_add_path ~/dots
-```
-
 Rust setup is optional. Setup offers rustup from `https://sh.rustup.rs` if missing.
 Fish loads `~/.cargo/env.fish` when present. `dot doctor` checks for rustup.
 Authenticate apps separately. Credentials are not part of these dotfiles.
@@ -30,37 +26,39 @@ Authenticate apps separately. Credentials are not part of these dotfiles.
 ## Everyday commands
 
 ```fish
-dot update           # Pull changes, offer upgrades, and relink
-dot doctor           # Diagnose the setup, including a secret scan
-dot stow             # Repair links and install missing plugin dependencies
-dot brew check       # Check enabled packages and bundle choices
-dot brew unmanaged   # Find installed packages not declared here
-dot help             # All commands and global options
-dot brew help        # Package and bundle commands
-dot config help      # Machine-local preferences
+dot update                  # Pull, then update every component
+dot update --only rex,pi    # Update some components
+dot doctor                  # Check every component, including a secret scan
+dot components              # What dot manages, in run order
+dot stow                    # Re-link the Stow packages
+dot package add ripgrep     # Install a package and add it to packages/bundle
+dot check-packages          # Report missing packages
+dot help                    # All commands and global options
 ```
 
+`init`, `update`, and `doctor` take `--only` and `--skip` with component names.
+`init` and `update` also take `--dry-run`.
+`dot update` upgrades every outdated Homebrew package without asking.
 `dot stow` backs up blocking files before replacing them.
-See [managed links](lib/features/stow.md) for backup locations and recovery notes.
-Bundle selection never installs or uninstalls packages.
-`dot brew remove` changes declarations only, not installed packages.
+See [managed links](dot/lib/components/stow.md) for backup locations and recovery notes.
+[dot/README.md](dot/README.md) explains how the CLI works.
 
-## Feature references
+## Component references
 
-Instructions live beside each feature's implementation:
+Instructions live beside each component's implementation:
 
-- [Homebrew packages and preferences](lib/features/homebrew.md)
-- [Managed links and local state](lib/features/stow.md)
-- [Git identities and signing](lib/features/git.md)
-- [Fish and plugins](lib/features/fish.md)
-- [JavaScript runtimes and install policy](lib/features/pnpm.md)
-- [Shared Agent Skills](lib/features/skills.md)
-- [Pi and Plannotator](lib/features/pi.md)
-- [Cua Driver](lib/features/cua.md)
-- [OpenCode](lib/features/opencode.md)
-- [Herdr](lib/features/herdr.md)
-- [Rex](lib/features/rex.md)
-- [GitHub CLI](lib/features/gh.md)
+- [Homebrew packages](dot/lib/components/packages.md)
+- [Managed links and local state](dot/lib/components/stow.md)
+- [Git identities and signing](dot/lib/components/git.md)
+- [Fish and plugins](dot/lib/components/fish.md)
+- [JavaScript runtimes and install policy](dot/lib/components/pnpm.md)
+- [Shared Agent Skills](dot/lib/components/skills.md)
+- [Pi and Plannotator](dot/lib/components/pi.md)
+- [Cua Driver](dot/lib/components/cua.md)
+- [OpenCode](dot/lib/components/opencode.md)
+- [Herdr](dot/lib/components/herdr.md)
+- [Rex](dot/lib/components/rex.md)
+- [GitHub CLI](dot/lib/components/gh.md)
 
 ## Contributing safely
 
