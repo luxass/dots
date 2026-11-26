@@ -38,6 +38,12 @@ If the skill or hook is missing or outdated, the same step offers rex skill setu
 This writes the shared skill stub and ~/.claude/settings.json, which are tracked.
 Review the diff before committing. Doctor warns, rather than fails, for missing setup.
 
+The rex step also adds disable-model-invocation: true to the skill stub's front matter.
+Agents then load the Rex skill only when asked, for example with /skill:rex.
+Rex reports the edited stub as outdated, so doctor asks Rex about a copy without
+that line in a temporary HOME. After rex skill setup rewrites the stub, the step adds
+the line again.
+
 ## Change shortcuts
 
 The prefix is Ctrl+B. Split, zoom, resize, session, and tab shortcuts follow Herdr.
