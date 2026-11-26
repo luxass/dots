@@ -4,7 +4,9 @@
 # cmd_<command>_usage from the same file.
 
 # Every command and its one-line description, for `dot help`.
-readonly DOT_COMMAND_SUMMARIES=(
+# Arrays are assigned first and marked readonly after: on Bash 3.2,
+# `readonly NAME=(...)` inside a function (bats setup) makes a local.
+DOT_COMMAND_SUMMARIES=(
   "init|Install everything on this Mac (every component's install step)"
   "update|Pull the repository, then update every component"
   "doctor|Check every component and report problems"
@@ -23,6 +25,7 @@ readonly DOT_COMMAND_SUMMARIES=(
   "edit|Open the dotfiles repository in \$EDITOR"
   "help|Show help for dot or one command"
 )
+readonly DOT_COMMAND_SUMMARIES
 
 # command_function NAME: print the function for a command (init -> cmd_init), or fail.
 command_function() {

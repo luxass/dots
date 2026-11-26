@@ -4,7 +4,8 @@
 
 readonly STOW_DIR="$DOTFILES_DIR/stow"
 # Native Stow packages. Keep runtime data outside these deployment trees.
-readonly STOW_PACKAGES=(fish git ghostty starship runtime-policy pi opencode gh herdr rex plannotator tinycast claude codex)
+STOW_PACKAGES=(fish git ghostty starship runtime-policy pi opencode gh herdr rex plannotator tinycast claude codex)
+readonly STOW_PACKAGES
 # Brewfiles: packages/bundle (base) and packages/bundle.work (work, formulas only).
 readonly PACKAGES_DIR="${DOT_PACKAGES_DIR:-$DOTFILES_DIR/packages}"
 readonly STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
@@ -32,13 +33,14 @@ readonly REX_BUNDLED_CLI="$HOME/Library/Application Support/com.superlogical.rex
 readonly REX_DEFAULTS_DOMAIN="com.superlogical.rex"
 readonly REX_SETTINGS_FILE="$STOW_DIR/rex/.config/rex/macos-defaults.conf"
 # Managed pnpm globals as package:command. OpenCode is installed through Homebrew.
-readonly PNPM_GLOBAL_PACKAGES=(
+PNPM_GLOBAL_PACKAGES=(
   "sfw:sfw"
   "npm@${NPM_RUNTIME_VERSION}:npm"
   "@earendil-works/pi-coding-agent:pi"
   "cf:cf"
   "coderabbit:coderabbit"
 )
+readonly PNPM_GLOBAL_PACKAGES
 readonly SKILLS_DIR="$DOTFILES_DIR/shared/agents/skills"
 readonly SKILLS_LOCK="$DOTFILES_DIR/shared/agents/.skill-lock.json"
 readonly SKILLS_STATE_LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-lock.json"

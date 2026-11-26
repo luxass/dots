@@ -8,7 +8,7 @@
 # so a tool cannot be installed by init and then forgotten by update or doctor.
 
 # Run order for every phase. Later components may use what earlier ones installed.
-readonly DOT_COMPONENT_ORDER=(
+DOT_COMPONENT_ORDER=(
   homebrew # Homebrew itself
   packages # packages/bundle, and packages/bundle.work when you confirm
   stow     # Stow packages; before pnpm, so its install policy applies
@@ -24,6 +24,7 @@ readonly DOT_COMPONENT_ORDER=(
   herdr    # Herdr plugins
   rex      # Rex app (missing installs only) and its configuration
 )
+readonly DOT_COMPONENT_ORDER
 
 # Names defined so far, in definition order. load_components defines them in run order.
 DOT_COMPONENTS=()

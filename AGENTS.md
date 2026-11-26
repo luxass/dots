@@ -33,6 +33,8 @@ component scripts in `dot/lib/components/*.md`.
   functions, which the bats tests use. `dot link` puts `~/.local/bin/dot` on PATH.
 - Target macOS system Bash 3.2. Do not use associative arrays, `mapfile`, `${x,,}`,
   `[[ -v ]]`, or globstar. Guard empty-array expansion under `set -u`.
+  Assign arrays, then mark them `readonly NAME`: on Bash 3.2, `readonly NAME=(...)` inside a
+  function makes a local array. Test with `/bin/bash`, not Homebrew's Bash.
   Runtime code must not require Node.js, Python, Ruby, or another managed language runtime.
 - Everything dot sets up is a component. `dot/lib/components/<name>.sh` calls
   `define_component NAME required|optional "Title"` and defines `component_<name>_install`
