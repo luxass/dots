@@ -25,6 +25,14 @@ instead of external Git when filesystem monitoring is enabled. The wrapper appen
 the override to existing Git environment settings. Normal Git commands keep their
 configured filesystem monitoring, and Starship keeps its status indicators.
 
+## Measure startup
+
+Run dot benchmark-shell after changing conf.d or adding a plugin. It starts Fish
+ten times as an interactive shell and ten times as a noninteractive shell, then
+prints the fastest, median, mean, and slowest startup. Use --runs to change the
+count. If a change makes startup slower, find the slow commands with
+fish --profile-startup /tmp/fish-startup.txt -i -c exit.
+
 ## Manage plugins
 
 Declare Fisher plugins in [fish_plugins](../../../stow/fish/.config/fish/fish_plugins).
