@@ -20,6 +20,7 @@ DOT_COMMAND_SUMMARIES=(
   "hooks|Point Git at .githooks and set up repository filters"
   "secret-scan|Scan tracked and unignored files for secrets"
   "lint|Run shellcheck, shfmt, and the bats tests"
+  "benchmark-shell|Time Fish startup, interactive and non-interactive"
   "link|Put dot on PATH with a symlink in ~/.local/bin"
   "unlink|Remove the dot symlink that link created"
   "edit|Open the dotfiles repository in \$EDITOR"
