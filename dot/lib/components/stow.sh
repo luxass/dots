@@ -67,9 +67,90 @@ stow_remove() {
   print_success "Dotfiles unlinked"
 }
 
+# stow_uncommitted_changes: print `git status --short` lines for the Stow
+# packages. An installer that edits its configuration writes through the link
+# into the repository. Untracked files count too, because Stow links them into HOME.
+stow_uncommitted_changes() {
+  repo_is_git || return 0
+  repo_git status --short --untracked-files=all -- stow
+}
+
+# stow_link_directories: print the HOME directories that hold links dot makes:
+# the parents of every Stow target, plus the dot and shared skills links.
+stow_link_directories() {
+  local source target
+  {
+    while IFS= read -r -d '' source; do
+      target="$(stow_target "$source")"
+      printf '%s\n' "${target%/*}"
+    done < <(stow_sources)
+    printf '%s\n' "$HOME/.local/bin" "$HOME/.agents" "$HOME/.claude" "${SKILLS_STATE_LOCK%/*}"
+  } | sort -u
+}
+
+# stow_broken_links: print links in those directories, and one level below
+# them, that point into the repository at a file that no longer exists. A
+# rename or deletion in the repository leaves these behind, and GNU Stow's
+# simulate mode does not report them.
+stow_broken_links() {
+  local dir link dirs=()
+
+  while IFS= read -r dir; do
+    if [[ -d "$dir" ]]; then
+      dirs+=("$dir")
+    fi
+  done < <(stow_link_directories)
+  [[ "${#dirs[@]}" -gt 0 ]] || return 0
+
+  while IFS= read -r -d '' link; do
+    [[ -e "$link" ]] && continue
+    if link_points_into_repo "$link"; then
+      printf '%s\n' "$link"
+    fi
+  done < <(find "${dirs[@]}" -maxdepth 2 -name node_modules -prune -o -type l -print0 2>/dev/null) | sort -u
+}
+
+# broken_link_fix LINK: print the command that replaces or removes a broken link.
+broken_link_fix() {
+  case "$1" in
+    "$HOME/.local/bin/dot") printf 'dot link\n' ;;
+    "$HOME/.agents/skills" | "$HOME/.agents/.skill-lock.json" | "$HOME/.claude/skills" | "$SKILLS_STATE_LOCK")
+      printf 'dot init --only skills\n'
+      ;;
+    *) printf 'dot stow\n' ;;
+  esac
+}
+
+# stow_check_working_tree: warn about uncommitted package changes and broken
+# links into the repository. Warnings only: neither stops dot from working.
+stow_check_working_tree() {
+  local changes broken link
+
+  changes="$(stow_uncommitted_changes)" || changes=""
+  if [[ -n "$changes" ]]; then
+    print_warning "Uncommitted changes in Stow packages; review them before an installer's edit lands in Git:"
+    indent <<<"$changes" >&2
+  else
+    print_success "No uncommitted changes in Stow packages"
+  fi
+
+  broken="$(stow_broken_links)" || broken=""
+  if [[ -n "$broken" ]]; then
+    print_warning "Links into the repository point at missing files:"
+    while IFS= read -r link; do
+      printf '  %s (fix: %s)\n' "$(pretty_path "$link")" "$(broken_link_fix "$link")" >&2
+    done <<<"$broken"
+  else
+    print_success "No broken links into the repository"
+  fi
+}
+
 component_stow_install() { stow_apply; }
 
-component_stow_check() { stow_check; }
+component_stow_check() {
+  stow_check || return 1
+  stow_check_working_tree
+}
 
 stow_check() {
   local plan failed=0

@@ -20,6 +20,16 @@ dot init --only skills
 Dot doctor exits 1 only when a required component's check fails.
 Stow and skills are required components.
 
+Doctor also warns about two problems that GNU Stow's simulate mode does not report:
+
+- Uncommitted or untracked files under stow/. An installer that edits its
+  configuration writes through the link into the repository, and Stow links
+  untracked files into HOME. Review them with git -C ~/dots status -- stow.
+- Links into the repository that point at missing files, for example after a
+  rename. Doctor names the fix for each link: dot stow, dot link, or
+  dot init --only skills. It looks in the directories that hold managed links
+  and one level below them.
+
 Before replacing a blocking path, the stow step moves it to the backups directory under
 the local dot state directory. The default is ~/.local/state/dot/backups/<timestamp>/.
 If XDG_STATE_HOME is set, backups use its dot/backups/ directory instead.
