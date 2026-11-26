@@ -19,7 +19,7 @@ DOT_COMMAND_SUMMARIES=(
   "unstow|Remove the Stow links and the shared skills links"
   "hooks|Point Git at .githooks and set up repository filters"
   "secret-scan|Scan tracked and unignored files for secrets"
-  "lint|Run shellcheck, shfmt, and the bats tests"
+  "lint|Run shellcheck, shfmt, the bats tests, and the Pi extension tests"
   "benchmark-shell|Time Fish startup, interactive and non-interactive"
   "link|Put dot on PATH with a symlink in ~/.local/bin"
   "unlink|Remove the dot symlink that link created"

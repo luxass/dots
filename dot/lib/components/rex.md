@@ -44,6 +44,26 @@ Rex reports the edited stub as outdated, so doctor asks Rex about a copy without
 that line in a temporary HOME. After rex skill setup rewrites the stub, the step adds
 the line again.
 
+## Transfer a Pi session to another host
+
+In Pi, run /transfer, or /transfer HOST for a host from rex hosts list.
+Pi asks where on the host to continue: a new Rex session, or a new window in an
+existing one. Then it shows what moves and asks to confirm.
+
+The host must be a Mac with these dotfiles and the same project under its home
+folder. For a Git repository, push HEAD first. The host's checkout must not have
+uncommitted changes.
+
+Transfer moves the conversation, uncommitted changes to tracked files, and untracked
+files that Git does not ignore. Ignored files, such as .env and node_modules, stay here.
+On the host, the start script fetches the commit, checks out the branch or fast-forwards it,
+applies the work, and starts pi --fork in the same folder. Your session here stays open.
+
+Transfer uses rex cp and rex run, not SSH. The bundle goes to ~/.pi-transfer-ID on the host.
+The script keeps the conversation in ~/.cache/pi-transfer/ and removes the bundle.
+If a step fails, the script says why, opens a shell in the project, and keeps the bundle.
+The extension is [rex-transfer](../../../stow/pi/.pi/agent/extensions/rex-transfer/).
+
 ## Change shortcuts
 
 The prefix is Ctrl+B. Split, zoom, resize, session, and tab shortcuts follow Herdr.
