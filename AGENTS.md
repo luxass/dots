@@ -2,47 +2,58 @@
 
 Personal macOS development environment managed with GNU Stow and the `dot` CLI.
 This repo is public-facing. [README.md](README.md) is the entry point.
-Operational references live beside feature scripts in `lib/features/*.md`.
+[dot/README.md](dot/README.md) explains the CLI. Operational references live beside
+component scripts in `dot/lib/components/*.md`.
 
 ## WHERE TO LOOK
 
 | Task | Source | Reference |
 | --- | --- | --- |
-| Setup and update flow | `lib/commands/setup.sh` | [README](README.md) |
-| Packages and bundle choices | `lib/features/homebrew.sh`, `lib/commands/brew.sh`, `packages/bundle*` | [Homebrew](lib/features/homebrew.md) |
-| Paths, versions, feature order | `lib/core/paths.sh` | |
-| Managed links | `lib/features/stow.sh`, `lib/core/fs.sh` | [Stow](lib/features/stow.md) |
-| Runtime policy and global tools | `lib/features/pnpm.sh`, `stow/runtime-policy/` | [pnpm](lib/features/pnpm.md) |
-| Public Git configuration | `stow/git/.config/git/config`, `lib/features/git.sh` | [Git](lib/features/git.md) |
-| GitHub CLI | `stow/gh/.config/gh/`, `lib/features/gh.sh` | [gh](lib/features/gh.md) |
-| Shell, prompt, terminal | `stow/fish/`, `stow/starship/`, `stow/ghostty/` | [Fish](lib/features/fish.md) |
-| Rex configuration | `stow/rex/.config/rex/`, `lib/features/rex.sh` | [Rex](lib/features/rex.md) |
-| Herdr plugins and shortcuts | `stow/herdr/.config/herdr/`, `lib/features/herdr.sh` | [Herdr](lib/features/herdr.md) |
-| OpenCode configuration and plugins | `stow/opencode/.config/opencode/`, `lib/features/opencode.sh` | [OpenCode](lib/features/opencode.md) |
-| Pi customizations and reviews | `stow/pi/.pi/agent/`, `stow/plannotator/` | [Pi](lib/features/pi.md) |
-| Cua Driver | `lib/features/cua.sh` | [Cua](lib/features/cua.md) |
-| Shared Agent Skills | `shared/agents/`, `lib/features/skills.sh` | [Skills](lib/features/skills.md) |
-| One-time migrations | `lib/core/migrations.sh` | |
+| Setup, update, and doctor flow | `dot/commands/{init,update,doctor}.sh`, `dot/lib/component-runner.sh` | [dot](dot/README.md) |
+| Component order and selection | `dot/lib/component-registry.sh` | [dot](dot/README.md) |
+| Packages | `dot/lib/components/packages.sh`, `dot/lib/package-*.sh`, `dot/commands/package.sh`, `packages/bundle*` | [Packages](dot/lib/components/packages.md) |
+| Paths and versions | `dot/lib/paths.sh` | |
+| Managed links | `dot/lib/components/stow.sh`, `dot/lib/file-links.sh` | [Stow](dot/lib/components/stow.md) |
+| Runtime policy and global tools | `dot/lib/components/pnpm.sh`, `stow/runtime-policy/` | [pnpm](dot/lib/components/pnpm.md) |
+| Public Git configuration | `stow/git/.config/git/config`, `dot/lib/components/git.sh` | [Git](dot/lib/components/git.md) |
+| GitHub CLI | `stow/gh/.config/gh/`, `dot/lib/components/gh.sh` | [gh](dot/lib/components/gh.md) |
+| Shell, prompt, terminal | `stow/fish/`, `stow/starship/`, `stow/ghostty/` | [Fish](dot/lib/components/fish.md) |
+| Rex configuration | `stow/rex/.config/rex/`, `dot/lib/components/rex.sh` | [Rex](dot/lib/components/rex.md) |
+| Herdr plugins and shortcuts | `stow/herdr/.config/herdr/`, `dot/lib/components/herdr.sh` | [Herdr](dot/lib/components/herdr.md) |
+| OpenCode configuration and plugins | `stow/opencode/.config/opencode/`, `dot/lib/components/opencode.sh` | [OpenCode](dot/lib/components/opencode.md) |
+| Pi customizations and reviews | `stow/pi/.pi/agent/`, `stow/plannotator/` | [Pi](dot/lib/components/pi.md) |
+| Cua Driver | `dot/lib/components/cua.sh` | [Cua](dot/lib/components/cua.md) |
+| Shared Agent Skills | `shared/agents/`, `dot/lib/components/skills.sh` | [Skills](dot/lib/components/skills.md) |
+| One-time migrations | `dot/lib/migrations.sh` | |
+| Tests | `dot/**/*.bats`, `dot/tests/test-helpers.bash` | [dot](dot/README.md) |
 
 ## CLI DESIGN
 
-- `dot` sources `lib/core/*.sh`, `lib/features/*.sh`, and `lib/commands/*.sh`, then calls `main`.
+- `dot/bin/dot` loads `dot/lib/dot-lib.sh` and runs `dot_main`. Sourcing it only defines
+  functions, which the bats tests use. `dot link` puts `~/.local/bin/dot` on PATH.
 - Target macOS system Bash 3.2. Do not use associative arrays, `mapfile`, `${x,,}`,
   `[[ -v ]]`, or globstar. Guard empty-array expansion under `set -u`.
   Runtime code must not require Node.js, Python, Ruby, or another managed language runtime.
-- Add a feature as `lib/features/<name>.sh` and register it in `FEATURES` in `lib/core/paths.sh`.
-  Remove both to remove a feature. Put useful operating instructions beside it as `<name>.md`.
-- Features expose `<name>_prestow`, `<name>_poststow`, `<name>_deps`, `<name>_unstow`,
-  or `<name>_check`. `run_hook` calls them in `FEATURES` order.
-  Doctor prints one section per `_check`.
-- Add commands as `cmd_<name>` in `lib/commands/`. `dot foo-bar` runs `cmd_foo_bar`.
-  Update `cmd_help` and the `dot.fish` completions when adding a command.
+- Everything dot sets up is a component. `dot/lib/components/<name>.sh` calls
+  `define_component NAME required|optional "Title"` and defines `component_<name>_install`
+  (safe to run again) and `component_<name>_check`. `component_<name>_update` is optional;
+  without it, update runs install. List the name in `DOT_COMPONENT_ORDER` in
+  `dot/lib/component-registry.sh`. Remove both to remove a component.
+  Put useful operating instructions beside it as `<name>.md`.
+- init, update, and doctor walk `DOT_COMPONENT_ORDER`. A failed required step stops init and
+  update, and a failed required check fails doctor. Optional components warn and continue.
+  `dot stow` only re-links. Plugins, skills links, and app configuration belong to components.
+- Add commands as `dot/commands/<name>.sh` with `cmd_<name>` and `cmd_<name>_usage`.
+  `dot foo-bar` runs `cmd_foo_bar`. Add it to `DOT_COMMAND_SUMMARIES` in `dot/lib/dot-main.sh`
+  and to the `dot.fish` completions.
 - Return status explicitly with `|| return 1`. Do not rely on `set -e` in functions:
   it is disabled for functions called from `if`, `&&`, or `||`.
 - Use `x=$((x + 1))`, not `((x++))`, which fails under `set -e` at zero.
-- Use `print_*` helpers and `pretty_path`. Warnings and errors go to stderr.
+- Use `print_*` helpers, `confirm`, and `pretty_path`. Warnings and errors go to stderr.
   Disable colors for non-terminal output and `NO_COLOR`.
 - Use `ensure_link` and `check_link` for managed symlinks. Call `backup_path` before replacing anything.
+- Put bats tests next to the code they cover as `*.bats`. Load `dot/tests/test-helpers.bash`.
+  Tests use a temporary HOME and must never change the real machine.
 
 ## SAFETY AND LOCAL STATE
 
@@ -75,11 +86,12 @@ Operational references live beside feature scripts in `lib/features/*.md`.
 
 Read the relevant feature reference before changing its behavior. These constraints also apply:
 
-- Homebrew: use `dot brew add/remove` first. Each package belongs to one bundle and base stays enabled.
-  Preserve `packages.brew.<group>.enabled` keys. Selection never installs or uninstalls.
-  Remove changes declarations only. Uninstall refuses declared packages and active apps or services.
-  Unattended installs fail on unset choices, even with `--yes`. Reports never prompt or change
-  preferences. Never add automatic cleanup or delete user data.
+- Homebrew: use `dot package add/remove` to change the Brewfiles. `packages/bundle` is the base
+  list for every machine. `packages/bundle.work` holds work formulas only; casks belong in base.
+  Init asks before installing the work list and saves nothing. Update upgrades every outdated
+  package. Run Homebrew changes through `brew_without_cleanup`. Never add `brew cleanup`,
+  automatic cleanup, or anything that deletes user data. Failed installs are recorded only in the
+  local dot state directory.
 - Pi: Git allow-lists customizations. Expect Pi to rewrite `settings.json`.
   Never include credentials or local development package paths. Re-add local packages with `pi install`.
 - OpenCode v2: register `@luxass/opencode-voice` once in `opencode.jsonc`'s `plugins` array,
@@ -109,15 +121,15 @@ Read the relevant feature reference before changing its behavior. These constrai
 
 ## VALIDATION
 
-- `dot lint` must pass. Shellcheck and shfmt are pinned in `.mise.toml` and run through
-  `mise exec`. Run `mise trust` once per machine. Style comes from `.editorconfig`
-  and `.shellcheckrc`.
+- `dot lint` must pass. It runs shellcheck, shfmt, and the bats tests, pinned in `.mise.toml`
+  and run through `mise exec`. Run `mise trust` and `mise install` once per machine.
+  Style comes from `.editorconfig` and `.shellcheckrc`.
 - Run `dot doctor` after setup behavior changes. Use `dot info` for paths, runtimes, and status.
 - `dot hooks` installs the tracked pre-push hook and repo filters. The hook runs
-  `dot secret-scan` and `dot lint`. CI also tests Stow link/unlink into an empty HOME
-  without installing plugin dependencies.
+  `dot secret-scan` and `dot lint`. CI also runs `dot init --only stow,skills`,
+  `dot doctor --only stow,skills`, and `dot unstow` in an empty HOME.
 - The secret scanner never prints values. It skips ignored files, submodules, and history.
   Execution errors must fail the command. Reviewed exceptions in `.secret-scan-allowlist`
   match an exact source-line SHA-256 plus path. Never use whole-file or directory exclusions.
 - Stow backs up blocking paths under the local dot state directory's `backups/<timestamp>/`.
-  See [Stow](lib/features/stow.md) for locations and state recovery.
+  See [Stow](dot/lib/components/stow.md) for locations and state recovery.

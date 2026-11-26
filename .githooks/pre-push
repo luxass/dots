@@ -4,5 +4,5 @@ set -euo pipefail
 repo="$(git rev-parse --show-toplevel)"
 
 echo "Running dot secret-scan and dot lint before push..."
-"$repo/dot" secret-scan
-"$repo/dot" lint
+"$repo/dot/bin/dot" secret-scan
+"$repo/dot/bin/dot" lint

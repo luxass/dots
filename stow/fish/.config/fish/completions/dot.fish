@@ -1,30 +1,43 @@
 complete -c dot -f
 complete -c dot -s v -l verbose -d 'Print extra diagnostics'
-complete -c dot -s y -l yes -d 'Answer yes to confirmations, not bundle choices'
+complete -c dot -s y -l yes -d 'Answer yes to confirmations'
 complete -c dot -s h -l help -d 'Show help'
 complete -c dot -l version -d 'Show version'
 
-complete -c dot -n __fish_use_subcommand -a init -d 'Install packages, link dotfiles, set up runtimes'
-complete -c dot -n __fish_use_subcommand -a update -d 'Pull changes, offer upgrades, relink'
-complete -c dot -n __fish_use_subcommand -a stow -d 'Link selected Stow packages and install plugin dependencies'
-complete -c dot -n __fish_use_subcommand -a unstow -d 'Remove the links'
-complete -c dot -n __fish_use_subcommand -a doctor -d 'Check the whole setup'
+set -l dot_commands init update doctor components info package check-packages retry-failed stow unstow hooks secret-scan lint link unlink edit help
+complete -c dot -n __fish_use_subcommand -a init -d 'Install everything (every component install step)'
+complete -c dot -n __fish_use_subcommand -a update -d 'Pull, then update every component'
+complete -c dot -n __fish_use_subcommand -a doctor -d 'Check every component'
+complete -c dot -n __fish_use_subcommand -a components -d 'List components in run order'
 complete -c dot -n __fish_use_subcommand -a info -d 'Show paths, runtimes, and repo status'
-complete -c dot -n __fish_use_subcommand -a secret-scan -d 'Scan for secrets'
-complete -c dot -n __fish_use_subcommand -a lint -d 'Run shellcheck and shfmt on dot'
-complete -c dot -n __fish_use_subcommand -a brew -d 'Homebrew packages and bundle choices'
-complete -c dot -n __fish_use_subcommand -a config -d 'Machine-local preferences'
+complete -c dot -n __fish_use_subcommand -a package -d 'List, add, remove, or upgrade packages'
+complete -c dot -n __fish_use_subcommand -a check-packages -d 'Report missing packages'
+complete -c dot -n __fish_use_subcommand -a retry-failed -d 'Retry packages that failed during init'
+complete -c dot -n __fish_use_subcommand -a stow -d 'Re-link the Stow packages'
+complete -c dot -n __fish_use_subcommand -a unstow -d 'Remove the Stow and skills links'
 complete -c dot -n __fish_use_subcommand -a hooks -d 'Point Git at .githooks and set up repo filters'
+complete -c dot -n __fish_use_subcommand -a secret-scan -d 'Scan for secrets'
+complete -c dot -n __fish_use_subcommand -a lint -d 'Run shellcheck, shfmt, and bats'
+complete -c dot -n __fish_use_subcommand -a link -d 'Link ~/.local/bin/dot'
+complete -c dot -n __fish_use_subcommand -a unlink -d 'Remove ~/.local/bin/dot'
+complete -c dot -n __fish_use_subcommand -a edit -d 'Open the repository in $EDITOR'
 complete -c dot -n __fish_use_subcommand -a help -d 'Show help'
+complete -c dot -n '__fish_seen_subcommand_from help' -a "$dot_commands"
 
-set -l brew_cmds list check bundle install add remove uninstall unmanaged update help
-complete -c dot -n "__fish_seen_subcommand_from brew; and not __fish_seen_subcommand_from $brew_cmds" -a "$brew_cmds"
-complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from list; and not __fish_seen_subcommand_from bundle' -a 'base fonts work personal'
-complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from bundle; and not __fish_seen_subcommand_from list enable disable help' -a 'list enable disable help'
-complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from bundle; and __fish_seen_subcommand_from enable disable' -a 'fonts work personal'
-complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from add remove' -s g -l group -x -a 'base fonts work personal' -d 'Bundle group'
-complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from add remove uninstall update' -l cask -d 'Select a cask'
-complete -c dot -n '__fish_seen_subcommand_from brew; and __fish_seen_subcommand_from add remove uninstall update' -l formula -d 'Select a formula'
+# init, update, doctor: component selection
+complete -c dot -n '__fish_seen_subcommand_from init update doctor' -l only -x -a '(dot components --names 2>/dev/null)' -d 'Only these components (comma-separated)'
+complete -c dot -n '__fish_seen_subcommand_from init update doctor' -l skip -x -a '(dot components --names 2>/dev/null)' -d 'Skip these components (comma-separated)'
+complete -c dot -n '__fish_seen_subcommand_from init update' -l dry-run -d 'Print the plan and change nothing'
+complete -c dot -n '__fish_seen_subcommand_from update' -l no-pull -d 'Skip the git pull'
+complete -c dot -n '__fish_seen_subcommand_from components' -l names -d 'Print only component names'
 
-complete -c dot -n '__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from list get set unset reset path help' -a 'list get set unset reset path help'
-complete -c dot -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from get set unset' -a 'packages.brew.fonts.enabled packages.brew.work.enabled packages.brew.personal.enabled'
+# package
+set -l package_commands list add remove update help
+complete -c dot -n "__fish_seen_subcommand_from package; and not __fish_seen_subcommand_from $package_commands" -a list -d 'List packages (default)'
+complete -c dot -n "__fish_seen_subcommand_from package; and not __fish_seen_subcommand_from $package_commands" -a add -d 'Install a package and add it to a list'
+complete -c dot -n "__fish_seen_subcommand_from package; and not __fish_seen_subcommand_from $package_commands" -a remove -d 'Remove a package from the lists'
+complete -c dot -n "__fish_seen_subcommand_from package; and not __fish_seen_subcommand_from $package_commands" -a update -d 'Upgrade packages'
+complete -c dot -n "__fish_seen_subcommand_from package; and not __fish_seen_subcommand_from $package_commands" -a help -d 'Show package help'
+complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from add' -a 'brew cask' -d 'Package type'
+complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from add remove update list' -a 'base work' -d 'Package list'
+complete -c dot -n '__fish_seen_subcommand_from package; and __fish_seen_subcommand_from remove update list' -a all -d 'Every list'

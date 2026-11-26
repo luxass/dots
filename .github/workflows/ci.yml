@@ -29,15 +29,16 @@ jobs:
           mise trust
           mise install
 
-      - name: Lint
-        run: ./dot lint
+      # shellcheck, shfmt, and the bats tests.
+      - name: Lint and test
+        run: ./dot/bin/dot lint
 
       - name: Secret scan
-        run: ./dot secret-scan
+        run: ./dot/bin/dot secret-scan
 
-      # Link every Stow package into an empty HOME, then unlink it again.
-      # This calls the linking functions directly: `dot stow` also installs
-      # plugin dependencies (Fisher, Herdr, sfw) that this runner does not have.
+      # Link every Stow package and the shared skills into an empty HOME, check
+      # them, then unlink them again. Only the stow and skills components run:
+      # the others install plugins and runtimes this runner does not have.
       - name: Stow into an empty HOME
         shell: bash
         run: |
@@ -46,15 +47,8 @@ jobs:
           export XDG_STATE_HOME="$HOME/.local/state"
           mkdir -p "$HOME"
 
-          DOTFILES_DIR="$PWD"
-          for lib in lib/core/*.sh lib/features/*.sh lib/commands/*.sh; do
-            # shellcheck source=/dev/null
-            source "$lib"
-          done
-
-          stow_apply
-          stow_check
-          skills_check
+          ./dot/bin/dot init --only stow,skills
+          ./dot/bin/dot doctor --only stow,skills
 
           # --no-folding: no HOME directory may be a link into the checkout.
           folded="$(find "$HOME" -type l -exec sh -c '[ -d "$1" ]' _ {} \; -print \
@@ -67,7 +61,7 @@ jobs:
 
           # Only links into stow/ or shared/agents/ belong to dot; tools such as
           # mise may add their own state links under the same HOME.
-          stow_remove
+          ./dot/bin/dot unstow
           left="$(find "$HOME" -type l -exec sh -c \
             'case "$(readlink "$1")" in */stow/* | */shared/agents/*) exit 0 ;; *) exit 1 ;; esac' _ {} \; -print)"
           if [ -n "$left" ]; then

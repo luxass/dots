@@ -1,0 +1,44 @@
+# shellcheck shell=bash
+# Repository paths and managed versions. Constants only.
+# Component order lives in component-registry.sh.
+
+readonly STOW_DIR="$DOTFILES_DIR/stow"
+# Native Stow packages. Keep runtime data outside these deployment trees.
+readonly STOW_PACKAGES=(fish git ghostty starship runtime-policy pi opencode gh herdr rex plannotator tinycast claude codex)
+# Brewfiles: packages/bundle (base) and packages/bundle.work (work, formulas only).
+readonly PACKAGES_DIR="${DOT_PACKAGES_DIR:-$DOTFILES_DIR/packages}"
+readonly STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
+readonly BACKUP_ROOT="$STATE_DIR/backups"
+# Packages that failed during init, for `dot retry-failed`. Local, never in Git.
+readonly FAILED_PACKAGES_DIR="$STATE_DIR/failed-packages"
+
+PNPM_HOME="${PNPM_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/pnpm}"
+readonly PNPM_HOME
+readonly PNPM_INSTALL_VERSION="${PNPM_INSTALL_VERSION:-12}"
+readonly PNPM_UPDATE_TAG="${PNPM_UPDATE_TAG:-latest-12}"
+readonly NODE_RUNTIME_VERSION="${NODE_RUNTIME_VERSION:-24}"
+readonly NPM_RUNTIME_VERSION="${NPM_RUNTIME_VERSION:-12}"
+readonly CUA_DRIVER_INSTALL_URL="https://cua.ai/driver/install.sh"
+readonly CUA_DRIVER_APP="/Applications/CuaDriver.app"
+readonly REX_INSTALL_PATH="/Applications/Rex Beta.app"
+readonly REX_INSTALLATION_URL="https://www.superlogical.com/rex/docs/installation"
+# Rex is not in Homebrew. dot installs it once from the Bleeding Edge
+# (snapshot) appcast; after that, the app's own updater keeps it current.
+readonly REX_APPCAST_URL="https://blob.superlogical.com/public/rex-app/snapshot-arm64/appcast.xml"
+readonly REX_DOWNLOAD_PREFIX="https://blob.superlogical.com/public/rex-app/snapshot-arm64/"
+readonly REX_TEAM_ID="AG92C3PT77"
+readonly REX_BUNDLE_ID="com.superlogical.rex"
+readonly REX_BUNDLED_CLI="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex"
+readonly REX_DEFAULTS_DOMAIN="com.superlogical.rex"
+readonly REX_SETTINGS_FILE="$STOW_DIR/rex/.config/rex/macos-defaults.conf"
+# Managed pnpm globals as package:command. OpenCode is installed through Homebrew.
+readonly PNPM_GLOBAL_PACKAGES=(
+  "sfw:sfw"
+  "npm@${NPM_RUNTIME_VERSION}:npm"
+  "@earendil-works/pi-coding-agent:pi"
+  "cf:cf"
+  "coderabbit:coderabbit"
+)
+readonly SKILLS_DIR="$DOTFILES_DIR/shared/agents/skills"
+readonly SKILLS_LOCK="$DOTFILES_DIR/shared/agents/.skill-lock.json"
+readonly SKILLS_STATE_LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/skills/.skill-lock.json"

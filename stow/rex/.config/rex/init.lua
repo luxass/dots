@@ -86,8 +86,8 @@ rex.bind(P .. "v", "client.find.open")
 -- Leave Ctrl+H/J/K/L and Shift+Enter to terminal applications.
 
 -- Appearance follows macOS. macos-defaults.conf selects the theme pair.
--- These palette actions import the tracked theme files; 'dot stow' runs them
--- through 'rex do' when a theme is missing. No shortcut is bound to them.
+-- These palette actions import the tracked theme files; 'dot update --only rex'
+-- runs them through 'rex do' when a theme is missing. No shortcut is bound to them.
 for _, theme in ipairs({
   { file = "catppuccin-macchiato", title = "Catppuccin Macchiato" },
   { file = "catppuccin-latte", title = "Catppuccin Latte" },
