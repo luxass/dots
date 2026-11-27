@@ -10,7 +10,8 @@
     "npm:@luxass/pi-cost-explorer",
     "npm:@plannotator/pi-extension",
     "git:github.com/dmmulroy/pi-claude-cli",
-    "npm:@luxass/pi-subagents"
+    "npm:@luxass/pi-subagents",
+    "git:github.com/dmmulroy/rex-sdk"
   ],
   "theme": "catppuccin-latte/catppuccin-macchiato",
   "defaultProvider": "crow",

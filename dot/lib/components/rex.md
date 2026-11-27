@@ -40,6 +40,9 @@ Review the diff before committing. Doctor warns, rather than fails, for missing 
 
 The rex step also adds disable-model-invocation: true to the skill stub's front matter.
 Agents then load the Rex skill only when asked, for example with /skill:rex.
+In Pi, agents drive Rex through codemode tools instead: the rex namespace (rex_* tools) from
+Dillon Mulroy's [rex-sdk](https://github.com/dmmulroy/rex-sdk) Pi package, declared in Pi's settings.json.
+It speaks Rex API revision 18. If a Rex update drops that revision, the tools fail until rex-sdk catches up.
 Rex reports the edited stub as outdated, so doctor asks Rex about a copy without
 that line in a temporary HOME. After rex skill setup rewrites the stub, the step adds
 the line again.
