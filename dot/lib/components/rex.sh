@@ -303,13 +303,73 @@ rex_terminfo_ready() {
     | jq -e '.conclusion | type == "string" and startswith("Ready")' >/dev/null
 }
 
+# The Rex skill stub that `rex skill setup` writes into the shared skills folder.
+readonly REX_SKILL_FILE="$SKILLS_DIR/rex/SKILL.md"
+# Agents load the Rex skill only when asked, for example with /skill:rex,
+# instead of on their own for every Rex-related prompt.
+readonly REX_SKILL_MODEL_LINE="disable-model-invocation: true"
+
+# rex_skill_hide_from_models: add REX_SKILL_MODEL_LINE to the Rex skill's front
+# matter. `rex skill setup` writes the stub without it, so run this after every
+# setup. A file without front matter is left alone.
+rex_skill_hide_from_models() {
+  local tmp
+
+  [[ -f "$REX_SKILL_FILE" ]] || return 0
+  grep -qxF "$REX_SKILL_MODEL_LINE" "$REX_SKILL_FILE" && return 0
+  [[ "$(head -n 1 "$REX_SKILL_FILE")" == --- ]] || return 0
+
+  tmp="$(mktemp "${TMPDIR:-/tmp}/dot-rex-skill.XXXXXX")" || return 1
+  # Insert the line before the closing --- of the front matter.
+  if ! awk -v line="$REX_SKILL_MODEL_LINE" '
+    NR > 1 && !done && $0 == "---" { print line; done = 1 }
+    { print }
+  ' "$REX_SKILL_FILE" >"$tmp" || ! cat "$tmp" >"$REX_SKILL_FILE"; then
+    rm -f "$tmp"
+    print_error "Could not update $(pretty_path "$REX_SKILL_FILE")"
+    return 1
+  fi
+  rm -f "$tmp"
+  print_success "Rex skill now loads only when asked ($REX_SKILL_MODEL_LINE)"
+}
+
+# rex_skill_current_without_model_line CLI: Rex reports the stub as current
+# once REX_SKILL_MODEL_LINE is removed. Rex calls any stub it did not write
+# outdated, so ask it about a copy without the line, in a temporary HOME.
+rex_skill_current_without_model_line() {
+  local cli="$1" sandbox state
+
+  [[ -f "$REX_SKILL_FILE" ]] || return 1
+  sandbox="$(mktemp -d "${TMPDIR:-/tmp}/dot-rex-skill.XXXXXX")" || return 1
+  if ! mkdir -p "$sandbox/.agents/skills/rex" \
+    || ! grep -vxF "$REX_SKILL_MODEL_LINE" "$REX_SKILL_FILE" >"$sandbox/.agents/skills/rex/SKILL.md"; then
+    rm -rf "$sandbox"
+    return 1
+  fi
+  state="$(HOME="$sandbox" XDG_CONFIG_HOME="$sandbox/.config" "$cli" --autostart=false skill status --json 2>/dev/null \
+    | jq -r 'first(.harnesses[] | select(.id == "pi") | .items[] | select(.kind == "skill") | .state) // empty' || true)"
+  rm -rf "$sandbox"
+  [[ "$state" == current ]]
+}
+
 # Print agent skill or hook items that are not current. Unsupported hooks
-# (agents without hook support) are fine.
+# (agents without hook support) are fine. A skill that is outdated only
+# because of REX_SKILL_MODEL_LINE counts as current.
 rex_agents_pending() {
-  "$1" --autostart=false skill status --json \
+  local cli="$1" pending
+
+  pending="$("$cli" --autostart=false skill status --json \
     | jq -r '[.harnesses[] | select(.detected) | .id as $agent | .items[]
       | select(.state != "current" and .state != "unsupported")
-      | "\($agent) \(.kind) \(.state)"] | .[]'
+      | "\($agent) \(.kind) \(.state)"] | .[]')" || return 1
+  if [[ "$pending" == *" skill outdated"* ]] \
+    && grep -qxF "$REX_SKILL_MODEL_LINE" "$REX_SKILL_FILE" 2>/dev/null \
+    && rex_skill_current_without_model_line "$cli"; then
+    pending="$(grep -v ' skill outdated$' <<<"$pending" || true)"
+  fi
+  if [[ -n "$pending" ]]; then
+    printf '%s\n' "$pending"
+  fi
 }
 
 # Install the xterm-rex terminfo entry. Rex writes it to ~/.terminfo, writes
@@ -343,6 +403,7 @@ rex_setup_terminfo() {
 rex_setup_agents() {
   local cli="$1" pending
 
+  rex_skill_hide_from_models || return 1
   pending="$(rex_agents_pending "$cli")" || {
     print_warning "Could not read Rex agent setup; run 'rex skill status'"
     return 0
@@ -360,6 +421,7 @@ rex_setup_agents() {
     print_error "rex skill setup failed; run it yourself to see why"
     return 1
   }
+  rex_skill_hide_from_models || return 1
   print_success "Rex agent skill and hooks are set up"
 }
 
@@ -429,6 +491,11 @@ rex_check() {
     print_warning "Rex agent setup is incomplete: $(paste -sd ',' - <<<"$pending" | sed 's/,/, /g'); run 'dot update --only rex'"
   else
     print_success "Rex agent skill and hooks"
+  fi
+  if grep -qxF "$REX_SKILL_MODEL_LINE" "$REX_SKILL_FILE" 2>/dev/null; then
+    print_success "Rex skill loads only when asked"
+  else
+    print_warning "Rex skill can load on its own; run 'dot update --only rex'"
   fi
 }
 
