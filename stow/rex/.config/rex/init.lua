@@ -104,3 +104,7 @@ for _, theme in ipairs({
     end,
   })
 end
+
+-- Dillon Mulroy's "Transfer pi Session to Host…" action (also /transfer in Pi),
+-- copied unchanged into dmmulroy/transfer_pi_session/. See its README.md.
+require("dmmulroy.transfer_pi_session")

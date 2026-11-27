@@ -44,6 +44,23 @@ Rex reports the edited stub as outdated, so doctor asks Rex about a copy without
 that line in a temporary HOME. After rex skill setup rewrites the stub, the step adds
 the line again.
 
+## Transfer a Pi session to another host
+
+This is Dillon Mulroy's transfer, copied unchanged with credit:
+[transfer_pi_session/](../../../stow/rex/.config/rex/dmmulroy/transfer_pi_session/README.md) for Rex,
+and [rex-transfer.ts](../../../stow/pi/.pi/agent/extensions/rex-transfer.ts) for Pi.
+See [CREDITS.md](../../../stow/rex/.config/rex/dmmulroy/CREDITS.md).
+
+Run it from the Rex palette (Transfer pi Session to Host…) or with /transfer HOST in Pi.
+It moves the Pi session in the pane, with its working tree, to another Rex host.
+The host needs an ssh:// endpoint that connects without a prompt, and pi installed.
+init.lua loads it with require("dmmulroy.transfer_pi_session").
+After editing it, run its tests (no host is contacted):
+
+```fish
+rex do ~/.config/rex/dmmulroy/transfer_pi_session/tests/run.lua
+```
+
 ## Change shortcuts
 
 The prefix is Ctrl+B. Split, zoom, resize, session, and tab shortcuts follow Herdr.

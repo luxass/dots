@@ -7,8 +7,9 @@ ${BOLD}USAGE${RESET}
   dot lint
 
 Run shellcheck and shfmt over dot's shell code, then every *.bats test under
-dot/. Style comes from .shellcheckrc and .editorconfig. The pre-push hook and
-CI run this.
+dot/, then the Pi extension tests (stow/pi/.pi/agent/extensions/*/test/) when
+Node can run TypeScript. Style comes from .shellcheckrc and .editorconfig. The
+pre-push hook and CI run this.
 EOF
 }
 
@@ -53,4 +54,25 @@ cmd_lint() {
     return 1
   }
   print_success "Shell code is clean and tests pass"
+  lint_pi_extensions
+}
+
+# lint_pi_extensions: run the Pi extension tests with Node's built-in test
+# runner. They need a Node that strips TypeScript types (22.18 or newer), so
+# without one this warns and skips instead of failing.
+lint_pi_extensions() {
+  local pi_tests output
+
+  pi_tests=("$DOTFILES_DIR"/stow/pi/.pi/agent/extensions/*/test/*.test.ts)
+  [[ -e "${pi_tests[0]}" ]] || return 0
+  if ! command_exists node || ! node -e 'process.exit(process.features.typescript ? 0 : 1)' 2>/dev/null; then
+    print_warning "Skipping Pi extension tests: they need Node 22.18 or newer"
+    return 0
+  fi
+  if ! output="$(cd "$DOTFILES_DIR" && NODE_NO_WARNINGS=1 node --test "${pi_tests[@]}" 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    print_error "Pi extension tests failed"
+    return 1
+  fi
+  print_success "Pi extension tests pass ($(grep -E '^ℹ tests ' <<<"$output" | awk '{ print $3 }') tests)"
 }
