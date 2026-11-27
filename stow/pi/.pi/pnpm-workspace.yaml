@@ -1,3 +1,15 @@
+# pnpm settings for ~/.pi. The root package and every extension with its own
+# package.json (agent/extensions/*) install together.
+packages:
+  - agent/extensions/*
+
+# Dependencies that may run install or build scripts. Everything else is blocked
+# (dangerouslyAllowAllBuilds is false in the global policy).
 allowBuilds:
   '@google/genai': true
   protobufjs: true
+  # mpl (agent/extensions/mpl) is a Git dependency that builds itself in its
+  # prepare script. Allowed for this pinned commit only.
+  'mpl@https://codeload.github.com/ivarvong/mpl/tar.gz/8befb5cddc461d9d3a29b4b8270efe2d559f9d00': true
+  # tsx's esbuild gets its binary from @esbuild/<platform>; its postinstall only checks it.
+  esbuild: false

@@ -95,6 +95,9 @@ Read the relevant feature reference before changing its behavior. These constrai
   automatic cleanup, or anything that deletes user data. Failed installs are recorded only in the
   local dot state directory.
 - Pi: Git allow-lists customizations. Expect Pi to rewrite `settings.json`.
+  Pi extension dependencies install in `stow/pi/.pi` (Pi resolves imports from the real path),
+  through `dot init --only pi`. That one install allows npm scripts so Git dependencies such as mpl
+  can build; `pnpm-workspace.yaml`'s `allowBuilds` names every package that may run one.
   Never include credentials or local development package paths. Re-add local packages with `pi install`.
 - OpenCode v2: register `@luxass/opencode-voice` once in `opencode.jsonc`'s `plugins` array,
   not `cli.json`. Never run `opencode service set ...` automatically: it stops the server.

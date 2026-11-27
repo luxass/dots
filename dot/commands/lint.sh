@@ -59,12 +59,18 @@ cmd_lint() {
 
 # lint_pi_extensions: run the Pi extension tests with Node's built-in test
 # runner. They need a Node that strips TypeScript types (22.18 or newer), so
-# without one this warns and skips instead of failing.
+# without one this warns and skips instead of failing. Extensions with their
+# own package.json test with their own dependencies in ~/.pi (pnpm test), so
+# they are left out here.
 lint_pi_extensions() {
-  local pi_tests output
+  local test_file pi_tests=() output
 
-  pi_tests=("$DOTFILES_DIR"/stow/pi/.pi/agent/extensions/*/test/*.test.ts)
-  [[ -e "${pi_tests[0]}" ]] || return 0
+  for test_file in "$DOTFILES_DIR"/stow/pi/.pi/agent/extensions/*/test/*.test.ts; do
+    [[ -e "$test_file" ]] || continue
+    [[ -f "${test_file%/test/*}/package.json" ]] && continue
+    pi_tests+=("$test_file")
+  done
+  [[ "${#pi_tests[@]}" -gt 0 ]] || return 0
   if ! command_exists node || ! node -e 'process.exit(process.features.typescript ? 0 : 1)' 2>/dev/null; then
     print_warning "Skipping Pi extension tests: they need Node 22.18 or newer"
     return 0

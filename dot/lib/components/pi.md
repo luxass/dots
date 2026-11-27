@@ -6,7 +6,9 @@ Shared skills use the [shared collection](skills.md), not duplicate Pi copies.
 
 ## Update Pi
 
-Dot init installs the extension dependencies in ~/.pi. To run only that step, use dot init --only pi.
+Dot init installs the extension dependencies in stow/pi/.pi, because Pi resolves extension imports
+from their real path in the repository. Git and Stow ignore the node_modules folders.
+To run only that step, use dot init --only pi. Do not run a plain pnpm install there: it skips mpl's build.
 Dot update runs Pi's native self-updater, reinstalls those dependencies, then offers extension package updates.
 Both updates use a one-command release-age exception. Other installs keep the normal policy.
 Managed global tools are declared in [paths.sh](../paths.sh).
@@ -16,6 +18,14 @@ in settings.json. Re-add them on each machine with pi install.
 Dot hooks configures a Git clean filter that removes lastChangelogVersion from staged
 settings content. Pi can keep writing the key locally. Doctor warns if the filter is missing.
 For native computer use, see [Cua Driver](cua.md).
+
+## Draw charts
+
+The codemode tool mpl_render draws matplotlib-style charts. It is
+[Dillon Mulroy's extension](../../../stow/pi/.pi/agent/extensions/mpl/README.md), copied with credit.
+Charts follow Pi's light or dark theme (Catppuccin Latte or Macchiato).
+Files go to ~/.pi/agent/work/charts/<date>/, outside the repository.
+Dot doctor checks that the mpl library is built.
 
 ## Review with Plannotator
 

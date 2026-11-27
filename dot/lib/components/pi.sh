@@ -2,8 +2,23 @@
 # Pi: public extension dependencies in ~/.pi and updates.
 define_component pi optional "Pi extensions"
 
+# Pi loads extensions from their real path in the repository, so their
+# dependencies install there too. Git and Stow ignore node_modules.
+readonly PI_PACKAGE_DIR="$STOW_DIR/pi/.pi"
+
+# Git dependencies, such as mpl in agent/extensions/mpl, build in their prepare
+# script. pnpm runs that build with npm, which reads ignore-scripts=true from
+# ~/.npmrc and silently skips it. Allow scripts for this one install only.
+# pnpm-workspace.yaml's allowBuilds still names every package that may run one.
 pi_install_dependencies() {
-  pnpm_install_deps "$HOME/.pi" "Pi extension"
+  NPM_CONFIG_IGNORE_SCRIPTS=false pnpm_install_deps "$PI_PACKAGE_DIR" "Pi extension"
+}
+
+# pi_mpl_built: mpl, if installed, has its build output. A plain pnpm install
+# leaves it without dist/ (see pi_install_dependencies).
+pi_mpl_built() {
+  local mpl="$PI_PACKAGE_DIR/agent/extensions/mpl/node_modules/mpl"
+  [[ ! -e "$mpl" ]] || [[ -f "$mpl/dist/browser/index.js" ]]
 }
 
 # Pi's camelCase pnpm flag doesn't override pnpm 12's release-age policy, so
@@ -32,11 +47,17 @@ pi_update_extensions() {
 pi_check() {
   local failed=0
 
-  if [[ -f "$HOME/.pi/package.json" ]]; then
-    if [[ -d "$HOME/.pi/node_modules/@earendil-works/pi-coding-agent" ]]; then
+  if [[ -f "$PI_PACKAGE_DIR/package.json" ]]; then
+    if [[ -d "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-coding-agent" ]]; then
       print_success "Pi extension dependencies"
     else
       print_error "Pi extension dependencies are missing; run 'dot init --only pi'"
+      failed=1
+    fi
+    if pi_mpl_built; then
+      print_success "mpl chart library is built"
+    else
+      print_error "mpl is installed without its build; run 'dot init --only pi', not a plain pnpm install"
       failed=1
     fi
   fi
