@@ -46,23 +46,20 @@ the line again.
 
 ## Transfer a Pi session to another host
 
-In Pi, run /transfer, or /transfer HOST for a host from rex hosts list.
-Pi asks where on the host to continue: a new Rex session, or a new window in an
-existing one. Then it shows what moves and asks to confirm.
+This is Dillon Mulroy's transfer, copied unchanged with credit:
+[transfer_pi_session/](../../../stow/rex/.config/rex/dmmulroy/transfer_pi_session/README.md) for Rex,
+and [rex-transfer.ts](../../../stow/pi/.pi/agent/extensions/rex-transfer.ts) for Pi.
+See [CREDITS.md](../../../stow/rex/.config/rex/dmmulroy/CREDITS.md).
 
-The host must be a Mac with these dotfiles and the same project under its home
-folder. For a Git repository, push HEAD first. The host's checkout must not have
-uncommitted changes.
+Run it from the Rex palette (Transfer pi Session to Host…) or with /transfer HOST in Pi.
+It moves the Pi session in the pane, with its working tree, to another Rex host.
+The host needs an ssh:// endpoint that connects without a prompt, and pi installed.
+init.lua loads it with require("dmmulroy.transfer_pi_session").
+After editing it, run its tests (no host is contacted):
 
-Transfer moves the conversation, uncommitted changes to tracked files, and untracked
-files that Git does not ignore. Ignored files, such as .env and node_modules, stay here.
-On the host, the start script fetches the commit, checks out the branch or fast-forwards it,
-applies the work, and starts pi --fork in the same folder. Your session here stays open.
-
-Transfer uses rex cp and rex run, not SSH. The bundle goes to ~/.pi-transfer-ID on the host.
-The script keeps the conversation in ~/.cache/pi-transfer/ and removes the bundle.
-If a step fails, the script says why, opens a shell in the project, and keeps the bundle.
-The extension is [rex-transfer](../../../stow/pi/.pi/agent/extensions/rex-transfer/).
+```fish
+rex do ~/.config/rex/dmmulroy/transfer_pi_session/tests/run.lua
+```
 
 ## Change shortcuts
 

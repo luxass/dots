@@ -50,6 +50,8 @@ stow/rex/.config/rex/*
 !stow/rex/.config/rex/init.lua
 !stow/rex/.config/rex/macos-defaults.conf
 !stow/rex/.config/rex/themes/
+# Dillon Mulroy's transfer action, copied with credit (dmmulroy/CREDITS.md).
+!stow/rex/.config/rex/dmmulroy/
 
 # Herdr downloads, registries, sessions, and sockets stay local.
 stow/herdr/.config/herdr/plugins/
