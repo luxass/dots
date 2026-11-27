@@ -15,7 +15,7 @@ Launch Rex once to install its bundled CLI, then run dot update --only rex.
 [init.lua](../../../stow/rex/.config/rex/init.lua) defines shortcuts and theme import actions.
 [macos-defaults.conf](../../../stow/rex/.config/rex/macos-defaults.conf) defines app preferences.
 The theme pair uses Catppuccin Macchiato and Latte and follows macOS appearance.
-Rex and Ghostty use Monaspace Krypton at size 14 without ligatures.
+Rex uses Monaspace Krypton at size 14 without ligatures.
 
 Dot stow only links the files. The rex step in dot init and dot update checks init.lua,
 reloads it if Rex is running, and writes app preferences.
@@ -66,10 +66,9 @@ rex do ~/.config/rex/dmmulroy/transfer_pi_session/tests/run.lua
 
 ## Change shortcuts
 
-The prefix is Ctrl+B. Split, zoom, resize, session, and tab shortcuts follow Herdr.
+The prefix is Ctrl+B. Split, zoom, resize, session, and tab shortcuts keep the layout from Herdr, which these dotfiles used before Rex.
 Prefix+x closes the focused pane. If it is the last pane, it closes the tab.
 Detach shortcuts close the window, not the server. Prefix+v opens Find.
-Herdr Annotate and agent/worktree navigation have no mapped equivalents.
 Do not bind a theme shortcut or add Neovim or Twitch integration.
 
 After Lua edits, run:

@@ -1,7 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "plugins": [
-    "./herdr-opencode",
     "@luxass/opencode-voice",
     "@luxass/opencode-personal",
     {

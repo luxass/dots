@@ -163,15 +163,6 @@
       "installedAt": "2026-10-10T03:52:22.481Z",
       "updatedAt": "2026-10-10T03:52:22.481Z"
     },
-    "herdr": {
-      "source": "herdrdev/herdr",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/herdrdev/herdr.git",
-      "skillPath": "skills/herdr/SKILL.md",
-      "skillFolderHash": "67042ed7910d4177a9000e0679e78b0346060927",
-      "installedAt": "2026-10-10T03:56:46.488Z",
-      "updatedAt": "2026-10-10T03:56:46.488Z"
-    },
     "tailscale": {
       "source": "tailscale/tailscale-skill",
       "sourceType": "github",
@@ -234,15 +225,6 @@
       "skillFolderHash": "362200ac2fb3c17b765049444e88de73767e6d08",
       "installedAt": "2026-10-15T02:42:17.943Z",
       "updatedAt": "2026-10-15T02:42:17.943Z"
-    },
-    "plannotator-tui": {
-      "source": "plannotator/plannotator-tui",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/plannotator/plannotator-tui.git",
-      "skillPath": "skills/plannotator-tui/SKILL.md",
-      "skillFolderHash": "626f21d2febf8e0b80084169a127e57153d2e614",
-      "installedAt": "2026-10-15T03:48:58.570Z",
-      "updatedAt": "2026-10-15T03:48:58.570Z"
     },
     "cua-driver": {
       "source": "trycua/cua",

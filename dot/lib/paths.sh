@@ -4,7 +4,7 @@
 
 readonly STOW_DIR="$DOTFILES_DIR/stow"
 # Native Stow packages. Keep runtime data outside these deployment trees.
-STOW_PACKAGES=(fish git ghostty starship runtime-policy pi opencode gh herdr rex plannotator tinycast claude codex)
+STOW_PACKAGES=(fish git starship runtime-policy pi opencode gh rex plannotator tinycast claude codex)
 readonly STOW_PACKAGES
 # Brewfiles: packages/bundle (base) and packages/bundle.work (work, formulas only).
 readonly PACKAGES_DIR="${DOT_PACKAGES_DIR:-$DOTFILES_DIR/packages}"

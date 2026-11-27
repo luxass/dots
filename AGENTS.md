@@ -17,9 +17,8 @@ component scripts in `dot/lib/components/*.md`.
 | Runtime policy and global tools | `dot/lib/components/pnpm.sh`, `stow/runtime-policy/` | [pnpm](dot/lib/components/pnpm.md) |
 | Public Git configuration | `stow/git/.config/git/config`, `dot/lib/components/git.sh` | [Git](dot/lib/components/git.md) |
 | GitHub CLI | `stow/gh/.config/gh/`, `dot/lib/components/gh.sh` | [gh](dot/lib/components/gh.md) |
-| Shell, prompt, terminal | `stow/fish/`, `stow/starship/`, `stow/ghostty/` | [Fish](dot/lib/components/fish.md) |
+| Shell and prompt | `stow/fish/`, `stow/starship/` | [Fish](dot/lib/components/fish.md) |
 | Rex configuration | `stow/rex/.config/rex/`, `dot/lib/components/rex.sh` | [Rex](dot/lib/components/rex.md) |
-| Herdr plugins and shortcuts | `stow/herdr/.config/herdr/`, `dot/lib/components/herdr.sh` | [Herdr](dot/lib/components/herdr.md) |
 | OpenCode configuration and plugins | `stow/opencode/.config/opencode/`, `dot/lib/components/opencode.sh` | [OpenCode](dot/lib/components/opencode.md) |
 | Pi customizations and reviews | `stow/pi/.pi/agent/`, `stow/plannotator/` | [Pi](dot/lib/components/pi.md) |
 | Cua Driver | `dot/lib/components/cua.sh` | [Cua](dot/lib/components/cua.md) |
@@ -68,8 +67,8 @@ component scripts in `dot/lib/components/*.md`.
   `STOW_PACKAGES` deploys with `--dotfiles --no-folding`.
   Git ignores do not affect Stow. Keep runtime state physically outside packages.
   Shared Stow exclusions cover `node_modules`, `.DS_Store`, and private Git paths.
-- Keep gh `hosts.yml`, OpenCode `service*.json`, Herdr `plugins/`, `plugins.json`,
-  `.plugins.lock`, and Rex generated state local. Codex config stays local too:
+- Keep gh `hosts.yml`, OpenCode `service*.json`, and Rex generated state local.
+  Codex config stays local too:
   `stow/codex/` contains ignore policy only.
 - Public Git defaults belong in `stow/git/.config/git/config`, which includes
   `~/.config/git/local.conf` last. Private profiles belong there and under `~/.config/git/extras/`.
@@ -81,7 +80,7 @@ component scripts in `dot/lib/components/*.md`.
   (`sfw pnpm install`, `sfw npm install`, etc.). Only standalone pnpm and sfw bootstraps are exempt.
 - Use HOME, repo-relative paths, or existing helpers instead of hardcoded user paths.
   Do not create nested Git repositories or unmanaged dependency installs inside Stow packages.
-- Do not reintroduce tmux, skhd, lazygit, wezterm, Neovim configuration, or custom alias/function
+- Do not reintroduce tmux, Herdr, Ghostty, skhd, lazygit, wezterm, Neovim configuration, or custom alias/function
   files unless requested. Do not add Linux setup or casks in `packages/bundle.work` unless asked.
 
 ## FEATURE CONSTRAINTS
@@ -108,8 +107,6 @@ Read the relevant feature reference before changing its behavior. These constrai
   `init.lua`'s `import_*` actions. Preserve terminfo and missing-skill setup offers.
   Keep generated theme IDs, the registry, `ssh_config`, and `terminfo-hosts` local.
   Do not bind a theme shortcut or add Neovim or Twitch integration.
-- Herdr: preserve `prefix+m` for zoom, `prefix+o` for document review, and `prefix+i` for
-  notifications. Never stop a running server.
 - Fish: Fisher installs declared `fish_plugins` outside the repo. Never commit plugin files,
   `fish_variables`, or generated completions.
 - Cua Driver: ask before stopping a running daemon and warn about interrupted computer-use

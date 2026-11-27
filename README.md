@@ -56,7 +56,6 @@ Instructions live beside each component's implementation:
 - [Pi and Plannotator](dot/lib/components/pi.md)
 - [Cua Driver](dot/lib/components/cua.md)
 - [OpenCode](dot/lib/components/opencode.md)
-- [Herdr](dot/lib/components/herdr.md)
 - [Rex](dot/lib/components/rex.md)
 - [GitHub CLI](dot/lib/components/gh.md)
 
