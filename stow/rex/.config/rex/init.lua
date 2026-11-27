@@ -1,5 +1,5 @@
 -- Managed by dots. Check with 'rex config check'; apply with 'rex config reload'.
--- Keep the Herdr prefix (Ctrl+B) and shared pane/session/tab shortcuts.
+-- Prefix Ctrl+B. The pane, session, and tab shortcuts keep the layout from Herdr.
 local P = "ctrl+b>"
 
 rex.bind(P .. "ctrl+b", "pane.send_key", { key = "ctrl+b" })
@@ -9,7 +9,6 @@ rex.bind(P .. "r", "client.config.reload")
 rex.bind(P .. "d", "client.window.close")
 rex.bind(P .. "q", "client.window.close")
 
--- Rex sessions correspond to Herdr workspaces.
 rex.bind(P .. "shift+n", "session.new")
 rex.bind(P .. "shift+w", "session.rename")
 rex.bind(P .. "shift+d", "session.close")
@@ -31,7 +30,7 @@ end
 
 rex.bind(P .. "\\", "pane.split", { direction = "right" })
 rex.bind(P .. "enter", "pane.split", { direction = "down" })
--- Match Herdr: closing the last pane closes its tab.
+-- Closing the last pane closes its tab.
 rex.action({
   name = "close_pane_or_tab",
   title = "Close Pane (or Tab if Last Pane)",
@@ -63,7 +62,7 @@ rex.bind(P .. "tab", "pane.focus_next")
 rex.bind(P .. "shift+tab", "pane.focus_previous")
 for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
   rex.bind(P .. key, "pane.focus", { direction = direction })
-  -- Rex moves a pane next to its neighbor, not an exact Herdr swap.
+  -- Rex moves a pane next to its neighbor; it does not swap the two.
   rex.bind(P .. "shift+" .. key, "pane.move", { direction = direction })
 end
 
@@ -81,8 +80,8 @@ rex.bind("resize/enter", "client.mode.exit")
 
 -- Rex has no keyboard copy mode. Use find on the same shortcut instead.
 rex.bind(P .. "v", "client.find.open")
--- Herdr Annotate, notifications, agent/worktree navigation, pane renaming,
--- and scrollback editing are not mapped. Do not claim feature parity.
+-- Notifications, agent/worktree navigation, pane renaming, and scrollback
+-- editing are not mapped.
 -- Leave Ctrl+H/J/K/L and Shift+Enter to terminal applications.
 
 -- Appearance follows macOS. macos-defaults.conf selects the theme pair.

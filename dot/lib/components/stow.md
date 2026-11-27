@@ -42,7 +42,7 @@ so README.md and .gitignore files can deploy too. No git add is required before 
 ## Keep application state outside the checkout
 
 Do not put auth, sessions, logs, caches, sockets, or downloaded plugins in packages.
-Pi state stays under ~/.pi/agent/. Fish variables and Herdr state also stay local.
+Pi state stays under ~/.pi/agent/. Fish variables also stay local.
 Git ignores prevent accidental staging, not deployment.
 [Shared skills](skills.md) use explicit links rather than Stow.
 Restart apps that cache checkout paths if they recreate state in the repo.

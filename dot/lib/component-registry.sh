@@ -21,7 +21,6 @@ DOT_COMPONENT_ORDER=(
   pi       # Pi extension dependencies and updates
   cua      # Cua Driver
   opencode # OpenCode plugin dependencies and updates
-  herdr    # Herdr plugins
   rex      # Rex app (missing installs only) and its configuration
 )
 readonly DOT_COMPONENT_ORDER

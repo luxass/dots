@@ -53,18 +53,6 @@ stow/rex/.config/rex/*
 # Dillon Mulroy's transfer action, copied with credit (dmmulroy/CREDITS.md).
 !stow/rex/.config/rex/dmmulroy/
 
-# Herdr downloads, registries, sessions, and sockets stay local.
-stow/herdr/.config/herdr/plugins/
-stow/herdr/.config/herdr/plugins.json
-stow/herdr/.config/herdr/.plugins.lock
-stow/herdr/.config/herdr/*.log
-stow/herdr/.config/herdr/*.sock
-stow/herdr/.config/herdr/*.sock.*
-stow/herdr/.config/herdr/session.json
-stow/herdr/.config/herdr/session-history.json
-stow/herdr/.config/herdr/session-snapshots/
-stow/herdr/.config/herdr/release-notes.json
-
 # Pi preferences and customizations only, never runtime state.
 stow/pi/.pi/package-lock.json
 stow/pi/.pi/agent/*

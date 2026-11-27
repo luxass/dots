@@ -50,12 +50,9 @@ In Pi, /plannotator-plan-mode toggles planning restrictions until approval.
 Shared [review preferences](../../../stow/plannotator/.plannotator/config.json) select unified diffs,
 wrapped lines, hidden whitespace changes, and focused feedback.
 Reviews and credentials remain local and outside Git and Stow.
-
-Terminal reviews use Herdr Annotate and its bundled plannotator-tui.
-Its [preferences](../../../stow/plannotator/.config/plannotator-tui/config.toml) select a full-tab overlay.
-Browser reviews do not require the Herdr plugin. No extra command files are needed.
+Reviews open in the browser. No extra command files are needed.
 
 ## Appearance
 
 Pi follows its host terminal with Catppuccin Macchiato in dark mode and Latte in light mode.
-Restart Pi to load the theme pair. Ghostty follows macOS appearance.
+Restart Pi to load the theme pair. Rex follows macOS appearance.
