@@ -27,6 +27,13 @@ Charts follow Pi's light or dark theme (Catppuccin Latte or Macchiato).
 Files go to ~/.pi/agent/work/charts/<date>/, outside the repository.
 Dot doctor checks that the mpl library is built.
 
+## Search sessions
+
+/find searches the current session, every branch. /find-all searches every session on this Mac.
+It is [Dillon Mulroy's session-finder](../../../stow/pi/.pi/agent/extensions/session-finder/README.md),
+copied with credit. Its index is ~/.pi/agent/cache/session-finder/index.sqlite, outside the repository.
+The index is safe to delete; it rebuilds.
+
 ## Review with Plannotator
 
 Pi declares its review package in [settings.json](../../../stow/pi/.pi/agent/settings.json).
