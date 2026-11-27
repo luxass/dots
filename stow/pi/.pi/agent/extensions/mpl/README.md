@@ -26,7 +26,7 @@ Dillon's `home/.pi` is an npm workspace. Here it is a pnpm workspace, `stow/pi/.
 - mpl builds itself in its `prepare` script. pnpm runs that build with npm, which reads
   `ignore-scripts=true` from `~/.npmrc`. `dot init --only pi` allows scripts for that one install.
   A plain `pnpm install` installs mpl without its build. `dot doctor` reports that.
-- Dillon's tests import `typebox`, which his `home/.pi/package.json` lists. Ours does not, so
-  `test/mpl.test.ts` does not run here yet. Pi provides `typebox` to the extension at runtime.
+- Run the tests from `stow/pi/.pi/agent/extensions/mpl` with `pnpm test`. They import `typebox`,
+  which `stow/pi/.pi/package.json` lists as a dev dependency, as Dillon's `home/.pi` does.
 
 The paths in `AGENTS.md` (`home/.pi`, `npm run check`) are Dillon's.
