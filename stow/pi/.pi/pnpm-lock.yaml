@@ -135,6 +135,15 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
 
+  agent/extensions/session-finder:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.5.2
+        version: 24.13.3
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
 packages:
 
   '@anthropic-ai/sdk@0.91.1':
