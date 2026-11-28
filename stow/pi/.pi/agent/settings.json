@@ -21,7 +21,6 @@
   "defaultTools": [
     "+codemode"
   ],
-  "showCacheMissNotices": true,
   "steeringMode": "all",
   "followUpMode": "all",
   "enableAnalytics": false,
@@ -30,5 +29,11 @@
       "pi-claude-cli",
       "crow"
     ]
+  },
+  "notices": {
+    "cacheMisses": true,
+    "cacheWarming": true,
+    "compactionCosts": true,
+    "reasoningDrops": true
   }
 }
