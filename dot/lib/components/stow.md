@@ -28,7 +28,8 @@ Doctor also warns about two problems that GNU Stow's simulate mode does not repo
 - Links into the repository that point at missing files, for example after a
   rename. Doctor names the fix for each link: dot stow, dot link, or
   dot init --only skills. It looks in the directories that hold managed links
-  and one level below them.
+  and one level below them. Dot stow removes dead links into the Stow packages,
+  including those of a removed package or folder, which Stow itself leaves.
 
 Before replacing a blocking path, the stow step moves it to the backups directory under
 the local dot state directory. The default is ~/.local/state/dot/backups/<timestamp>/.

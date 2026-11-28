@@ -58,7 +58,28 @@ stow_apply() {
     print_error "GNU Stow failed"
     return 1
   fi
+  stow_remove_dead_links || return 1
   print_success "Dotfiles linked"
+}
+
+# stow_remove_dead_links: remove links into the Stow packages whose file no
+# longer exists. Restow removes these only inside folders a package still has,
+# so removing a whole package or folder (for example stow/herdr) leaves them.
+# Links that dot link and the skills component own are left to those steps.
+stow_remove_dead_links() {
+  local link value target
+
+  while IFS= read -r link; do
+    [[ -n "$link" ]] || continue
+    value="$(readlink "$link")" || continue
+    case "$value" in
+      /*) target="$value" ;;
+      *) target="$(dirname "$link")/$value" ;;
+    esac
+    [[ "$(lexical_path "$target")" == "$STOW_DIR"/* ]] || continue
+    rm "$link" || return 1
+    print_info "Removed dead link $(pretty_path "$link")"
+  done < <(stow_broken_links)
 }
 
 stow_remove() {
@@ -117,6 +138,7 @@ broken_link_fix() {
     "$HOME/.agents/skills" | "$HOME/.agents/.skill-lock.json" | "$HOME/.claude/skills" | "$SKILLS_STATE_LOCK")
       printf 'dot init --only skills\n'
       ;;
+    # dot stow removes dead links into the Stow packages (stow_remove_dead_links).
     *) printf 'dot stow\n' ;;
   esac
 }
